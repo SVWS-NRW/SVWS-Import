@@ -1,0 +1,160 @@
+<template>
+  <div class="app-shell" :class="{ 'has-nav': auth.isConnected }">
+    <nav v-if="auth.isConnected" class="app-nav">
+      <div class="nav-brand">SVWS-Import</div>
+      <div class="nav-links">
+        <RouterLink :to="{ name: 'import' }" class="nav-link">
+          <i class="pi pi-file-import" /> Import
+        </RouterLink>
+        <RouterLink :to="{ name: 'schueler' }" class="nav-link" v-if="schuelerStore.totalCount > 0">
+          <i class="pi pi-users" /> Schüler
+          <Badge :value="schuelerStore.totalCount" severity="secondary" />
+        </RouterLink>
+        <RouterLink :to="{ name: 'lehrer' }" class="nav-link" v-if="lehrerStore.totalCount > 0">
+          <i class="pi pi-id-card" /> Lehrer
+          <Badge :value="lehrerStore.totalCount" severity="secondary" />
+        </RouterLink>
+      </div>
+      <div class="nav-conn">
+        <span class="conn-info">
+          <i class="pi pi-circle-fill" style="color: #22c55e; font-size: 0.65rem;" />
+          {{ auth.schema }}@{{ shortUrl }}
+        </span>
+        <Button
+          label="Trennen"
+          icon="pi pi-power-off"
+          size="small"
+          severity="secondary"
+          text
+          @click="handleDisconnect"
+        />
+      </div>
+    </nav>
+
+    <main class="app-main">
+      <RouterView />
+    </main>
+
+    <Toast position="bottom-right" />
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useRouter } from 'vue-router'
+import Button from 'primevue/button'
+import Badge from 'primevue/badge'
+import Toast from 'primevue/toast'
+import { useAuthStore } from '@/stores/auth'
+import { useSchuelerStore } from '@/stores/schueler'
+import { useLehrerStore } from '@/stores/lehrer'
+
+const auth = useAuthStore()
+const schuelerStore = useSchuelerStore()
+const lehrerStore = useLehrerStore()
+const router = useRouter()
+
+const shortUrl = computed(() => {
+  try {
+    return new URL(auth.baseUrl).hostname
+  } catch {
+    return auth.baseUrl
+  }
+})
+
+function handleDisconnect(): void {
+  auth.disconnect()
+  schuelerStore.clear()
+  lehrerStore.clear()
+  router.push({ name: 'connect' })
+}
+</script>
+
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+#app {
+  height: 100%;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+</style>
+
+<style scoped>
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.app-nav {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0 1.5rem;
+  height: 56px;
+  background: var(--p-surface-card);
+  border-bottom: 1px solid var(--p-surface-border);
+  flex-shrink: 0;
+}
+
+.nav-brand {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--p-primary-color);
+  white-space: nowrap;
+}
+
+.nav-links {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 6px;
+  text-decoration: none;
+  color: var(--p-text-color);
+  font-size: 0.9rem;
+  transition: background 0.15s;
+}
+
+.nav-link:hover,
+.nav-link.router-link-active {
+  background: var(--p-primary-50);
+  color: var(--p-primary-color);
+}
+
+.nav-conn {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.conn-info {
+  font-size: 0.8rem;
+  color: var(--p-text-muted-color);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.app-main {
+  flex: 1;
+  overflow: auto;
+  background: var(--p-surface-ground);
+}
+
+.has-nav .app-main {
+  overflow: auto;
+}
+</style>

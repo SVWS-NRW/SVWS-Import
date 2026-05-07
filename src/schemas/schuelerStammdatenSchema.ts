@@ -90,7 +90,10 @@ export const schuelerStammdatenSchema: ImportModule = {
       category: 'Personaldaten',
       required: false,
       type: 'string',
-      aliases: ['staatsangehoerigkeit', 'staatsangehörigkeit', 'nationalität', 'nationality', 'nation'],
+      aliases: [
+        'staatsangehoerigkeit', 'staatsangehörigkeit', 'nationalität', 'nationality', 'nation',
+        '1. staatsang.', '1 staatsang', '1. staatsangehörigkeit', 'staatsang',
+      ],
       hint: 'ISO-3166-Alpha-2 Code (z.B. DE, TR, PL) oder Klartextbezeichnung',
     },
     {
@@ -108,7 +111,7 @@ export const schuelerStammdatenSchema: ImportModule = {
       category: 'Adresse',
       required: false,
       type: 'string',
-      aliases: ['strasse', 'straße', 'strassenname', 'street', 'adresse', 'wohnstraße'],
+      aliases: ['strasse', 'straße', 'strassenname', 'street', 'adresse', 'wohnstraße', 'strae'],
     },
     {
       key: 'hausnummer',

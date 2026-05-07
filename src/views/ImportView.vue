@@ -26,7 +26,7 @@
         mode="basic"
         :auto="false"
         :multiple="false"
-        accept=".csv,.xlsx,.xls"
+        accept=".csv,.xlsx,.xls,.dat"
         chooseLabel="Datei auswählen"
         :maxFileSize="10000000"
         @select="onFileSelect"

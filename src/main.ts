@@ -5,6 +5,8 @@ import Aura from '@primevue/themes/aura'
 import ConfirmationService from 'primevue/confirmationservice'
 import ToastService from 'primevue/toastservice'
 import 'primeicons/primeicons.css'
+import '@ag-grid-community/styles/ag-grid.css'
+import '@ag-grid-community/styles/ag-theme-quartz.css'
 
 import App from './App.vue'
 import router from './router'

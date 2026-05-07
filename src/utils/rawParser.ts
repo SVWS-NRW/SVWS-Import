@@ -33,6 +33,26 @@ function buildColumns(headerRow: string[], dataRows: string[][]): RawColumn[] {
   })
 }
 
+/** .dat-Dateien aus SVWS verwenden Pipe als Trennzeichen */
+function delimiterForFile(file: File): string {
+  return /\.dat$/i.test(file.name) ? '|' : ''
+}
+
+/**
+ * Öffnet eine Datei beliebigen unterstützten Formats (CSV, DAT, XLSX, XLS)
+ * und gibt die Rohdaten ohne Feldmapping zurück.
+ * DAT-Dateien werden automatisch mit Pipe-Trennzeichen eingelesen.
+ */
+export async function parseRawFile(
+  file: File,
+  firstRowIsHeader = true,
+): Promise<RawImportData> {
+  if (/\.(xlsx|xls)$/i.test(file.name)) {
+    return parseRawXlsx(file, 0, firstRowIsHeader)
+  }
+  return parseRawCsv(file, delimiterForFile(file), firstRowIsHeader)
+}
+
 /**
  * Liest eine CSV-Datei ein und gibt die Rohdaten ohne jegliches Feldmapping zurück.
  * @param delimiter Trennzeichen; leer = automatische Erkennung durch PapaParse

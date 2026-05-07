@@ -190,9 +190,25 @@ h2 {
   background: var(--p-primary-50);
 }
 
+:global(.dark) .import-card.active {
+  background: color-mix(in srgb, var(--p-primary-color) 18%, var(--p-surface-card));
+}
+
 .card-icon {
   font-size: 2rem;
   color: var(--p-primary-color);
+}
+
+.import-card.active .card-icon {
+  color: var(--p-primary-700);
+}
+
+.import-card.active strong {
+  color: var(--p-primary-900);
+}
+
+.import-card.active small {
+  color: var(--p-primary-700);
 }
 
 .import-card strong {

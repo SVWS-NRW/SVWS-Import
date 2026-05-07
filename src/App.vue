@@ -21,6 +21,14 @@
           {{ auth.schema }}@{{ shortUrl }}
         </span>
         <Button
+          :icon="isDark ? 'pi pi-sun' : 'pi pi-moon'"
+          size="small"
+          severity="secondary"
+          text
+          :aria-label="isDark ? 'Hell-Modus aktivieren' : 'Dunkel-Modus aktivieren'"
+          @click="toggleDark"
+        />
+        <Button
           label="Trennen"
           icon="pi pi-power-off"
           size="small"
@@ -30,6 +38,17 @@
         />
       </div>
     </nav>
+
+    <Button
+      v-if="!auth.isConnected"
+      :icon="isDark ? 'pi pi-sun' : 'pi pi-moon'"
+      size="small"
+      severity="secondary"
+      text
+      class="dark-mode-fab"
+      :aria-label="isDark ? 'Hell-Modus aktivieren' : 'Dunkel-Modus aktivieren'"
+      @click="toggleDark"
+    />
 
     <main class="app-main">
       <RouterView />
@@ -48,7 +67,9 @@ import Toast from 'primevue/toast'
 import { useAuthStore } from '@/stores/auth'
 import { useSchuelerStore } from '@/stores/schueler'
 import { useLehrerStore } from '@/stores/lehrer'
+import { useDarkMode } from '@/composables/useDarkMode'
 
+const { isDark, toggle: toggleDark } = useDarkMode()
 const auth = useAuthStore()
 const schuelerStore = useSchuelerStore()
 const lehrerStore = useLehrerStore()
@@ -156,5 +177,12 @@ html, body {
 
 .has-nav .app-main {
   overflow: auto;
+}
+
+.dark-mode-fab {
+  position: fixed;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 100;
 }
 </style>

@@ -45,7 +45,7 @@
     </Message>
 
     <ag-grid-vue
-      class="ag-theme-quartz data-table"
+      :class="[isDark ? 'ag-theme-quartz-dark' : 'ag-theme-quartz', 'data-table']"
       :rowData="store.rows"
       :columnDefs="columnDefs"
       :defaultColDef="defaultColDef"
@@ -72,6 +72,7 @@ import Message from 'primevue/message'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
 import { useSchuelerStore } from '@/stores/schueler'
+import { useDarkMode } from '@/composables/useDarkMode'
 import { type SchuelerImportRow } from '@/models/Schueler'
 import ImportStats from '@/components/ImportStats.vue'
 
@@ -80,6 +81,7 @@ ModuleRegistry.registerModules([ClientSideRowModelModule])
 const router = useRouter()
 const store = useSchuelerStore()
 const confirm = useConfirm()
+const { isDark } = useDarkMode()
 const uploadResult = ref<{ sent: number; failed: number } | null>(null)
 
 const defaultColDef: ColDef = {

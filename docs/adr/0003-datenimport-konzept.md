@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted — Extended by [ADR 0015](0015-import-ux-wizard.md)
 
 ## Kontext
 

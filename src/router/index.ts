@@ -20,6 +20,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/wizard',
+      name: 'wizard',
+      component: () => import('@/views/ImportWizardView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/schueler',
       name: 'schueler',
       component: () => import('@/views/SchuelerView.vue'),

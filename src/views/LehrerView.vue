@@ -89,18 +89,18 @@ const defaultColDef: ColDef = {
 
 const columnDefs: ColDef<LehrerImportRow>[] = [
   { field: 'kuerzel', headerName: 'Kürzel', width: 100,
-    cellStyle: (p) => p.data?._errors.some(e => e.includes('Kürzel')) ? { background: '#fee2e2' } : null },
+    cellStyle: (p) => p.data?._errors.some(e => e.includes('Kürzel')) ? { background: isDark.value ? '#7f1d1d' : '#fee2e2' } : null },
   { field: 'nachname', headerName: 'Nachname', flex: 1.5,
-    cellStyle: (p) => p.data?._errors.some(e => e.includes('Nachname')) ? { background: '#fee2e2' } : null },
+    cellStyle: (p) => p.data?._errors.some(e => e.includes('Nachname')) ? { background: isDark.value ? '#7f1d1d' : '#fee2e2' } : null },
   { field: 'vorname', headerName: 'Vorname', flex: 1.5,
-    cellStyle: (p) => p.data?._errors.some(e => e.includes('Vorname')) ? { background: '#fee2e2' } : null },
+    cellStyle: (p) => p.data?._errors.some(e => e.includes('Vorname')) ? { background: isDark.value ? '#7f1d1d' : '#fee2e2' } : null },
   { field: 'personalTyp', headerName: 'Typ', width: 130 },
   { field: 'anrede', headerName: 'Anrede', width: 100 },
   { field: 'titel', headerName: 'Titel', width: 90 },
   { field: 'geschlecht', headerName: 'Geschlecht', width: 110 },
   { field: 'geburtsdatum', headerName: 'Geburtsdatum', width: 140 },
   { field: 'emailDienstlich', headerName: 'E-Mail', flex: 2,
-    cellStyle: (p) => p.data?._errors.some(e => e.includes('E-Mail')) ? { background: '#fee2e2' } : null },
+    cellStyle: (p) => p.data?._errors.some(e => e.includes('E-Mail')) ? { background: isDark.value ? '#7f1d1d' : '#fee2e2' } : null },
   { field: 'telefon', headerName: 'Telefon', width: 140 },
   {
     headerName: 'Status',
@@ -163,6 +163,12 @@ function confirmClear(): void {
   })
 }
 </script>
+
+<style>
+.row-sent { opacity: 0.6; }
+.row-error { background-color: #fff5f5 !important; }
+.dark .row-error { background-color: #3b0c0c !important; }
+</style>
 
 <style scoped>
 .table-view {

@@ -28,7 +28,7 @@
     </div>
 
     <!-- Schritt-Inhalt -->
-    <div class="wizard-content">
+    <div class="wizard-content" :class="{ 'is-grid-step': wizardStore.currentStep === 'edit' }">
 
       <!-- Schritt 1: Modul & Datei wählen -->
       <template v-if="wizardStore.currentStep === 'upload'">
@@ -87,7 +87,7 @@
 
         <div class="preview-table-wrap">
           <DataTable
-            :value="wizardStore.rawData?.rows ?? []"
+            :value="wizardStore.rawData?.rows.slice(0, 50) ?? []"
             size="small"
             stripedRows
             tableStyle="width: max-content; min-width: 100%"
@@ -103,6 +103,38 @@
             </Column>
           </DataTable>
         </div>
+        <small v-if="(wizardStore.rawData?.totalRows ?? 0) > 50" class="preview-note">
+          Vorschau zeigt 50 von {{ wizardStore.rawData?.totalRows }} Zeilen.
+          Alle Zeilen werden importiert.
+        </small>
+      </template>
+
+      <!-- Schritt 3: Spalten-Mapping -->
+      <template v-else-if="wizardStore.currentStep === 'mapping'">
+        <StepColumnMapping
+          v-if="wizardStore.rawData && wizardStore.selectedModule"
+          :moduleId="wizardStore.selectedModule.id"
+          :rawColumns="wizardStore.rawData.columns"
+          :fields="wizardStore.selectedModule.fields"
+          :initialMapping="wizardStore.columnMapping"
+          @update:mapping="wizardStore.setColumnMapping"
+        />
+      </template>
+
+      <!-- Schritt 4: Daten prüfen & korrigieren -->
+      <template v-else-if="wizardStore.currentStep === 'edit'">
+        <StepDataPreview
+          v-if="wizardStore.selectedModule"
+          :module="wizardStore.selectedModule"
+        />
+      </template>
+
+      <!-- Schritt 5: Senden -->
+      <template v-else-if="wizardStore.currentStep === 'send'">
+        <StepSend
+          v-if="wizardStore.selectedModule"
+          :module="wizardStore.selectedModule"
+        />
       </template>
 
     </div>
@@ -144,6 +176,10 @@ import { useWizardStore } from '@/stores/wizardStore'
 import type { WizardStep } from '@/stores/wizardStore'
 import { importModules } from '@/schemas'
 import { parseRawFile } from '@/utils/rawParser'
+import { applyMapping } from '@/utils/applyMapping'
+import StepColumnMapping from '@/components/import/StepColumnMapping.vue'
+import StepDataPreview from '@/components/import/StepDataPreview.vue'
+import StepSend from '@/components/import/StepSend.vue'
 
 const STEPS: { key: WizardStep; label: string }[] = [
   { key: 'upload',  label: 'Datei & Modul' },
@@ -187,6 +223,14 @@ async function goNext(): Promise<void> {
     }
     return
   }
+  if (wizardStore.currentStep === 'mapping') {
+    const { rawData, columnMapping, selectedModule } = wizardStore
+    if (!rawData || !columnMapping || !selectedModule) return
+    wizardStore.setMappedRows(applyMapping(rawData, columnMapping, selectedModule))
+    wizardStore.advanceStep()
+    return
+  }
+
   wizardStore.advanceStep()
 }
 
@@ -295,6 +339,13 @@ function goBack(): void {
   overflow-x: hidden;
 }
 
+/* Im Grid-Schritt darf der Container nicht scrollen — AG Grid übernimmt das selbst */
+.wizard-content.is-grid-step {
+  overflow: hidden;
+  padding: 1rem 1.5rem;
+  gap: 0;
+}
+
 .content-title {
   margin: 0;
   font-size: 1.1rem;
@@ -314,6 +365,11 @@ function goBack(): void {
   align-items: center;
   gap: 0.5rem;
   flex-wrap: wrap;
+}
+
+.preview-note {
+  color: var(--p-text-muted-color);
+  font-size: 0.8rem;
 }
 
 .file-badge {

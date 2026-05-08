@@ -3,11 +3,18 @@ import type { SchuelerNeu, SchuelerImportRow } from '@/models/Schueler'
 import type { LehrerStammdaten, LehrerImportRow } from '@/models/Lehrer'
 import { schuelerImportToApi } from '@/models/Schueler'
 import { lehrerImportToApi } from '@/models/Lehrer'
+import type { ImportModule, MappedRow, ImportContext, EntityType } from '@/models/ImportSchema'
 
 export interface UploadResult {
   success: boolean
   id?: number
   error?: string
+}
+
+// Endpunkte je Entitätstyp — hier neue Module eintragen wenn der SVWS-Endpunkt bekannt ist
+const ENTITY_ENDPOINTS: Partial<Record<EntityType, string>> = {
+  schueler: '/schueler/create',
+  lehrer:   '/lehrer/create',
 }
 
 export async function testConnection(): Promise<boolean> {
@@ -18,6 +25,33 @@ export async function testConnection(): Promise<boolean> {
     return false
   }
 }
+
+/**
+ * Schickt eine gemappte Zeile über das jeweilige Modul-Schema an den SVWS-Server.
+ * Verwendet module.toApiPayload() zur Transformation und leitet an den richtigen Endpunkt.
+ */
+export async function sendMappedRow(
+  module: ImportModule,
+  row: MappedRow,
+  context: ImportContext,
+): Promise<UploadResult> {
+  if (!module.toApiPayload) {
+    return { success: false, error: `Modul "${module.id}" hat keine toApiPayload-Funktion` }
+  }
+  const endpoint = ENTITY_ENDPOINTS[module.entityType]
+  if (!endpoint) {
+    return { success: false, error: `Kein API-Endpunkt für Entitätstyp "${module.entityType}" konfiguriert` }
+  }
+  try {
+    const payload = module.toApiPayload(row, context)
+    const response = await getApiClient().post(endpoint, payload)
+    return { success: true, id: response.data?.id }
+  } catch (error: unknown) {
+    return { success: false, error: extractErrorMessage(error) }
+  }
+}
+
+// ── Veraltete, typenspezifische Funktionen (für SchuelerView / LehrerView) ──
 
 export async function createSchueler(
   row: SchuelerImportRow,

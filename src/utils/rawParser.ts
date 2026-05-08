@@ -76,7 +76,11 @@ export async function parseRawCsv(
         }
 
         const headerRow = firstRowIsHeader
-          ? allRows[0].map(c => String(c).trim())
+          ? allRows[0].map((c, i) => {
+              const s = String(c).trim()
+              // UTF-8 BOM (﻿) am Dateianfang landet im ersten Feld
+              return i === 0 ? s.replace(/^﻿/, '') : s
+            })
           : allRows[0].map((_, i) => `Spalte ${String.fromCharCode(65 + i)}`)
         const dataRows = firstRowIsHeader ? allRows.slice(1) : allRows
 

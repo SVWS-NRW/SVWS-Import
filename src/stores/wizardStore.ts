@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, shallowRef, computed } from 'vue'
 import type { ImportModule, MappedRow, ImportContext } from '@/models/ImportSchema'
 import type { ColumnMapping } from '@/models/ColumnMapping'
 import type { RawImportData } from '@/models/RawImportData'
@@ -11,9 +11,10 @@ const STEP_ORDER: WizardStep[] = ['upload', 'preview', 'mapping', 'edit', 'send'
 export const useWizardStore = defineStore('wizard', () => {
   const currentStep    = ref<WizardStep>('upload')
   const selectedModule = ref<ImportModule | null>(null)
-  const rawData        = ref<RawImportData | null>(null)
+  // shallowRef: Vue DevTools serialisiert nur die Referenz, nicht 10.000+ Zeilen tief
+  const rawData        = shallowRef<RawImportData | null>(null)
   const columnMapping  = ref<ColumnMapping | null>(null)
-  const mappedRows     = ref<MappedRow[]>([])
+  const mappedRows     = shallowRef<MappedRow[]>([])
   const context        = ref<ImportContext>({})
   const uploading      = ref(false)
   const completedSteps = ref<Set<WizardStep>>(new Set())
@@ -100,7 +101,9 @@ export const useWizardStore = defineStore('wizard', () => {
   function updateRow(id: string, patch: Partial<MappedRow>): void {
     const idx = mappedRows.value.findIndex(r => r._id === id)
     if (idx !== -1) {
-      mappedRows.value[idx] = { ...mappedRows.value[idx], ...patch }
+      const updated = [...mappedRows.value]
+      updated[idx] = { ...updated[idx], ...patch }
+      mappedRows.value = updated
     }
   }
 
@@ -111,12 +114,14 @@ export const useWizardStore = defineStore('wizard', () => {
   function markSent(id: string, serverError?: string): void {
     const idx = mappedRows.value.findIndex(r => r._id === id)
     if (idx !== -1) {
-      mappedRows.value[idx] = {
-        ...mappedRows.value[idx],
+      const updated = [...mappedRows.value]
+      updated[idx] = {
+        ...updated[idx],
         _sent: !serverError,
         _serverError: serverError,
         _errors: serverError ? [serverError] : [],
       }
+      mappedRows.value = updated
     }
   }
 

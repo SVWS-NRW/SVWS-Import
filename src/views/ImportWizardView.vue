@@ -85,22 +85,24 @@
           </div>
         </div>
 
-        <DataTable
-          :value="wizardStore.rawData?.rows ?? []"
-          size="small"
-          stripedRows
-          tableStyle="min-width: max-content"
-          class="preview-table"
-        >
-          <Column
-            v-for="col in wizardStore.rawData?.columns ?? []"
-            :key="col.index"
-            :header="col.name"
-            style="min-width: 120px"
+        <div class="preview-table-wrap">
+          <DataTable
+            :value="wizardStore.rawData?.rows ?? []"
+            size="small"
+            stripedRows
+            tableStyle="width: max-content; min-width: 100%"
+            class="preview-table"
           >
-            <template #body="{ data }">{{ data[col.name] }}</template>
-          </Column>
-        </DataTable>
+            <Column
+              v-for="col in wizardStore.rawData?.columns ?? []"
+              :key="col.index"
+              :header="col.name"
+              style="min-width: 120px"
+            >
+              <template #body="{ data }">{{ data[col.name] }}</template>
+            </Column>
+          </DataTable>
+        </div>
       </template>
 
     </div>
@@ -289,7 +291,8 @@ function goBack(): void {
   flex-direction: column;
   gap: 1.25rem;
   padding: 1.5rem 2rem;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .content-title {
@@ -321,12 +324,13 @@ function goBack(): void {
   color: var(--p-text-muted-color);
 }
 
-/* Sticky column headers while wizard-content scrolls vertically */
+.preview-table-wrap {
+  overflow-x: auto;
+  min-width: 0;
+}
 
-.preview-table :deep(thead tr th) {
-  position: sticky;
-  top: 0;
-  z-index: 1;
+.preview-table-wrap :deep(.p-datatable-table-container) {
+  overflow: visible !important;
 }
 
 /* Modul-Karten */

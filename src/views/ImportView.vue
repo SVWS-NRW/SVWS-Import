@@ -18,6 +18,13 @@
           <small>Lehrkräfte anlegen</small>
         </div>
       </div>
+      <div class="import-card wizard-card" @click="router.push({ name: 'wizard' })">
+        <i class="pi pi-list-check card-icon" />
+        <div>
+          <strong>Import-Assistent</strong>
+          <small>Geführter Import Schritt für Schritt</small>
+        </div>
+      </div>
     </div>
 
     <div class="upload-area">
@@ -165,8 +172,12 @@ h2 {
 
 .import-cards {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1rem;
+}
+
+.wizard-card {
+  border-style: dashed;
 }
 
 .import-card {

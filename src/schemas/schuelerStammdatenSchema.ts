@@ -1,4 +1,9 @@
 import type { ImportModule, MappedRow, ImportContext } from '@/models/ImportSchema'
+
+function resolveNationalitaet(raw: string, context: ImportContext): string {
+  if (!raw) return ''
+  return context.kataloge?.nationalitaeten?.get(raw) ?? raw
+}
 import type { SchuelerNeu, Geschlecht, SchuelerStatus } from '@/models/Schueler'
 import { normalisiereDatum } from '@/utils/csvParser'
 
@@ -94,7 +99,7 @@ export const schuelerStammdatenSchema: ImportModule = {
         'staatsangehoerigkeit', 'staatsangehörigkeit', 'nationalität', 'nationality', 'nation',
         '1. staatsang.', '1 staatsang', '1. staatsangehörigkeit', 'staatsang',
       ],
-      hint: 'ISO-3166-Alpha-2 Code (z.B. DE, TR, PL) oder Klartextbezeichnung',
+      hint: 'Numerischer Schlüssel (z.B. 000) oder ISO-3-Kürzel (z.B. DEU)',
     },
     {
       key: 'religionID',
@@ -259,6 +264,7 @@ export const schuelerStammdatenSchema: ImportModule = {
       aufnahmedatum: normalisiereDatum(str('aufnahmedatum')) || null,
       beginnBildungsgang: normalisiereDatum(str('beginnBildungsgang')) || null,
       dauerBildungsgang: null,
+      staatsangehoerigkeitID: resolveNationalitaet(str('staatsangehoerigkeitID'), context) || null,
       idReligion: null,
       idSchuljahresabschnitt: context.idSchuljahresabschnitt ?? null,
       idJahrgang: null,

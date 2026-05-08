@@ -1,4 +1,9 @@
-import type { ImportModule, MappedRow } from '@/models/ImportSchema'
+import type { ImportModule, MappedRow, ImportContext } from '@/models/ImportSchema'
+
+function resolveNationalitaet(raw: string, context: ImportContext): string {
+  if (!raw) return ''
+  return context.kataloge?.nationalitaeten?.get(raw) ?? raw
+}
 import type { LehrerStammdaten, PersonalTyp } from '@/models/Lehrer'
 import { normalisiereDatum } from '@/utils/csvParser'
 
@@ -99,7 +104,8 @@ export const lehrerStammdatenSchema: ImportModule = {
       category: 'Personaldaten',
       required: false,
       type: 'string',
-      aliases: ['staatsangehoerigkeit', 'staatsangehörigkeit', 'nationalität', 'nationality'],
+      aliases: ['staatsangehoerigkeit', 'staatsangehörigkeit', 'nationalität', 'nationality', 'staatsang'],
+      hint: 'Numerischer Schlüssel (z.B. 000) oder ISO-3-Kürzel (z.B. DEU)',
     },
     // ── Beschäftigung ─────────────────────────────────────────────────────────
     {
@@ -219,7 +225,7 @@ export const lehrerStammdatenSchema: ImportModule = {
     },
   ],
 
-  toApiPayload(row: MappedRow): LehrerStammdaten {
+  toApiPayload(row: MappedRow, context: ImportContext): LehrerStammdaten {
     const str = (key: string) => String(row[key] ?? '').trim()
 
     const geschlechtMap: Record<string, number> = {
@@ -247,7 +253,7 @@ export const lehrerStammdatenSchema: ImportModule = {
       vorname: str('vorname'),
       geschlecht: geschlechtMap[rawGeschlecht] ?? null,
       geburtsdatum: normalisiereDatum(str('geburtsdatum')) || null,
-      staatsangehoerigkeitID: str('staatsangehoerigkeitID') || null,
+      staatsangehoerigkeitID: resolveNationalitaet(str('staatsangehoerigkeitID'), context) || null,
       strassenname: str('strassenname') || null,
       hausnummer: str('hausnummer') || null,
       hausnummerZusatz: str('hausnummerZusatz') || null,

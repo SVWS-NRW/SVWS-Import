@@ -13,6 +13,7 @@ export interface SchuelerNeu {
   aufnahmedatum: string | null
   beginnBildungsgang: string | null
   dauerBildungsgang: number | null
+  staatsangehoerigkeitID: string | null
   idReligion: number | null
   idSchuljahresabschnitt: number | null
   idJahrgang: number | null
@@ -50,6 +51,7 @@ export function schuelerImportToApi(row: SchuelerImportRow, idSchuljahresabschni
     aufnahmedatum: row.aufnahmedatum || null,
     beginnBildungsgang: null,
     dauerBildungsgang: null,
+    staatsangehoerigkeitID: null,
     idReligion: null,
     idSchuljahresabschnitt,
     idJahrgang: null,

@@ -28,8 +28,14 @@ export interface FieldDefinition {
   validate?: (value: string) => string | null
 }
 
+export interface ImportKataloge {
+  /** schluessel (codeDEStatis, z.B. "000") → kuerzel (ISO-3, z.B. "DEU") */
+  nationalitaeten?: Map<string, string>
+}
+
 export interface ImportContext {
   idSchuljahresabschnitt?: number
+  kataloge?: ImportKataloge
 }
 
 // MappedRow: meta-Felder mit festen Typen + dynamische Datenfelder als unknown

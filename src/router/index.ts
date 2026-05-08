@@ -1,5 +1,10 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import ConnectView from '@/views/ConnectView.vue'
+import ImportView from '@/views/ImportView.vue'
+import ImportWizardView from '@/views/ImportWizardView.vue'
+import SchuelerView from '@/views/SchuelerView.vue'
+import LehrerView from '@/views/LehrerView.vue'
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -11,30 +16,30 @@ const router = createRouter({
     {
       path: '/connect',
       name: 'connect',
-      component: () => import('@/views/ConnectView.vue'),
+      component: ConnectView,
     },
     {
       path: '/import',
       name: 'import',
-      component: () => import('@/views/ImportView.vue'),
+      component: ImportView,
       meta: { requiresAuth: true },
     },
     {
       path: '/wizard',
       name: 'wizard',
-      component: () => import('@/views/ImportWizardView.vue'),
+      component: ImportWizardView,
       meta: { requiresAuth: true },
     },
     {
       path: '/schueler',
       name: 'schueler',
-      component: () => import('@/views/SchuelerView.vue'),
+      component: SchuelerView,
       meta: { requiresAuth: true },
     },
     {
       path: '/lehrer',
       name: 'lehrer',
-      component: () => import('@/views/LehrerView.vue'),
+      component: LehrerView,
       meta: { requiresAuth: true },
     },
   ],

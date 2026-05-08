@@ -1,9 +1,22 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
 
+function removeModuleType(): Plugin {
+  return {
+    name: 'remove-module-type',
+    apply: 'build',
+    transformIndexHtml(html) {
+      return html
+        .replace(/<script type="module"/g, '<script defer')
+        .replace(/ crossorigin/g, '')
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [vue(), removeModuleType()],
+  base: './',
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
@@ -14,16 +27,7 @@ export default defineConfig({
     assetsDir: 'assets',
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-vue': ['vue', 'vue-router', 'pinia'],
-          'vendor-primevue': ['primevue', '@primevue/themes'],
-          'vendor-aggrid': [
-            '@ag-grid-community/core',
-            '@ag-grid-community/client-side-row-model',
-            '@ag-grid-community/vue3',
-          ],
-          'vendor-parse': ['papaparse', 'read-excel-file/browser', 'axios'],
-        },
+        format: 'iife',
       },
     },
   },

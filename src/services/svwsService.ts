@@ -76,6 +76,11 @@ export async function createLehrer(row: LehrerImportRow): Promise<UploadResult> 
   }
 }
 
+export async function fetchForExport(endpoint: string): Promise<Record<string, unknown>[]> {
+  const response = await getApiClient().get(endpoint)
+  return Array.isArray(response.data) ? response.data : []
+}
+
 function extractErrorMessage(error: unknown): string {
   if (error && typeof error === 'object' && 'response' in error) {
     const axiosError = error as { response?: { status: number; data?: unknown } }

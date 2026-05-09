@@ -1,6 +1,6 @@
 export type FieldType = 'string' | 'date' | 'number' | 'enum' | 'boolean'
 
-export type EntityType = 'schueler' | 'lehrer' | 'klassen' | 'kurse'
+export type EntityType = 'schueler' | 'lehrer' | 'klassen' | 'kurse' | 'jahrgaenge' | 'faecher' | 'betriebe'
 
 export type ModuleType =
   | 'stammdaten'
@@ -59,4 +59,6 @@ export interface ImportModule {
   /** IDs von Modulen, die vor diesem importiert sein müssen (z.B. Stammdaten vor Lernabschnitt) */
   requiredModules?: string[]
   toApiPayload?: (row: MappedRow, context: ImportContext) => unknown
+  /** Modul noch nicht implementiert — Kachel wird als Vorschau angezeigt */
+  comingSoon?: boolean
 }

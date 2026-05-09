@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/auth'
 import ConnectView from '@/views/ConnectView.vue'
 import ImportView from '@/views/ImportView.vue'
 import ImportWizardView from '@/views/ImportWizardView.vue'
+import ExportView from '@/views/ExportView.vue'
 import SchuelerView from '@/views/SchuelerView.vue'
 import LehrerView from '@/views/LehrerView.vue'
 
@@ -28,6 +29,12 @@ const router = createRouter({
       path: '/wizard',
       name: 'wizard',
       component: ImportWizardView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/export',
+      name: 'export',
+      component: ExportView,
       meta: { requiresAuth: true },
     },
     {

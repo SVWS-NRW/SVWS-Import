@@ -27,6 +27,22 @@
       </div>
     </div>
 
+    <div class="import-cards coming-soon-cards">
+      <div
+        v-for="mod in comingSoonModules"
+        :key="mod.id"
+        class="import-card coming-soon"
+        title="Noch nicht verfügbar"
+      >
+        <i :class="[mod.icon, 'card-icon']" />
+        <div>
+          <strong>{{ mod.label }}</strong>
+          <small>{{ mod.description }}</small>
+          <span class="coming-soon-badge">In Vorbereitung</span>
+        </div>
+      </div>
+    </div>
+
     <div class="upload-area">
       <FileUpload
         ref="fileUploadRef"
@@ -89,6 +105,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { importModules } from '@/schemas'
 import Button from 'primevue/button'
 import FileUpload from 'primevue/fileupload'
 import Message from 'primevue/message'
@@ -101,6 +118,8 @@ import { parseSchuelerXlsx, parseLehrerXlsx } from '@/utils/xlsxParser'
 const router = useRouter()
 const schuelerStore = useSchuelerStore()
 const lehrerStore = useLehrerStore()
+
+const comingSoonModules = importModules.filter(m => m.comingSoon)
 
 const dataType = ref<'schueler' | 'lehrer'>('schueler')
 const selectedFile = ref<File | null>(null)
@@ -178,6 +197,35 @@ h2 {
 
 .wizard-card {
   border-style: dashed;
+}
+
+.coming-soon-cards {
+  margin-top: -0.25rem;
+}
+
+.import-card.coming-soon {
+  opacity: 0.55;
+  cursor: not-allowed;
+  border-style: dashed;
+}
+
+.import-card.coming-soon:hover {
+  border-color: var(--p-surface-border);
+}
+
+.coming-soon-badge {
+  display: inline-block;
+  margin-top: 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--p-text-muted-color);
+  background: var(--p-surface-200, #e5e7eb);
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+}
+
+:global(.dark) .coming-soon-badge {
+  background: var(--p-surface-700, #374151);
 }
 
 .import-card {

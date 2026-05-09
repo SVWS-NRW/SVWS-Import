@@ -36,7 +36,7 @@
 
         <div class="module-grid">
           <div
-            v-for="mod in importModules"
+            v-for="mod in importModules.filter(m => !m.comingSoon)"
             :key="mod.id"
             class="module-card"
             :class="{ active: wizardStore.selectedModule?.id === mod.id }"

@@ -6,6 +6,9 @@
         <RouterLink :to="{ name: 'import' }" class="nav-link">
           <i class="pi pi-file-import" /> Import
         </RouterLink>
+        <RouterLink :to="{ name: 'export' }" class="nav-link">
+          <i class="pi pi-file-export" /> Export
+        </RouterLink>
         <RouterLink :to="{ name: 'schueler' }" class="nav-link" v-if="schuelerStore.totalCount > 0">
           <i class="pi pi-users" /> Schüler
           <Badge :value="schuelerStore.totalCount" severity="secondary" />

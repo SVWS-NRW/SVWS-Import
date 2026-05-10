@@ -7,6 +7,5 @@ export const klassenSchema: ImportModule = {
   label: 'Klassen',
   description: 'Klassen anlegen: Bezeichnung, Jahrgang, Klassenleitung',
   icon: 'pi pi-sitemap',
-  comingSoon: true,
   fields: [],
 }

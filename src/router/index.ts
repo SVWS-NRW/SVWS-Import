@@ -6,6 +6,7 @@ import ImportWizardView from '@/views/ImportWizardView.vue'
 import ExportView from '@/views/ExportView.vue'
 import SchuelerView from '@/views/SchuelerView.vue'
 import LehrerView from '@/views/LehrerView.vue'
+import KlassenView from '@/views/KlassenView.vue'
 import HelpView from '@/views/HelpView.vue'
 
 const router = createRouter({
@@ -48,6 +49,12 @@ const router = createRouter({
       path: '/lehrer',
       name: 'lehrer',
       component: LehrerView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/klassen',
+      name: 'klassen',
+      component: KlassenView,
       meta: { requiresAuth: true },
     },
     {

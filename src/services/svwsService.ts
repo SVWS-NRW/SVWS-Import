@@ -1,8 +1,10 @@
 import { getApiClient } from './apiClient'
 import type { SchuelerNeu, SchuelerImportRow } from '@/models/Schueler'
 import type { LehrerStammdaten, LehrerImportRow } from '@/models/Lehrer'
+import type { KlasseImportRow, KlasseDetails } from '@/models/Klassen'
 import { schuelerImportToApi } from '@/models/Schueler'
 import { lehrerImportToApi } from '@/models/Lehrer'
+import { klasseImportToApi } from '@/models/Klassen'
 import type { ImportModule, MappedRow, ImportContext, EntityType } from '@/models/ImportSchema'
 
 export interface UploadResult {
@@ -15,6 +17,7 @@ export interface UploadResult {
 const ENTITY_ENDPOINTS: Partial<Record<EntityType, string>> = {
   schueler: '/schueler/create',
   lehrer:   '/lehrer/create',
+  klassen:  '/klassen/create',
 }
 
 export async function testConnection(): Promise<boolean> {
@@ -71,6 +74,21 @@ export async function createLehrer(row: LehrerImportRow): Promise<UploadResult> 
     const payload: LehrerStammdaten = lehrerImportToApi(row)
     const response = await getApiClient().post('/lehrer/create', payload)
     return { success: true, id: response.data.id }
+  } catch (error: unknown) {
+    return { success: false, error: extractErrorMessage(error) }
+  }
+}
+
+export async function fetchKlassenDetails(idSchuljahresabschnitt: number): Promise<KlasseDetails[]> {
+  const response = await getApiClient().get(`/klassen/details/abschnitt/${idSchuljahresabschnitt}`)
+  return Array.isArray(response.data) ? response.data : []
+}
+
+export async function createKlasse(row: KlasseImportRow, idSchuljahresabschnitt: number): Promise<UploadResult> {
+  try {
+    const payload = klasseImportToApi(row, idSchuljahresabschnitt)
+    const response = await getApiClient().post('/klassen/create', payload)
+    return { success: true, id: response.data?.id }
   } catch (error: unknown) {
     return { success: false, error: extractErrorMessage(error) }
   }

@@ -38,6 +38,16 @@
       </div>
     </div>
 
+    <div class="import-cards">
+      <div class="import-card" :class="{ active: dataType === 'klassen' }" @click="dataType = 'klassen'">
+        <i class="pi pi-sitemap card-icon" />
+        <div>
+          <strong>Klassen</strong>
+          <small>Klassen anlegen</small>
+        </div>
+      </div>
+    </div>
+
     <div class="import-cards coming-soon-cards">
       <div
         v-for="mod in comingSoonModules"
@@ -100,16 +110,18 @@ import FileUpload from 'primevue/fileupload'
 import Message from 'primevue/message'
 import { useSchuelerStore } from '@/stores/schueler'
 import { useLehrerStore } from '@/stores/lehrer'
-import { parseSchuelerCsv, parseLehrerCsv } from '@/utils/csvParser'
+import { useKlassenStore } from '@/stores/klassen'
+import { parseSchuelerCsv, parseLehrerCsv, parseKlassenCsv } from '@/utils/csvParser'
 import { parseSchuelerXlsx, parseLehrerXlsx } from '@/utils/xlsxParser'
 
 const router = useRouter()
 const schuelerStore = useSchuelerStore()
 const lehrerStore = useLehrerStore()
+const klassenStore = useKlassenStore()
 
 const comingSoonModules = importModules.filter(m => m.comingSoon)
 
-const dataType = ref<'schueler' | 'lehrer'>('schueler')
+const dataType = ref<'schueler' | 'lehrer' | 'klassen'>('schueler')
 const selectedFile = ref<File | null>(null)
 const parsing = ref(false)
 const parseError = ref('')
@@ -140,7 +152,7 @@ async function handleImport(): Promise<void> {
       schuelerStore.setRows(rows)
       schuelerStore.validateAll()
       router.push({ name: 'schueler' })
-    } else {
+    } else if (dataType.value === 'lehrer') {
       const rows = isXlsx
         ? await parseLehrerXlsx(file)
         : await parseLehrerCsv(file)
@@ -148,6 +160,12 @@ async function handleImport(): Promise<void> {
       lehrerStore.setRows(rows)
       lehrerStore.validateAll()
       router.push({ name: 'lehrer' })
+    } else {
+      const rows = await parseKlassenCsv(file)
+      if (rows.length === 0) throw new Error('Keine Datensätze gefunden')
+      klassenStore.setRows(rows)
+      klassenStore.validateAll()
+      router.push({ name: 'klassen' })
     }
   } catch (e) {
     parseError.value = e instanceof Error ? e.message : 'Fehler beim Einlesen der Datei'

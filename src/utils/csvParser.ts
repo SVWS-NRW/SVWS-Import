@@ -1,6 +1,7 @@
 import Papa from 'papaparse'
 import { type SchuelerImportRow } from '@/models/Schueler'
 import { type LehrerImportRow } from '@/models/Lehrer'
+import { type KlasseImportRow } from '@/models/Klassen'
 import { generateId } from './idHelper'
 
 // Normalisiert Spaltennamen: Leerzeichen/Groß-Klein entfernen
@@ -72,7 +73,7 @@ export async function parseLehrerCsv(file: File): Promise<LehrerImportRow[]> {
             _valid: true,
             _errors: [],
             _sent: false,
-            kuerzel: get(m, 'kuerzel', 'abbreviation', 'kürzel'),
+            kuerzel: get(m, 'kuerzel', 'abbreviation', 'kürzel', 'internkrz', 'kurzzeichen', 'kz'),
             nachname: get(m, 'nachname', 'name', 'familienname'),
             vorname: get(m, 'vorname', 'firstname'),
             personalTyp: get(m, 'personaltyp', 'typ', 'type') || 'LEHRKRAFT',
@@ -82,6 +83,44 @@ export async function parseLehrerCsv(file: File): Promise<LehrerImportRow[]> {
             geschlecht: get(m, 'geschlecht', 'gender'),
             emailDienstlich: get(m, 'emaildienstlich', 'email', 'mail', 'e-mail'),
             telefon: get(m, 'telefon', 'phone', 'tel'),
+          }
+          return row
+        })
+        resolve(rows)
+      },
+      error(err) {
+        reject(new Error(`CSV-Fehler: ${err.message}`))
+      },
+    })
+  })
+}
+
+export async function parseKlassenCsv(file: File): Promise<KlasseImportRow[]> {
+  return new Promise((resolve, reject) => {
+    Papa.parse<Record<string, string>>(file, {
+      header: true,
+      skipEmptyLines: true,
+      delimiter: /\.dat$/i.test(file.name) ? '|' : '',
+      complete(results) {
+        const rows: KlasseImportRow[] = results.data.map(record => {
+          const m = buildLookup(record)
+          const row: KlasseImportRow = {
+            _id: generateId(),
+            _valid: true,
+            _errors: [],
+            _sent: false,
+            kuerzel:          get(m, 'internbez', 'kuerzel', 'kürzel', 'bezeichnung'),
+            kuerzelStatistik: get(m, 'statistikbez', 'kuerzelstatistik', 'statistikbezeichnung'),
+            beschreibung:     get(m, 'sonstigebez', 'beschreibung', 'sonstigebezeichnung'),
+            jahrgang:         get(m, 'jahrgang', 'jahrgangsstufe', 'jg'),
+            folgeklasse:      get(m, 'folgeklasse'),
+            klassenlehrer:    get(m, 'klassenlehrer', 'klassenlehrkraft', 'kl'),
+            orgForm:          get(m, 'orgform', 'organisationsform'),
+            klassenart:       get(m, 'klassenart'),
+            gliederung:       get(m, 'gliederung'),
+            fachklasse:       get(m, 'fachklasse'),
+            jahr:             get(m, 'jahr', 'schuljahr'),
+            abschnitt:        get(m, 'abschnitt'),
           }
           return row
         })

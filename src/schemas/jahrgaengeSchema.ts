@@ -7,6 +7,5 @@ export const jahrgaengeSchema: ImportModule = {
   label: 'Jahrgänge',
   description: 'Jahrgangsstufen anlegen: Kürzel, Bezeichnung, Sortierung',
   icon: 'pi pi-calendar',
-  comingSoon: true,
   fields: [],
 }

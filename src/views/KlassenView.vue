@@ -19,8 +19,22 @@
       />
       <div class="header-actions">
         <div class="abschnitt-field">
-          <label>Schuljahresabschnitt-ID</label>
-          <InputNumber v-model="store.idSchuljahresabschnitt" :min="1" style="width: 130px" />
+          <label>Schuljahresabschnitt</label>
+          <Select
+            v-if="schuleStore.loaded"
+            v-model="store.idSchuljahresabschnitt"
+            :options="schuleStore.abschnitteOptions"
+            optionLabel="label"
+            optionValue="id"
+            placeholder="Abschnitt wählen"
+            style="width: 220px"
+          />
+          <InputNumber
+            v-else
+            v-model="store.idSchuljahresabschnitt"
+            :min="1"
+            style="width: 130px"
+          />
         </div>
         <Button
           label="DB laden"
@@ -58,7 +72,7 @@
     <div class="section">
       <h3 class="section-title">
         Vorhandene Klassen
-        <span class="section-badge">Abschnitt-ID {{ store.idSchuljahresabschnitt }}</span>
+        <span class="section-badge">{{ schuleStore.labelForId(store.idSchuljahresabschnitt) }}</span>
       </h3>
       <ag-grid-vue
         :class="[isDark ? 'ag-theme-quartz-dark' : 'ag-theme-quartz', 'existing-table']"
@@ -94,17 +108,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { AgGridVue } from '@ag-grid-community/vue3'
 import { ClientSideRowModelModule } from '@ag-grid-community/client-side-row-model'
 import { ModuleRegistry, type ColDef, type GetRowIdParams, type CellValueChangedEvent } from '@ag-grid-community/core'
 import Button from 'primevue/button'
 import InputNumber from 'primevue/inputnumber'
+import Select from 'primevue/select'
 import Message from 'primevue/message'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
 import { useKlassenStore } from '@/stores/klassen'
+import { useSchuleStore } from '@/stores/schule'
+import { useJahrgaengeStore } from '@/stores/jahrgaenge'
 import { type KlasseImportRow } from '@/models/Klassen'
 import ImportStats from '@/components/ImportStats.vue'
 import { useDarkMode } from '@/composables/useDarkMode'
@@ -113,8 +130,22 @@ ModuleRegistry.registerModules([ClientSideRowModelModule])
 
 const router = useRouter()
 const store = useKlassenStore()
+const schuleStore = useSchuleStore()
+const jahrgaengeStore = useJahrgaengeStore()
 const confirm = useConfirm()
 const { isDark } = useDarkMode()
+
+onMounted(async () => {
+  if (schuleStore.loaded) {
+    const defaultId = schuleStore.aktuellerAbschnittId ?? schuleStore.abschnitteOptions[0]?.id ?? null
+    if (defaultId !== null) store.idSchuljahresabschnitt = defaultId
+  }
+  // Jahrgänge laden und Kürzel → ID auflösen
+  if (jahrgaengeStore.existingJahrgaenge.length === 0) {
+    await jahrgaengeStore.loadExisting()
+  }
+  store.resolveJahrgaenge(jahrgaengeStore.existingJahrgaenge)
+})
 const uploadResult = ref<{ sent: number; failed: number } | null>(null)
 const loadError = ref('')
 
@@ -145,7 +176,18 @@ const importColDefs: ColDef<KlasseImportRow>[] = [
     cellStyle: (p) => p.data?._errors.some(e => e.includes('Kürzel')) ? { background: isDark.value ? '#7f1d1d' : '#fee2e2' } : null },
   { field: 'kuerzelStatistik', headerName: 'Statistik-Kz.', width: 120 },
   { field: 'beschreibung',     headerName: 'Bezeichnung',   flex: 1.5 },
-  { field: 'jahrgang',         headerName: 'Jahrgang',      width: 100 },
+  {
+    field: 'jahrgang',
+    headerName: 'Jahrgang',
+    width: 140,
+    cellStyle: (p) => p.data?._errors.some(e => e.includes('Jahrgang')) ? { background: isDark.value ? '#7f1d1d' : '#fee2e2' } : null,
+    cellRenderer: (params: { data: KlasseImportRow }) => {
+      const { jahrgang, idJahrgang } = params.data
+      if (!jahrgang) return '<span style="color:#9ca3af">—</span>'
+      if (idJahrgang !== null) return `<span style="color:#22c55e" title="ID: ${idJahrgang}">${jahrgang} <small style="opacity:.7">→ ${idJahrgang}</small></span>`
+      return `<span style="color:#f59e0b" title="Kein passender Jahrgang in der DB">${jahrgang} ⚠</span>`
+    },
+  },
   { field: 'folgeklasse',      headerName: 'Folgeklasse',   width: 120 },
   { field: 'klassenlehrer',    headerName: 'Klassenlehrer', width: 130 },
   { field: 'orgForm',          headerName: 'Org.Form',      width: 100 },
@@ -200,6 +242,7 @@ async function handleLoadExisting(): Promise<void> {
   loadError.value = ''
   const result = await store.loadExisting()
   if (result.error) loadError.value = result.error
+  store.resolveJahrgaenge(jahrgaengeStore.existingJahrgaenge)
 }
 
 async function doUpload(): Promise<void> {
@@ -211,12 +254,18 @@ async function doUpload(): Promise<void> {
 }
 
 async function handleUploadAll(): Promise<void> {
-  if (store.fileJahr) {
+  const selected = schuleStore.abschnittForId(store.idSchuljahresabschnitt)
+  const mismatch = selected && store.fileJahr && (
+    selected.schuljahr !== parseInt(store.fileJahr) ||
+    selected.abschnitt !== parseInt(store.fileAbschnitt)
+  )
+  if (mismatch) {
+    const fileLabel = `${store.fileJahr}/${String(parseInt(store.fileJahr) + 1).slice(-2)} – ${store.fileAbschnitt === '1' ? '1. Halbjahr' : '2. Halbjahr'}`
     confirm.require({
-      message: `Die Importdatei enthält Klassen für Schuljahr ${store.fileJahr}, Abschnitt ${store.fileAbschnitt}. Passt das zum gewählten Schuljahresabschnitt (ID: ${store.idSchuljahresabschnitt})?`,
-      header: 'Schuljahresabschnitt bestätigen',
+      message: `Die Importdatei enthält Klassen für ${fileLabel}, der gewählte Abschnitt ist aber „${schuleStore.labelForId(store.idSchuljahresabschnitt)}". Trotzdem importieren?`,
+      header: 'Abschnitt stimmt nicht überein',
       icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Ja, importieren',
+      acceptLabel: 'Ja, trotzdem importieren',
       rejectLabel: 'Abbrechen',
       accept: doUpload,
     })

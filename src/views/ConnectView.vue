@@ -75,12 +75,14 @@
 import { reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useSchuleStore } from '@/stores/schule'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 
 const auth = useAuthStore()
+const schuleStore = useSchuleStore()
 const router = useRouter()
 
 const form = reactive({
@@ -95,6 +97,7 @@ const isFormValid = computed(() =>
 )
 
 async function handleConnect(): Promise<void> {
+  schuleStore.reset()
   const ok = await auth.connect({
     baseUrl: form.baseUrl.trim().replace(/\/$/, ''),
     schema: form.schema.trim(),
@@ -103,6 +106,7 @@ async function handleConnect(): Promise<void> {
   })
   if (ok) {
     form.password = ''
+    await schuleStore.fetch()
     router.push({ name: 'import' })
   }
 }

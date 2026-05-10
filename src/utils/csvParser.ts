@@ -2,6 +2,7 @@ import Papa from 'papaparse'
 import { type SchuelerImportRow } from '@/models/Schueler'
 import { type LehrerImportRow } from '@/models/Lehrer'
 import { type KlasseImportRow } from '@/models/Klassen'
+import { type JahrgangImportRow } from '@/models/Jahrgaenge'
 import { generateId } from './idHelper'
 
 // Normalisiert Spaltennamen: Leerzeichen/Groß-Klein entfernen
@@ -113,6 +114,7 @@ export async function parseKlassenCsv(file: File): Promise<KlasseImportRow[]> {
             kuerzelStatistik: get(m, 'statistikbez', 'kuerzelstatistik', 'statistikbezeichnung'),
             beschreibung:     get(m, 'sonstigebez', 'beschreibung', 'sonstigebezeichnung'),
             jahrgang:         get(m, 'jahrgang', 'jahrgangsstufe', 'jg'),
+            idJahrgang:       null,
             folgeklasse:      get(m, 'folgeklasse'),
             klassenlehrer:    get(m, 'klassenlehrer', 'klassenlehrkraft', 'kl'),
             orgForm:          get(m, 'orgform', 'organisationsform'),
@@ -123,6 +125,34 @@ export async function parseKlassenCsv(file: File): Promise<KlasseImportRow[]> {
             abschnitt:        get(m, 'abschnitt'),
           }
           return row
+        })
+        resolve(rows)
+      },
+      error(err) {
+        reject(new Error(`CSV-Fehler: ${err.message}`))
+      },
+    })
+  })
+}
+
+export async function parseJahrgaengeCsv(file: File): Promise<JahrgangImportRow[]> {
+  return new Promise((resolve, reject) => {
+    Papa.parse<Record<string, string>>(file, {
+      header: true,
+      skipEmptyLines: true,
+      delimiter: /\.dat$/i.test(file.name) ? '|' : '',
+      complete(results) {
+        const rows: JahrgangImportRow[] = results.data.map(record => {
+          const m = buildLookup(record)
+          return {
+            _id: generateId(),
+            _valid: true,
+            _errors: [],
+            _sent: false,
+            kuerzel:          get(m, 'internkrz', 'kuerzel', 'kürzel', 'jahrgang', 'jg'),
+            kuerzelStatistik: get(m, 'statistikkrz', 'kuerzelstatistik', 'statistikkuerzel'),
+            gliederung:       get(m, 'gliederung'),
+          }
         })
         resolve(rows)
       },

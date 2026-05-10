@@ -2,9 +2,12 @@ import { getApiClient } from './apiClient'
 import type { SchuelerNeu, SchuelerImportRow } from '@/models/Schueler'
 import type { LehrerStammdaten, LehrerImportRow } from '@/models/Lehrer'
 import type { KlasseImportRow, KlasseDetails } from '@/models/Klassen'
+import type { JahrgangImportRow, JahrgangDetails } from '@/models/Jahrgaenge'
+import type { SchuleStammdaten } from '@/models/Schule'
 import { schuelerImportToApi } from '@/models/Schueler'
 import { lehrerImportToApi } from '@/models/Lehrer'
 import { klasseImportToApi } from '@/models/Klassen'
+import { jahrgangImportToApi } from '@/models/Jahrgaenge'
 import type { ImportModule, MappedRow, ImportContext, EntityType } from '@/models/ImportSchema'
 
 export interface UploadResult {
@@ -17,7 +20,8 @@ export interface UploadResult {
 const ENTITY_ENDPOINTS: Partial<Record<EntityType, string>> = {
   schueler: '/schueler/create',
   lehrer:   '/lehrer/create',
-  klassen:  '/klassen/create',
+  klassen:   '/klassen/create',
+  jahrgaenge: '/jahrgaenge/create',
 }
 
 export async function testConnection(): Promise<boolean> {
@@ -77,6 +81,26 @@ export async function createLehrer(row: LehrerImportRow): Promise<UploadResult> 
   } catch (error: unknown) {
     return { success: false, error: extractErrorMessage(error) }
   }
+}
+
+export async function fetchJahrgaenge(): Promise<JahrgangDetails[]> {
+  const response = await getApiClient().get('/jahrgaenge')
+  return Array.isArray(response.data) ? response.data : []
+}
+
+export async function createJahrgang(row: JahrgangImportRow): Promise<UploadResult> {
+  try {
+    const payload = jahrgangImportToApi(row)
+    const response = await getApiClient().post('/jahrgaenge/create', payload)
+    return { success: true, id: response.data?.id }
+  } catch (error: unknown) {
+    return { success: false, error: extractErrorMessage(error) }
+  }
+}
+
+export async function fetchSchuleStammdaten(): Promise<SchuleStammdaten> {
+  const response = await getApiClient().get('/schule/stammdaten')
+  return response.data
 }
 
 export async function fetchKlassenDetails(idSchuljahresabschnitt: number): Promise<KlasseDetails[]> {

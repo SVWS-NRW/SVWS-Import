@@ -7,6 +7,7 @@ import ExportView from '@/views/ExportView.vue'
 import SchuelerView from '@/views/SchuelerView.vue'
 import LehrerView from '@/views/LehrerView.vue'
 import KlassenView from '@/views/KlassenView.vue'
+import JahrgaengeView from '@/views/JahrgaengeView.vue'
 import HelpView from '@/views/HelpView.vue'
 
 const router = createRouter({
@@ -55,6 +56,12 @@ const router = createRouter({
       path: '/klassen',
       name: 'klassen',
       component: KlassenView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/jahrgaenge',
+      name: 'jahrgaenge',
+      component: JahrgaengeView,
       meta: { requiresAuth: true },
     },
     {

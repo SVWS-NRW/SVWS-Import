@@ -32,8 +32,19 @@
     <div v-if="module.entityType === 'schueler'" class="context-section">
       <div class="section-title">Kontextdaten</div>
       <div class="context-row">
-        <label class="context-label">Schuljahresabschnitt-ID *</label>
+        <label class="context-label">Schuljahresabschnitt *</label>
+        <Select
+          v-if="schuleStore.loaded"
+          v-model="idSchuljahresabschnitt"
+          :options="schuleStore.abschnitteOptions"
+          optionLabel="label"
+          optionValue="id"
+          placeholder="Abschnitt wählen"
+          :disabled="uploading || isDone"
+          style="width: 220px"
+        />
         <InputNumber
+          v-else
           v-model="idSchuljahresabschnitt"
           :min="1"
           :disabled="uploading || isDone"
@@ -122,13 +133,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import Button from 'primevue/button'
 import InputNumber from 'primevue/inputnumber'
+import Select from 'primevue/select'
 import ProgressBar from 'primevue/progressbar'
 import Tag from 'primevue/tag'
 import { useWizardStore } from '@/stores/wizardStore'
 import { useAuthStore } from '@/stores/auth'
+import { useSchuleStore } from '@/stores/schule'
 import { sendMappedRow } from '@/services/svwsService'
 import type { ImportModule, MappedRow } from '@/models/ImportSchema'
 
@@ -136,17 +149,25 @@ const props = defineProps<{ module: ImportModule }>()
 
 const wizardStore = useWizardStore()
 const authStore   = useAuthStore()
+const schuleStore = useSchuleStore()
 
 // ── Kontext ────────────────────────────────────────────────────────────────
 
 const idSchuljahresabschnitt = computed({
-  get: () => wizardStore.context.idSchuljahresabschnitt ?? 1,
+  get: () => wizardStore.context.idSchuljahresabschnitt ?? 0,
   set: (v: number) => wizardStore.setContext({ idSchuljahresabschnitt: v }),
+})
+
+onMounted(() => {
+  if (!schuleStore.loaded) return
+  if (wizardStore.context.idSchuljahresabschnitt) return
+  const defaultId = schuleStore.aktuellerAbschnittId ?? schuleStore.abschnitteOptions[0]?.id ?? null
+  if (defaultId !== null) wizardStore.setContext({ idSchuljahresabschnitt: defaultId })
 })
 
 const canSend = computed(() => {
   if (props.module.entityType === 'schueler') {
-    return (wizardStore.context.idSchuljahresabschnitt ?? 0) >= 1
+    return (wizardStore.context.idSchuljahresabschnitt ?? 0) > 0
   }
   return true
 })

@@ -1,8 +1,8 @@
 export interface KlasseApiPayload {
   kuerzel: string
-  kuerzelStatistik: string | null
   beschreibung: string | null
   idSchuljahresabschnitt: number
+  idJahrgang: number | null
 }
 
 export interface KlasseDetails {
@@ -22,6 +22,7 @@ export interface KlasseImportRow {
   kuerzelStatistik: string
   beschreibung: string
   jahrgang: string
+  idJahrgang: number | null   // aufgelöst aus jahrgang-Kürzel
   folgeklasse: string
   klassenlehrer: string
   orgForm: string
@@ -35,8 +36,8 @@ export interface KlasseImportRow {
 export function klasseImportToApi(row: KlasseImportRow, idSchuljahresabschnitt: number): KlasseApiPayload {
   return {
     kuerzel: row.kuerzel,
-    kuerzelStatistik: row.kuerzelStatistik || null,
     beschreibung: row.beschreibung || null,
     idSchuljahresabschnitt,
+    idJahrgang: row.idJahrgang,
   }
 }

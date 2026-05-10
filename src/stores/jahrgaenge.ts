@@ -1,29 +1,24 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { type KlasseImportRow, type KlasseDetails } from '@/models/Klassen'
-import { type JahrgangDetails } from '@/models/Jahrgaenge'
-import { createKlasse, fetchKlassenDetails } from '@/services/svwsService'
+import { type JahrgangImportRow, type JahrgangDetails } from '@/models/Jahrgaenge'
+import { createJahrgang, fetchJahrgaenge } from '@/services/svwsService'
 
-export const useKlassenStore = defineStore('klassen', () => {
-  const rows = ref<KlasseImportRow[]>([])
-  const existingKlassen = ref<KlasseDetails[]>([])
+export const useJahrgaengeStore = defineStore('jahrgaenge', () => {
+  const rows = ref<JahrgangImportRow[]>([])
+  const existingJahrgaenge = ref<JahrgangDetails[]>([])
   const uploading = ref(false)
   const loadingExisting = ref(false)
-  const idSchuljahresabschnitt = ref<number>(1)
 
   const totalCount = computed(() => rows.value.length)
   const validCount = computed(() => rows.value.filter(r => r._valid).length)
   const sentCount = computed(() => rows.value.filter(r => r._sent).length)
   const errorCount = computed(() => rows.value.filter(r => !r._valid).length)
 
-  const fileJahr = computed(() => rows.value.find(r => r.jahr)?.jahr ?? '')
-  const fileAbschnitt = computed(() => rows.value.find(r => r.abschnitt)?.abschnitt ?? '')
-
-  function setRows(newRows: KlasseImportRow[]): void {
+  function setRows(newRows: JahrgangImportRow[]): void {
     rows.value = newRows
   }
 
-  function updateRow(id: string, patch: Partial<KlasseImportRow>): void {
+  function updateRow(id: string, patch: Partial<JahrgangImportRow>): void {
     const idx = rows.value.findIndex(r => r._id === id)
     if (idx !== -1) {
       rows.value[idx] = { ...rows.value[idx], ...patch }
@@ -33,24 +28,6 @@ export const useKlassenStore = defineStore('klassen', () => {
 
   function deleteRow(id: string): void {
     rows.value = rows.value.filter(r => r._id !== id)
-  }
-
-  function normalizeJg(s: string): string {
-    const trimmed = s.trim().toLowerCase().replace(/^0+/, '')
-    return trimmed || '0'
-  }
-
-  function resolveJahrgaenge(jahrgaenge: JahrgangDetails[]): void {
-    rows.value = rows.value.map(row => {
-      if (!row.jahrgang.trim()) return { ...row, idJahrgang: null }
-      const norm = normalizeJg(row.jahrgang)
-      const match = jahrgaenge.find(j =>
-        normalizeJg(j.kuerzel ?? '') === norm ||
-        normalizeJg(j.kuerzelStatistik ?? '') === norm
-      )
-      return { ...row, idJahrgang: match?.id ?? null }
-    })
-    validateAll()
   }
 
   function validateRow(idx: number): void {
@@ -66,16 +43,16 @@ export const useKlassenStore = defineStore('klassen', () => {
 
   function clear(): void {
     rows.value = []
-    existingKlassen.value = []
+    existingJahrgaenge.value = []
   }
 
   async function loadExisting(): Promise<{ error?: string }> {
     loadingExisting.value = true
     try {
-      existingKlassen.value = await fetchKlassenDetails(idSchuljahresabschnitt.value)
+      existingJahrgaenge.value = await fetchJahrgaenge()
       return {}
     } catch (e) {
-      return { error: e instanceof Error ? e.message : 'Fehler beim Laden der Klassen' }
+      return { error: e instanceof Error ? e.message : 'Fehler beim Laden der Jahrgänge' }
     } finally {
       loadingExisting.value = false
     }
@@ -88,7 +65,7 @@ export const useKlassenStore = defineStore('klassen', () => {
     for (let i = 0; i < rows.value.length; i++) {
       const row = rows.value[i]
       if (!row._valid || row._sent) continue
-      const result = await createKlasse(row, idSchuljahresabschnitt.value)
+      const result = await createJahrgang(row)
       if (result.success) {
         rows.value[i] = { ...row, _sent: true, _errors: [] }
         sent++
@@ -102,8 +79,8 @@ export const useKlassenStore = defineStore('klassen', () => {
   }
 
   return {
-    rows, existingKlassen, uploading, loadingExisting, idSchuljahresabschnitt,
-    totalCount, validCount, sentCount, errorCount, fileJahr, fileAbschnitt,
-    setRows, updateRow, deleteRow, validateAll, resolveJahrgaenge, clear, loadExisting, uploadAll,
+    rows, existingJahrgaenge, uploading, loadingExisting,
+    totalCount, validCount, sentCount, errorCount,
+    setRows, updateRow, deleteRow, validateAll, clear, loadExisting, uploadAll,
   }
 })

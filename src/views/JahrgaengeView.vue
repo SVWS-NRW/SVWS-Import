@@ -9,7 +9,7 @@
           @click="router.push({ name: 'import' })"
           aria-label="Zurück"
         />
-        <h2>Schülerdaten</h2>
+        <h2>Jahrgänge</h2>
       </div>
       <ImportStats
         :total="store.totalCount"
@@ -18,24 +18,6 @@
         :sent="store.sentCount"
       />
       <div class="header-actions">
-        <div class="abschnitt-field">
-          <label>Schuljahresabschnitt</label>
-          <Select
-            v-if="schuleStore.loaded"
-            v-model="store.idSchuljahresabschnitt"
-            :options="schuleStore.abschnitteOptions"
-            optionLabel="label"
-            optionValue="id"
-            placeholder="Abschnitt wählen"
-            style="width: 220px"
-          />
-          <InputNumber
-            v-else
-            v-model="store.idSchuljahresabschnitt"
-            :min="1"
-            style="width: 130px"
-          />
-        </div>
         <Button
           label="Alles senden"
           icon="pi pi-upload"
@@ -58,17 +40,35 @@
       <span v-if="uploadResult.failed > 0">, {{ uploadResult.failed }} fehlgeschlagen</span>
     </Message>
 
-    <ag-grid-vue
-      :class="[isDark ? 'ag-theme-quartz-dark' : 'ag-theme-quartz', 'data-table']"
-      :rowData="store.rows"
-      :columnDefs="columnDefs"
-      :defaultColDef="defaultColDef"
-      :rowClassRules="rowClassRules"
-      :getRowId="getRowId"
-      @cell-value-changed="onCellChanged"
-      :animateRows="true"
-      :stopEditingWhenCellsLoseFocus="true"
-    />
+    <Message v-if="loadError" severity="error" :closable="true" @close="loadError = ''">
+      {{ loadError }}
+    </Message>
+
+    <div class="section">
+      <h3 class="section-title">Vorhandene Jahrgänge</h3>
+      <ag-grid-vue
+        :class="[isDark ? 'ag-theme-quartz-dark' : 'ag-theme-quartz', 'existing-table']"
+        :rowData="store.existingJahrgaenge"
+        :columnDefs="existingColDefs"
+        :defaultColDef="readOnlyColDef"
+        :animateRows="true"
+      />
+    </div>
+
+    <div class="section import-section">
+      <h3 class="section-title">Zu importierende Jahrgänge</h3>
+      <ag-grid-vue
+        :class="[isDark ? 'ag-theme-quartz-dark' : 'ag-theme-quartz', 'data-table']"
+        :rowData="store.rows"
+        :columnDefs="importColDefs"
+        :defaultColDef="defaultColDef"
+        :rowClassRules="rowClassRules"
+        :getRowId="getRowId"
+        @cell-value-changed="onCellChanged"
+        :animateRows="true"
+        :stopEditingWhenCellsLoseFocus="true"
+      />
+    </div>
 
     <ConfirmDialog />
   </div>
@@ -81,31 +81,34 @@ import { AgGridVue } from '@ag-grid-community/vue3'
 import { ClientSideRowModelModule } from '@ag-grid-community/client-side-row-model'
 import { ModuleRegistry, type ColDef, type GetRowIdParams, type CellValueChangedEvent } from '@ag-grid-community/core'
 import Button from 'primevue/button'
-import InputNumber from 'primevue/inputnumber'
-import Select from 'primevue/select'
 import Message from 'primevue/message'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
-import { useSchuelerStore } from '@/stores/schueler'
-import { useSchuleStore } from '@/stores/schule'
-import { useDarkMode } from '@/composables/useDarkMode'
-import { type SchuelerImportRow } from '@/models/Schueler'
+import { useJahrgaengeStore } from '@/stores/jahrgaenge'
+import { type JahrgangImportRow } from '@/models/Jahrgaenge'
 import ImportStats from '@/components/ImportStats.vue'
+import { useDarkMode } from '@/composables/useDarkMode'
 
 ModuleRegistry.registerModules([ClientSideRowModelModule])
 
 const router = useRouter()
-const store = useSchuelerStore()
-const schuleStore = useSchuleStore()
+const store = useJahrgaengeStore()
 const confirm = useConfirm()
 const { isDark } = useDarkMode()
 const uploadResult = ref<{ sent: number; failed: number } | null>(null)
+const loadError = ref('')
 
-onMounted(() => {
-  if (!schuleStore.loaded) return
-  const defaultId = schuleStore.aktuellerAbschnittId ?? schuleStore.abschnitteOptions[0]?.id ?? null
-  if (defaultId !== null) store.idSchuljahresabschnitt = defaultId
+onMounted(async () => {
+  const result = await store.loadExisting()
+  if (result.error) loadError.value = result.error
 })
+
+const readOnlyColDef: ColDef = {
+  editable: false,
+  sortable: true,
+  filter: true,
+  resizable: true,
+}
 
 const defaultColDef: ColDef = {
   editable: (params) => !params.data._sent,
@@ -115,30 +118,24 @@ const defaultColDef: ColDef = {
   minWidth: 80,
 }
 
-const columnDefs: ColDef<SchuelerImportRow>[] = [
-  {
-    field: 'nachname',
-    headerName: 'Nachname',
-    flex: 1.5,
-    cellStyle: (p) => p.data?._errors.some(e => e.includes('Nachname')) ? { background: '#fee2e2' } : null,
-  },
-  {
-    field: 'vorname',
-    headerName: 'Vorname',
-    flex: 1.5,
-    cellStyle: (p) => p.data?._errors.some(e => e.includes('Vorname')) ? { background: '#fee2e2' } : null,
-  },
-  { field: 'alleVornamen', headerName: 'Alle Vornamen', flex: 1.5 },
-  { field: 'geschlecht', headerName: 'Geschlecht', width: 110 },
-  { field: 'geburtsdatum', headerName: 'Geburtsdatum', width: 140 },
-  { field: 'klasse', headerName: 'Klasse', width: 100 },
-  { field: 'jahrgang', headerName: 'Jahrgang', width: 110 },
-  { field: 'aufnahmedatum', headerName: 'Aufnahmedatum', width: 150 },
+const existingColDefs: ColDef[] = [
+  { field: 'id',               headerName: 'ID',           width: 80 },
+  { field: 'kuerzel',          headerName: 'Kürzel',       width: 110 },
+  { field: 'kuerzelStatistik', headerName: 'Statistik-Kz.', width: 130 },
+  { field: 'bezeichnung',      headerName: 'Bezeichnung',  flex: 1 },
+  { field: 'gliederung',       headerName: 'Gliederung',   width: 120 },
+]
+
+const importColDefs: ColDef<JahrgangImportRow>[] = [
+  { field: 'kuerzel',          headerName: 'Kürzel',        width: 110,
+    cellStyle: (p) => p.data?._errors.some(e => e.includes('Kürzel')) ? { background: isDark.value ? '#7f1d1d' : '#fee2e2' } : null },
+  { field: 'kuerzelStatistik', headerName: 'Statistik-Kz.', width: 130 },
+  { field: 'gliederung',       headerName: 'Gliederung',    flex: 1 },
   {
     headerName: 'Status',
-    width: 100,
+    width: 110,
     editable: false,
-    cellRenderer: (params: { data: SchuelerImportRow }) => {
+    cellRenderer: (params: { data: JahrgangImportRow }) => {
       if (params.data._sent) return '<span style="color:#22c55e">✔ Gesendet</span>'
       if (!params.data._valid) return `<span style="color:#ef4444" title="${params.data._errors.join('; ')}">✖ Fehler</span>`
       return '<span style="color:#f59e0b">● Bereit</span>'
@@ -150,41 +147,44 @@ const columnDefs: ColDef<SchuelerImportRow>[] = [
     editable: false,
     sortable: false,
     filter: false,
-    cellRenderer: (params: { data: SchuelerImportRow }) =>
+    cellRenderer: (params: { data: JahrgangImportRow }) =>
       params.data._sent
         ? ''
-        : `<button onclick="window.__deleteSchueler('${params.data._id}')" style="border:none;background:none;cursor:pointer;color:#ef4444;font-size:1rem" title="Zeile löschen">✕</button>`,
+        : `<button onclick="window.__deleteJahrgang('${params.data._id}')" style="border:none;background:none;cursor:pointer;color:#ef4444;font-size:1rem" title="Zeile löschen">✕</button>`,
   },
 ]
 
 const rowClassRules = {
-  'row-sent': (params: { data: SchuelerImportRow }) => params.data._sent,
-  'row-error': (params: { data: SchuelerImportRow }) => !params.data._valid && !params.data._sent,
+  'row-sent':  (params: { data: JahrgangImportRow }) => params.data._sent,
+  'row-error': (params: { data: JahrgangImportRow }) => !params.data._valid && !params.data._sent,
 }
 
-function getRowId(params: GetRowIdParams<SchuelerImportRow>): string {
+function getRowId(params: GetRowIdParams<JahrgangImportRow>): string {
   return params.data._id
 }
 
-function onCellChanged(event: CellValueChangedEvent<SchuelerImportRow>): void {
+function onCellChanged(event: CellValueChangedEvent<JahrgangImportRow>): void {
   if (event.data) {
     store.updateRow(event.data._id, { [event.colDef.field as string]: event.newValue })
   }
 }
 
-// Globaler Handler für den Löschen-Button in der Zelle
-;(window as unknown as Record<string, unknown>).__deleteSchueler = (id: string) => {
+;(window as unknown as Record<string, unknown>).__deleteJahrgang = (id: string) => {
   store.deleteRow(id)
 }
 
 async function handleUploadAll(): Promise<void> {
   uploadResult.value = null
   uploadResult.value = await store.uploadAll()
+  if ((uploadResult.value?.sent ?? 0) > 0) {
+    const result = await store.loadExisting()
+    if (result.error) loadError.value = result.error
+  }
 }
 
 function confirmClear(): void {
   confirm.require({
-    message: 'Alle Schülerdaten verwerfen?',
+    message: 'Alle Jahrgangsdaten verwerfen?',
     header: 'Bestätigung',
     icon: 'pi pi-exclamation-triangle',
     acceptLabel: 'Ja, leeren',
@@ -196,6 +196,12 @@ function confirmClear(): void {
   })
 }
 </script>
+
+<style>
+.row-sent  { opacity: 0.6; }
+.row-error { background-color: #fff5f5 !important; }
+.dark .row-error { background-color: #3b0c0c !important; }
+</style>
 
 <style scoped>
 .table-view {
@@ -231,21 +237,29 @@ h2 {
   margin-left: auto;
 }
 
-.abschnitt-field {
+.section {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
-  font-size: 0.8rem;
-  color: var(--p-text-muted-color);
+  gap: 0.5rem;
+}
+
+.import-section {
+  flex: 1;
+  min-height: 0;
+}
+
+.section-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.existing-table {
+  height: 220px;
 }
 
 .data-table {
   flex: 1;
-  min-height: 400px;
+  min-height: 300px;
 }
-</style>
-
-<style>
-.row-sent { opacity: 0.6; }
-.row-error { background-color: #fff5f5 !important; }
 </style>

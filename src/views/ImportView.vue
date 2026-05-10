@@ -1,7 +1,18 @@
 <template>
   <div class="import-view">
-    <h2>Daten importieren</h2>
-    <p class="subtitle">Wähle den Datentyp und lade eine CSV- oder Excel-Datei hoch.</p>
+    <div class="view-header">
+      <div>
+        <h2>Daten importieren</h2>
+        <p class="subtitle">Wähle den Datentyp und lade eine CSV- oder Excel-Datei hoch.</p>
+      </div>
+      <Button
+        icon="pi pi-question-circle"
+        label="Hilfe"
+        severity="secondary"
+        outlined
+        @click="router.push({ name: 'help' })"
+      />
+    </div>
 
     <div class="import-cards">
       <div class="import-card" :class="{ active: dataType === 'schueler' }" @click="dataType = 'schueler'">
@@ -77,28 +88,6 @@
       />
     </div>
 
-    <div class="hints">
-      <Fieldset legend="Hinweise zum Dateiformat" :toggleable="true" collapsed>
-        <div class="hint-content">
-          <div>
-            <strong>Schüler-Spalten (CSV/XLSX):</strong>
-            <code>Nachname, Vorname, Geschlecht, Geburtsdatum, Klasse, Jahrgang, Anmeldedatum, Aufnahmedatum</code>
-          </div>
-          <div>
-            <strong>Lehrer-Spalten (CSV/XLSX):</strong>
-            <code>Kuerzel, Nachname, Vorname, PersonalTyp, Anrede, Titel, Geschlecht, Geburtsdatum, EmailDienstlich, Telefon</code>
-          </div>
-          <div>
-            <strong>Geschlecht:</strong>
-            <code>m / w / d / x</code> oder <code>männlich / weiblich / divers</code>
-          </div>
-          <div>
-            <strong>Datum:</strong>
-            <code>YYYY-MM-DD</code> oder <code>DD.MM.YYYY</code>
-          </div>
-        </div>
-      </Fieldset>
-    </div>
   </div>
 </template>
 
@@ -109,7 +98,6 @@ import { importModules } from '@/schemas'
 import Button from 'primevue/button'
 import FileUpload from 'primevue/fileupload'
 import Message from 'primevue/message'
-import Fieldset from 'primevue/fieldset'
 import { useSchuelerStore } from '@/stores/schueler'
 import { useLehrerStore } from '@/stores/lehrer'
 import { parseSchuelerCsv, parseLehrerCsv } from '@/utils/csvParser'
@@ -179,13 +167,20 @@ async function handleImport(): Promise<void> {
   gap: 1.5rem;
 }
 
+.view-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
 h2 {
   margin: 0;
   font-size: 1.5rem;
 }
 
 .subtitle {
-  margin: -1rem 0 0;
+  margin: 0.25rem 0 0;
   color: var(--p-text-muted-color);
 }
 
@@ -296,20 +291,4 @@ h2 {
   align-items: center;
 }
 
-.hint-content {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  font-size: 0.875rem;
-}
-
-.hint-content code {
-  display: block;
-  margin-top: 0.25rem;
-  padding: 0.35rem 0.6rem;
-  background: var(--p-surface-ground);
-  border-radius: 4px;
-  font-family: monospace;
-  color: var(--p-primary-color);
-}
 </style>

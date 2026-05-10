@@ -20,12 +20,11 @@
       </div>
       <div class="nav-conn">
         <span class="conn-info">
-          <i class="pi pi-circle-fill" style="color: #22c55e; font-size: 0.65rem;" />
+          <i class="pi pi-circle-fill" style="color: #22c55e; font-size: 0.75rem;" />
           {{ auth.schema }}@{{ shortUrl }}
         </span>
         <Button
           :icon="isDark ? 'pi pi-sun' : 'pi pi-moon'"
-          size="small"
           severity="secondary"
           text
           :aria-label="isDark ? 'Hell-Modus aktivieren' : 'Dunkel-Modus aktivieren'"
@@ -34,7 +33,6 @@
         <Button
           label="Trennen"
           icon="pi pi-power-off"
-          size="small"
           severity="secondary"
           text
           @click="handleDisconnect"
@@ -120,8 +118,8 @@ html, body {
   display: flex;
   align-items: center;
   gap: 1.5rem;
-  padding: 0 1.5rem;
-  height: 56px;
+  padding: 0 1.75rem;
+  height: 64px;
   background: var(--p-surface-card);
   border-bottom: 1px solid var(--p-surface-border);
   flex-shrink: 0;
@@ -129,25 +127,25 @@ html, body {
 
 .nav-brand {
   font-weight: 700;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   color: var(--p-primary-color);
   white-space: nowrap;
 }
 
 .nav-links {
   display: flex;
-  gap: 0.25rem;
+  gap: 0.35rem;
 }
 
 .nav-link {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.4rem 0.85rem;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
   border-radius: 6px;
   text-decoration: none;
   color: var(--p-text-color);
-  font-size: 0.9rem;
+  font-size: 1rem;
   transition: background 0.15s;
 }
 
@@ -165,11 +163,11 @@ html, body {
 }
 
 .conn-info {
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   color: var(--p-text-muted-color);
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.4rem;
 }
 
 .app-main {

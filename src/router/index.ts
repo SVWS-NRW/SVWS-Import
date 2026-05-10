@@ -6,6 +6,7 @@ import ImportWizardView from '@/views/ImportWizardView.vue'
 import ExportView from '@/views/ExportView.vue'
 import SchuelerView from '@/views/SchuelerView.vue'
 import LehrerView from '@/views/LehrerView.vue'
+import HelpView from '@/views/HelpView.vue'
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -47,6 +48,12 @@ const router = createRouter({
       path: '/lehrer',
       name: 'lehrer',
       component: LehrerView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/hilfe',
+      name: 'help',
+      component: HelpView,
       meta: { requiresAuth: true },
     },
   ],

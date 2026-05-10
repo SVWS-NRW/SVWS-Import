@@ -55,18 +55,20 @@ export const useLehrerStore = defineStore('lehrer', () => {
     uploading.value = true
     let sent = 0
     let failed = 0
-    for (let i = 0; i < rows.value.length; i++) {
-      const row = rows.value[i]
+    const updated = [...rows.value]
+    for (let i = 0; i < updated.length; i++) {
+      const row = updated[i]
       if (!row._valid || row._sent) continue
       const result = await createLehrer(row)
       if (result.success) {
-        rows.value[i] = { ...row, _sent: true, _errors: [] }
+        updated[i] = { ...row, _sent: true, _errors: [] }
         sent++
       } else {
-        rows.value[i] = { ...row, _errors: [result.error ?? 'Unbekannter Fehler'] }
+        updated[i] = { ...row, _errors: [result.error ?? 'Unbekannter Fehler'] }
         failed++
       }
     }
+    rows.value = updated
     uploading.value = false
     return { sent, failed }
   }

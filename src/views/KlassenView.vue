@@ -98,6 +98,7 @@
         :rowClassRules="rowClassRules"
         :getRowId="getRowId"
         @cell-value-changed="onCellChanged"
+        @grid-ready="onImportGridReady"
         :animateRows="true"
         :stopEditingWhenCellsLoseFocus="true"
       />
@@ -112,7 +113,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { AgGridVue } from '@ag-grid-community/vue3'
 import { ClientSideRowModelModule } from '@ag-grid-community/client-side-row-model'
-import { ModuleRegistry, type ColDef, type GetRowIdParams, type CellValueChangedEvent } from '@ag-grid-community/core'
+import { ModuleRegistry, type ColDef, type GetRowIdParams, type CellValueChangedEvent, type GridApi } from '@ag-grid-community/core'
 import Button from 'primevue/button'
 import InputNumber from 'primevue/inputnumber'
 import Select from 'primevue/select'
@@ -134,17 +135,22 @@ const schuleStore = useSchuleStore()
 const jahrgaengeStore = useJahrgaengeStore()
 const confirm = useConfirm()
 const { isDark } = useDarkMode()
+const importGridApi = ref<GridApi | null>(null)
+
+function onImportGridReady(params: { api: GridApi }): void {
+  importGridApi.value = params.api
+}
 
 onMounted(async () => {
   if (schuleStore.loaded) {
     const defaultId = schuleStore.aktuellerAbschnittId ?? schuleStore.abschnitteOptions[0]?.id ?? null
     if (defaultId !== null) store.idSchuljahresabschnitt = defaultId
   }
-  // Jahrgänge laden und Kürzel → ID auflösen
   if (jahrgaengeStore.existingJahrgaenge.length === 0) {
     await jahrgaengeStore.loadExisting()
   }
   store.resolveJahrgaenge(jahrgaengeStore.existingJahrgaenge)
+  importGridApi.value?.refreshCells({ force: true })
 })
 const uploadResult = ref<{ sent: number; failed: number } | null>(null)
 const loadError = ref('')
@@ -248,6 +254,7 @@ async function handleLoadExisting(): Promise<void> {
 async function doUpload(): Promise<void> {
   uploadResult.value = null
   uploadResult.value = await store.uploadAll()
+  importGridApi.value?.refreshCells({ force: true })
   if ((uploadResult.value?.sent ?? 0) > 0) {
     await store.loadExisting()
   }

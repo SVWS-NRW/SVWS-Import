@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { type KlasseImportRow, type KlasseDetails } from '@/models/Klassen'
 import { type JahrgangDetails } from '@/models/Jahrgaenge'
-import { createKlasse, fetchKlassenDetails } from '@/services/svwsService'
+import { createKlasse, fetchKlassenDetails, type LehrkraftListEntry } from '@/services/svwsService'
 
 export const useKlassenStore = defineStore('klassen', () => {
   const rows = ref<KlasseImportRow[]>([])
@@ -38,6 +38,16 @@ export const useKlassenStore = defineStore('klassen', () => {
   function normalizeJg(s: string): string {
     const trimmed = s.trim().toLowerCase().replace(/^0+/, '')
     return trimmed || '0'
+  }
+
+  function resolveLehrkraefte(lehrkraefte: LehrkraftListEntry[]): void {
+    rows.value = rows.value.map(row => {
+      if (!row.klassenlehrer.trim()) return { ...row, idKlassenlehrer: null }
+      const match = lehrkraefte.find(l =>
+        l.kuerzel.toLowerCase() === row.klassenlehrer.trim().toLowerCase()
+      )
+      return { ...row, idKlassenlehrer: match?.id ?? null }
+    })
   }
 
   function resolveJahrgaenge(jahrgaenge: JahrgangDetails[]): void {
@@ -106,6 +116,6 @@ export const useKlassenStore = defineStore('klassen', () => {
   return {
     rows, existingKlassen, uploading, loadingExisting, idSchuljahresabschnitt,
     totalCount, validCount, sentCount, errorCount, fileJahr, fileAbschnitt,
-    setRows, updateRow, deleteRow, validateAll, resolveJahrgaenge, clear, loadExisting, uploadAll,
+    setRows, updateRow, deleteRow, validateAll, resolveJahrgaenge, resolveLehrkraefte, clear, loadExisting, uploadAll,
   }
 })

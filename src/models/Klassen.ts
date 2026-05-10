@@ -22,9 +22,10 @@ export interface KlasseImportRow {
   kuerzelStatistik: string
   beschreibung: string
   jahrgang: string
-  idJahrgang: number | null   // aufgelöst aus jahrgang-Kürzel
+  idJahrgang: number | null
   folgeklasse: string
   klassenlehrer: string
+  idKlassenlehrer: number | null
   orgForm: string
   klassenart: string
   gliederung: string

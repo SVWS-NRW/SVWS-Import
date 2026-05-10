@@ -83,6 +83,16 @@ export async function createLehrer(row: LehrerImportRow): Promise<UploadResult> 
   }
 }
 
+export interface LehrkraftListEntry {
+  id: number
+  kuerzel: string
+}
+
+export async function fetchLehrkraefte(): Promise<LehrkraftListEntry[]> {
+  const response = await getApiClient().get('/lehrer')
+  return Array.isArray(response.data) ? response.data : []
+}
+
 export async function fetchJahrgaenge(): Promise<JahrgangDetails[]> {
   const response = await getApiClient().get('/jahrgaenge')
   return Array.isArray(response.data) ? response.data : []
@@ -112,7 +122,11 @@ export async function createKlasse(row: KlasseImportRow, idSchuljahresabschnitt:
   try {
     const payload = klasseImportToApi(row, idSchuljahresabschnitt)
     const response = await getApiClient().post('/klassen/create', payload)
-    return { success: true, id: response.data?.id }
+    const newId: number = response.data?.id
+    if (newId && row.idKlassenlehrer !== null) {
+      await getApiClient().patch(`/klassen/${newId}`, { klassenLeitungen: [row.idKlassenlehrer] })
+    }
+    return { success: true, id: newId }
   } catch (error: unknown) {
     return { success: false, error: extractErrorMessage(error) }
   }

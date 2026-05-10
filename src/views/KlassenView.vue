@@ -99,6 +99,7 @@
         :getRowId="getRowId"
         @cell-value-changed="onCellChanged"
         @grid-ready="onImportGridReady"
+        @row-data-updated="onImportRowDataUpdated"
         :animateRows="true"
         :stopEditingWhenCellsLoseFocus="true"
       />
@@ -124,6 +125,7 @@ import { useKlassenStore } from '@/stores/klassen'
 import { useSchuleStore } from '@/stores/schule'
 import { useJahrgaengeStore } from '@/stores/jahrgaenge'
 import { type KlasseImportRow } from '@/models/Klassen'
+import { fetchLehrkraefte } from '@/services/svwsService'
 import ImportStats from '@/components/ImportStats.vue'
 import { useDarkMode } from '@/composables/useDarkMode'
 
@@ -141,16 +143,21 @@ function onImportGridReady(params: { api: GridApi }): void {
   importGridApi.value = params.api
 }
 
+function onImportRowDataUpdated(): void {
+  importGridApi.value?.refreshCells({ force: true })
+}
+
 onMounted(async () => {
   if (schuleStore.loaded) {
     const defaultId = schuleStore.aktuellerAbschnittId ?? schuleStore.abschnitteOptions[0]?.id ?? null
     if (defaultId !== null) store.idSchuljahresabschnitt = defaultId
   }
-  if (jahrgaengeStore.existingJahrgaenge.length === 0) {
-    await jahrgaengeStore.loadExisting()
-  }
+  const [, lehrkraefte] = await Promise.all([
+    jahrgaengeStore.existingJahrgaenge.length === 0 ? jahrgaengeStore.loadExisting() : Promise.resolve(),
+    fetchLehrkraefte(),
+  ])
   store.resolveJahrgaenge(jahrgaengeStore.existingJahrgaenge)
-  importGridApi.value?.refreshCells({ force: true })
+  store.resolveLehrkraefte(lehrkraefte)
 })
 const uploadResult = ref<{ sent: number; failed: number } | null>(null)
 const loadError = ref('')
@@ -195,7 +202,17 @@ const importColDefs: ColDef<KlasseImportRow>[] = [
     },
   },
   { field: 'folgeklasse',      headerName: 'Folgeklasse',   width: 120 },
-  { field: 'klassenlehrer',    headerName: 'Klassenlehrer', width: 130 },
+  {
+    field: 'klassenlehrer',
+    headerName: 'Klassenlehrer',
+    width: 150,
+    cellRenderer: (params: { data: KlasseImportRow }) => {
+      const { klassenlehrer, idKlassenlehrer } = params.data
+      if (!klassenlehrer) return '<span style="color:#9ca3af">—</span>'
+      if (idKlassenlehrer !== null) return `<span style="color:#22c55e" title="ID: ${idKlassenlehrer}">${klassenlehrer} <small style="opacity:.7">→ ${idKlassenlehrer}</small></span>`
+      return `<span style="color:#f59e0b" title="Kein passender Lehrer in der DB">${klassenlehrer} ⚠</span>`
+    },
+  },
   { field: 'orgForm',          headerName: 'Org.Form',      width: 100 },
   { field: 'klassenart',       headerName: 'Klassenart',    width: 110 },
   { field: 'gliederung',       headerName: 'Gliederung',    width: 110 },
@@ -246,9 +263,13 @@ function onCellChanged(event: CellValueChangedEvent<KlasseImportRow>): void {
 
 async function handleLoadExisting(): Promise<void> {
   loadError.value = ''
-  const result = await store.loadExisting()
+  const [result, lehrkraefte] = await Promise.all([
+    store.loadExisting(),
+    fetchLehrkraefte(),
+  ])
   if (result.error) loadError.value = result.error
   store.resolveJahrgaenge(jahrgaengeStore.existingJahrgaenge)
+  store.resolveLehrkraefte(lehrkraefte)
 }
 
 async function doUpload(): Promise<void> {

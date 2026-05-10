@@ -117,6 +117,7 @@ export async function parseKlassenCsv(file: File): Promise<KlasseImportRow[]> {
             idJahrgang:       null,
             folgeklasse:      get(m, 'folgeklasse'),
             klassenlehrer:    get(m, 'klassenlehrer', 'klassenlehrkraft', 'kl'),
+            idKlassenlehrer:  null,
             orgForm:          get(m, 'orgform', 'organisationsform'),
             klassenart:       get(m, 'klassenart'),
             gliederung:       get(m, 'gliederung'),

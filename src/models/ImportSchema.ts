@@ -28,9 +28,17 @@ export interface FieldDefinition {
   validate?: (value: string) => string | null
 }
 
+export interface OrtKatalogEintrag {
+  id: number
+  plz: string | null
+  ortsname: string | null
+}
+
 export interface ImportKataloge {
   /** schluessel (codeDEStatis, z.B. "000") → kuerzel (ISO-3, z.B. "DEU") */
   nationalitaeten?: Map<string, string>
+  /** "PLZ|ortsname" (lowercase) → OrtKatalogEintrag */
+  orte?: Map<string, OrtKatalogEintrag>
 }
 
 export interface ImportContext {

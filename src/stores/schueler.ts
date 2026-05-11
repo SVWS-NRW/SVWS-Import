@@ -2,6 +2,8 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { type SchuelerImportRow } from '@/models/Schueler'
 import { createSchueler } from '@/services/svwsService'
+import { loadKataloge } from '@/services/katalogService'
+import type { OrtKatalogEintrag } from '@/models/ImportSchema'
 
 export const useSchuelerStore = defineStore('schueler', () => {
   const rows = ref<SchuelerImportRow[]>([])
@@ -52,11 +54,20 @@ export const useSchuelerStore = defineStore('schueler', () => {
     uploading.value = true
     let sent = 0
     let failed = 0
+
+    let orteKatalog: Map<string, OrtKatalogEintrag> | undefined
+    try {
+      const kataloge = await loadKataloge()
+      orteKatalog = kataloge.orte
+    } catch {
+      // Katalog nicht verfügbar — Adress-Lookup wird übersprungen
+    }
+
     const updated = [...rows.value]
     for (let i = 0; i < updated.length; i++) {
       const row = updated[i]
       if (!row._valid || row._sent) continue
-      const result = await createSchueler(row, idSchuljahresabschnitt.value)
+      const result = await createSchueler(row, idSchuljahresabschnitt.value, orteKatalog)
       if (result.success) {
         updated[i] = { ...row, _sent: true, _errors: [] }
         sent++

@@ -27,16 +27,33 @@ export interface SchuelerImportRow {
   _valid: boolean
   _errors: string[]
   _sent: boolean
+  // Personaldaten
   nachname: string
   vorname: string
   alleVornamen: string
+  geburtsname: string
+  geburtsort: string
   geschlecht: string                 // Roh-String aus der Datei, wird beim Senden konvertiert
   geburtsdatum: string
+  staatsangehoerigkeitID: string
+  religionID: string                 // Klartext (z.B. "römisch-katholisch"), Mapping zu idReligion fehlt
+  // Adresse
+  strassenname: string
+  hausnummer: string
+  plz: string
+  ort: string
+  ortsteil: string
+  // Kontakt
+  telefon: string
+  email: string
+  // Schulbezogen
   status: string
   anmeldedatum: string
   aufnahmedatum: string
+  beginnBildungsgang: string
   klasse: string
   jahrgang: string
+  schulgliederung: string
 }
 
 export function schuelerImportToApi(row: SchuelerImportRow, idSchuljahresabschnitt: number): SchuelerNeu {

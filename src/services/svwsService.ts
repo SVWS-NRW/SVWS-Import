@@ -9,6 +9,7 @@ import { lehrerImportToApi } from '@/models/Lehrer'
 import { klasseImportToApi } from '@/models/Klassen'
 import { jahrgangImportToApi } from '@/models/Jahrgaenge'
 import type { ImportModule, MappedRow, ImportContext, EntityType } from '@/models/ImportSchema'
+import { resolveWohnortId } from './katalogService'
 
 export interface UploadResult {
   success: boolean
@@ -63,11 +64,31 @@ export async function sendMappedRow(
 export async function createSchueler(
   row: SchuelerImportRow,
   idSchuljahresabschnitt: number,
+  orteKatalog?: Map<string, import('@/models/ImportSchema').OrtKatalogEintrag>,
 ): Promise<UploadResult> {
   try {
     const payload: SchuelerNeu = schuelerImportToApi(row, idSchuljahresabschnitt)
     const response = await getApiClient().post('/schueler/create', payload)
-    return { success: true, id: response.data.id }
+    const newId: number = response.data.id
+
+    const stammdatenPatch: Record<string, unknown> = {}
+    if (row.geburtsname)   stammdatenPatch.geburtsname   = row.geburtsname
+    if (row.geburtsort)    stammdatenPatch.geburtsort     = row.geburtsort
+    if (row.strassenname)  stammdatenPatch.strassenname   = row.strassenname
+    if (row.hausnummer)    stammdatenPatch.hausnummer     = row.hausnummer
+    if (row.telefon)       stammdatenPatch.telefon        = row.telefon
+    if (row.email)         stammdatenPatch.emailPrivat    = row.email
+
+    if (orteKatalog) {
+      const wohnortID = resolveWohnortId(orteKatalog, row.plz, row.ort)
+      if (wohnortID !== null) stammdatenPatch.wohnortID = wohnortID
+    }
+
+    if (Object.keys(stammdatenPatch).length > 0) {
+      await getApiClient().patch(`/schueler/${newId}/stammdaten`, stammdatenPatch)
+    }
+
+    return { success: true, id: newId }
   } catch (error: unknown) {
     return { success: false, error: extractErrorMessage(error) }
   }

@@ -116,24 +116,48 @@ const defaultColDef: ColDef = {
 }
 
 const columnDefs: ColDef<SchuelerImportRow>[] = [
+  // ── Pflichtfelder ──────────────────────────────────────────────────────────
   {
     field: 'nachname',
     headerName: 'Nachname',
+    pinned: 'left',
     flex: 1.5,
+    minWidth: 120,
     cellStyle: (p) => p.data?._errors.some(e => e.includes('Nachname')) ? { background: '#fee2e2' } : null,
   },
   {
     field: 'vorname',
     headerName: 'Vorname',
+    pinned: 'left',
     flex: 1.5,
+    minWidth: 120,
     cellStyle: (p) => p.data?._errors.some(e => e.includes('Vorname')) ? { background: '#fee2e2' } : null,
   },
-  { field: 'alleVornamen', headerName: 'Alle Vornamen', flex: 1.5 },
-  { field: 'geschlecht', headerName: 'Geschlecht', width: 110 },
-  { field: 'geburtsdatum', headerName: 'Geburtsdatum', width: 140 },
-  { field: 'klasse', headerName: 'Klasse', width: 100 },
-  { field: 'jahrgang', headerName: 'Jahrgang', width: 110 },
-  { field: 'aufnahmedatum', headerName: 'Aufnahmedatum', width: 150 },
+  // ── Personaldaten ──────────────────────────────────────────────────────────
+  { field: 'geburtsdatum',           headerName: 'Geburtsdatum',          width: 140, pinned: 'left' },
+  { field: 'alleVornamen',           headerName: 'Alle Vornamen',        width: 150 },
+  { field: 'geburtsname',            headerName: 'Geburtsname',           width: 130 },
+  { field: 'geburtsort',             headerName: 'Geburtsort',            width: 120 },
+  { field: 'geschlecht',             headerName: 'Geschlecht',            width: 110 },
+  { field: 'staatsangehoerigkeitID', headerName: 'Staatsangehörigkeit',   width: 170 },
+  { field: 'religionID',             headerName: 'Konfession',            width: 160 },
+  // ── Adresse ────────────────────────────────────────────────────────────────
+  { field: 'strassenname',           headerName: 'Straße',                width: 180 },
+  { field: 'hausnummer',             headerName: 'Hausnr.',               width: 90 },
+  { field: 'plz',                    headerName: 'PLZ',                   width: 80 },
+  { field: 'ort',                    headerName: 'Ort',                   width: 130 },
+  { field: 'ortsteil',               headerName: 'Ortsteil',              width: 110 },
+  // ── Kontakt ────────────────────────────────────────────────────────────────
+  { field: 'telefon',                headerName: 'Telefon',               width: 140 },
+  { field: 'email',                  headerName: 'E-Mail',                width: 180 },
+  // ── Schulbezogen ──────────────────────────────────────────────────────────
+  { field: 'klasse',                 headerName: 'Klasse',                width: 100 },
+  { field: 'jahrgang',               headerName: 'Jahrgang',              width: 110 },
+  { field: 'schulgliederung',        headerName: 'Schulgliederung',       width: 150 },
+  { field: 'anmeldedatum',           headerName: 'Anmeldedatum',          width: 150 },
+  { field: 'aufnahmedatum',          headerName: 'Aufnahmedatum',         width: 150 },
+  { field: 'beginnBildungsgang',     headerName: 'Beginn Bildungsgang',   width: 170 },
+  // ── Import-Status ─────────────────────────────────────────────────────────
   {
     headerName: 'Status',
     width: 100,

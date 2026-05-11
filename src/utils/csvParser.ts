@@ -31,6 +31,7 @@ export async function parseSchuelerCsv(file: File): Promise<SchuelerImportRow[]>
     Papa.parse<Record<string, string>>(file, {
       header: true,
       skipEmptyLines: true,
+      delimiter: /\.dat$/i.test(file.name) ? '|' : '',
       complete(results) {
         const rows: SchuelerImportRow[] = results.data.map(record => {
           const m = buildLookup(record)
@@ -39,16 +40,29 @@ export async function parseSchuelerCsv(file: File): Promise<SchuelerImportRow[]>
             _valid: true,
             _errors: [],
             _sent: false,
-            nachname: get(m, 'nachname', 'name', 'familienname'),
-            vorname: get(m, 'vorname', 'firstname'),
-            alleVornamen: get(m, 'allevornamen', 'vornamen'),
-            geschlecht: get(m, 'geschlecht', 'gender', 'sex'),
-            geburtsdatum: normalisiereDatum(get(m, 'geburtsdatum', 'geburtstag', 'birthdate', 'birthday')),
-            status: get(m, 'status'),
-            anmeldedatum: normalisiereDatum(get(m, 'anmeldedatum')),
-            aufnahmedatum: normalisiereDatum(get(m, 'aufnahmedatum')),
-            klasse: get(m, 'klasse', 'class', 'klassenbezeichnung'),
-            jahrgang: get(m, 'jahrgang', 'jahrgangsstufe', 'grade'),
+            nachname:              get(m, 'nachname', 'name', 'familienname', 'last name', 'lastname'),
+            vorname:               get(m, 'vorname', 'firstname', 'first name', 'rufname'),
+            alleVornamen:          get(m, 'allevornamen', 'vornamen', 'alle vornamen'),
+            geburtsname:           get(m, 'geburtsname', 'mädchenname', 'maiden name'),
+            geburtsort:            get(m, 'geburtsort', 'birthplace'),
+            geschlecht:            get(m, 'geschlecht', 'gender', 'sex'),
+            geburtsdatum:          normalisiereDatum(get(m, 'geburtsdatum', 'geburtstag', 'birthdate', 'birthday', 'geb.datum', 'geb')),
+            staatsangehoerigkeitID: get(m, '1.staatsang.', 'staatsangehoerigkeit', 'staatsangehörigkeit', 'nationalität', 'nationality', 'staatsang'),
+            religionID:            get(m, 'konfession', 'religion', 'religionszugehörigkeit', 'religionszugehoerigkeit'),
+            strassenname:          get(m, 'straße', 'strasse', 'strassenname', 'street', 'adresse', 'wohnstraße', 'strae'),
+            hausnummer:            get(m, 'hausnummer', 'hnr', 'hausnr'),
+            plz:                   get(m, 'plz', 'postleitzahl', 'postal code', 'zip'),
+            ort:                   get(m, 'ort', 'wohnort', 'stadt', 'city'),
+            ortsteil:              get(m, 'ortsteil', 'stadtteil'),
+            telefon:               get(m, 'telefon', 'tel', 'phone', 'telefonnummer'),
+            email:                 get(m, 'email', 'e-mail', 'mail', 'emailadresse'),
+            status:                get(m, 'status'),
+            anmeldedatum:          normalisiereDatum(get(m, 'anmeldedatum', 'anmeldung')),
+            aufnahmedatum:         normalisiereDatum(get(m, 'aufnahmedatum', 'aufnahme', 'einschulung')),
+            beginnBildungsgang:    normalisiereDatum(get(m, 'beginnbildungsgang', 'beginn bildungsgang')),
+            klasse:                get(m, 'klasse', 'class', 'klassenbezeichnung', 'lerngruppe'),
+            jahrgang:              get(m, 'jahrgang', 'jahrgangsstufe', 'stufe', 'grade', 'jg', 'jgst'),
+            schulgliederung:       get(m, 'schulgliederung', 'gliederung', 'bildungsgang', 'track'),
           }
           return row
         })

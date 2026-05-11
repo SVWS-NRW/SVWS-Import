@@ -34,11 +34,19 @@ export interface OrtKatalogEintrag {
   ortsname: string | null
 }
 
+export interface ReligionKatalogEintrag {
+  id: number
+  bezeichnung: string | null
+  kuerzel: string | null
+}
+
 export interface ImportKataloge {
   /** schluessel (codeDEStatis, z.B. "000") → kuerzel (ISO-3, z.B. "DEU") */
   nationalitaeten?: Map<string, string>
   /** "PLZ|ortsname" (lowercase) → OrtKatalogEintrag */
   orte?: Map<string, OrtKatalogEintrag>
+  /** kuerzel (uppercase) → ReligionKatalogEintrag */
+  religionen?: Map<string, ReligionKatalogEintrag>
 }
 
 export interface ImportContext {

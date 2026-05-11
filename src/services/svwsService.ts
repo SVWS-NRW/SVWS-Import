@@ -9,12 +9,41 @@ import { lehrerImportToApi } from '@/models/Lehrer'
 import { klasseImportToApi } from '@/models/Klassen'
 import { jahrgangImportToApi } from '@/models/Jahrgaenge'
 import type { ImportModule, MappedRow, ImportContext, EntityType } from '@/models/ImportSchema'
-import { resolveWohnortId } from './katalogService'
+import { resolveWohnortId, resolveReligionId } from './katalogService'
 
 export interface UploadResult {
   success: boolean
   id?: number
   error?: string
+}
+
+interface SchuelerLernabschnitt {
+  id: number
+  wechselNr: number
+  klassenID: number | null
+}
+
+function resolveByKuerzel(map: Map<string, number>, kuerzel: string): number | null {
+  if (!kuerzel) return null
+  return map.get(kuerzel.trim().toLowerCase()) ?? null
+}
+
+export function buildKlassenMap(klassen: KlasseDetails[]): Map<string, number> {
+  const map = new Map<string, number>()
+  for (const k of klassen) {
+    if (k.kuerzel) map.set(k.kuerzel.trim().toLowerCase(), k.id)
+  }
+  return map
+}
+
+export function buildJahrgaengeMap(jahrgaenge: JahrgangDetails[]): Map<string, number> {
+  const map = new Map<string, number>()
+  for (const j of jahrgaenge) {
+    if (j.kuerzel) map.set(j.kuerzel.trim().toLowerCase(), j.id)
+    // kuerzelStatistik als Fallback (oft identisch, aber sicher)
+    if (j.kuerzelStatistik) map.set(j.kuerzelStatistik.trim().toLowerCase(), j.id)
+  }
+  return map
 }
 
 // Endpunkte je Entitätstyp — hier neue Module eintragen wenn der SVWS-Endpunkt bekannt ist
@@ -65,27 +94,64 @@ export async function createSchueler(
   row: SchuelerImportRow,
   idSchuljahresabschnitt: number,
   orteKatalog?: Map<string, import('@/models/ImportSchema').OrtKatalogEintrag>,
+  religionenKatalog?: Map<string, import('@/models/ImportSchema').ReligionKatalogEintrag>,
+  klassenMap?: Map<string, number>,
+  jahrgaengeMap?: Map<string, number>,
 ): Promise<UploadResult> {
   try {
     const payload: SchuelerNeu = schuelerImportToApi(row, idSchuljahresabschnitt)
     const response = await getApiClient().post('/schueler/create', payload)
     const newId: number = response.data.id
 
+    // ── Stammdaten-Patch (Adresse, Kontakt, Religion) ────────────────────────
     const stammdatenPatch: Record<string, unknown> = {}
-    if (row.geburtsname)   stammdatenPatch.geburtsname   = row.geburtsname
-    if (row.geburtsort)    stammdatenPatch.geburtsort     = row.geburtsort
-    if (row.strassenname)  stammdatenPatch.strassenname   = row.strassenname
-    if (row.hausnummer)    stammdatenPatch.hausnummer     = row.hausnummer
-    if (row.telefon)       stammdatenPatch.telefon        = row.telefon
-    if (row.email)         stammdatenPatch.emailPrivat    = row.email
+    if (row.geburtsname)   stammdatenPatch.geburtsname  = row.geburtsname
+    if (row.geburtsort)    stammdatenPatch.geburtsort    = row.geburtsort
+    if (row.strassenname)  stammdatenPatch.strassenname  = row.strassenname
+    if (row.hausnummer)    stammdatenPatch.hausnummer    = row.hausnummer
+    if (row.telefon)       stammdatenPatch.telefon       = row.telefon
+    if (row.email)         stammdatenPatch.emailPrivat   = row.email
 
     if (orteKatalog) {
       const wohnortID = resolveWohnortId(orteKatalog, row.plz, row.ort)
-      if (wohnortID !== null) stammdatenPatch.wohnortID = wohnortID
+      if (wohnortID !== null) {
+        // wohnortID und ortsteilID müssen immer zusammen gepatcht werden (API-Anforderung)
+        stammdatenPatch.wohnortID  = wohnortID
+        stammdatenPatch.ortsteilID = null
+      }
+    }
+
+    if (religionenKatalog) {
+      const religionID = resolveReligionId(religionenKatalog, row.religionKuerzel, row.religionID)
+      if (religionID !== null) stammdatenPatch.religionID = religionID
     }
 
     if (Object.keys(stammdatenPatch).length > 0) {
       await getApiClient().patch(`/schueler/${newId}/stammdaten`, stammdatenPatch)
+    }
+
+    // ── Lernabschnitt-Patch (Klasse + Jahrgang) ──────────────────────────────
+    const lernabschnittPatch: Record<string, unknown> = {}
+    if (klassenMap) {
+      const klassenID = resolveByKuerzel(klassenMap, row.klasse)
+      if (klassenID !== null) lernabschnittPatch.klassenID = klassenID
+    }
+    if (jahrgaengeMap) {
+      const jahrgangID = resolveByKuerzel(jahrgaengeMap, row.jahrgang)
+      if (jahrgangID !== null) lernabschnittPatch.jahrgangID = jahrgangID
+    }
+
+    if (Object.keys(lernabschnittPatch).length > 0) {
+      const laResp = await getApiClient().get<SchuelerLernabschnitt[]>(
+        `/schueler/lernabschnittsdaten/${newId}/${idSchuljahresabschnitt}`,
+      )
+      const lernabschnitt = laResp.data.find(la => la.wechselNr === 0) ?? laResp.data[0]
+      if (lernabschnitt?.id) {
+        await getApiClient().patch(
+          `/schueler/lernabschnittsdaten/${lernabschnitt.id}`,
+          lernabschnittPatch,
+        )
+      }
     }
 
     return { success: true, id: newId }

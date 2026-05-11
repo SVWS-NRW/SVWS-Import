@@ -49,6 +49,7 @@ export async function parseSchuelerCsv(file: File): Promise<SchuelerImportRow[]>
             geburtsdatum:          normalisiereDatum(get(m, 'geburtsdatum', 'geburtstag', 'birthdate', 'birthday', 'geb.datum', 'geb')),
             staatsangehoerigkeitID: get(m, '1.staatsang.', 'staatsangehoerigkeit', 'staatsangehörigkeit', 'nationalität', 'nationality', 'staatsang'),
             religionID:            get(m, 'konfession', 'religion', 'religionszugehörigkeit', 'religionszugehoerigkeit'),
+            religionKuerzel:       get(m, 'statistikkrzkonfession', 'statistikkrizkonfession', 'religionskuerzel', 'konfessionskuerzel'),
             strassenname:          get(m, 'straße', 'strasse', 'strassenname', 'street', 'adresse', 'wohnstraße', 'strae'),
             hausnummer:            get(m, 'hausnummer', 'hnr', 'hausnr'),
             plz:                   get(m, 'plz', 'postleitzahl', 'postal code', 'zip'),

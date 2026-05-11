@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { type SchuelerImportRow } from '@/models/Schueler'
-import { createSchueler } from '@/services/svwsService'
+import { createSchueler, buildKlassenMap, fetchKlassenDetails, buildJahrgaengeMap, fetchJahrgaenge } from '@/services/svwsService'
 import { loadKataloge } from '@/services/katalogService'
 import type { OrtKatalogEintrag } from '@/models/ImportSchema'
 
@@ -56,18 +56,28 @@ export const useSchuelerStore = defineStore('schueler', () => {
     let failed = 0
 
     let orteKatalog: Map<string, OrtKatalogEintrag> | undefined
+    let religionenKatalog: Map<string, import('@/models/ImportSchema').ReligionKatalogEintrag> | undefined
+    let klassenMap: Map<string, number> | undefined
+    let jahrgaengeMap: Map<string, number> | undefined
     try {
-      const kataloge = await loadKataloge()
-      orteKatalog = kataloge.orte
+      const [kataloge, klassen, jahrgaenge] = await Promise.all([
+        loadKataloge(),
+        fetchKlassenDetails(idSchuljahresabschnitt.value),
+        fetchJahrgaenge(),
+      ])
+      orteKatalog       = kataloge.orte
+      religionenKatalog = kataloge.religionen
+      klassenMap        = buildKlassenMap(klassen)
+      jahrgaengeMap     = buildJahrgaengeMap(jahrgaenge)
     } catch {
-      // Katalog nicht verfügbar — Adress-Lookup wird übersprungen
+      // Kataloge nicht verfügbar — Lookups werden übersprungen
     }
 
     const updated = [...rows.value]
     for (let i = 0; i < updated.length; i++) {
       const row = updated[i]
       if (!row._valid || row._sent) continue
-      const result = await createSchueler(row, idSchuljahresabschnitt.value, orteKatalog)
+      const result = await createSchueler(row, idSchuljahresabschnitt.value, orteKatalog, religionenKatalog, klassenMap, jahrgaengeMap)
       if (result.success) {
         updated[i] = { ...row, _sent: true, _errors: [] }
         sent++

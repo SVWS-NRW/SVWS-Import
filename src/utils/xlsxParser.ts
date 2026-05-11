@@ -47,6 +47,7 @@ export async function parseSchuelerXlsx(file: File): Promise<SchuelerImportRow[]
     geburtsdatum:           normalisiereDatum(col(row, headerMap, 'geburtsdatum', 'geburtstag', 'birthdate', 'birthday')),
     staatsangehoerigkeitID: col(row, headerMap, '1. staatsang.', 'staatsangehoerigkeit', 'staatsangehörigkeit', 'nationalität', 'nationality'),
     religionID:             col(row, headerMap, 'konfession', 'religion', 'religionszugehörigkeit'),
+    religionKuerzel:        col(row, headerMap, 'statistik krz konfession', 'religionskuerzel', 'konfessionskuerzel'),
     strassenname:           col(row, headerMap, 'straße', 'strasse', 'strassenname', 'street', 'adresse'),
     hausnummer:             col(row, headerMap, 'hausnummer', 'hnr', 'hausnr'),
     plz:                    col(row, headerMap, 'plz', 'postleitzahl', 'postal code', 'zip'),

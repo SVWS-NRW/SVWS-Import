@@ -36,7 +36,8 @@ export interface SchuelerImportRow {
   geschlecht: string                 // Roh-String aus der Datei, wird beim Senden konvertiert
   geburtsdatum: string
   staatsangehoerigkeitID: string
-  religionID: string                 // Klartext (z.B. "römisch-katholisch"), Mapping zu idReligion fehlt
+  religionID: string                 // Klartext (z.B. "römisch-katholisch")
+  religionKuerzel: string            // Kürzel aus Schild-NRW StatistikKrz (z.B. "KR"), bevorzugter Lookup-Schlüssel
   // Adresse
   strassenname: string
   hausnummer: string

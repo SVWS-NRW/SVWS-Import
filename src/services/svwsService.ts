@@ -8,7 +8,7 @@ import { schuelerImportToApi } from '@/models/Schueler'
 import { lehrerImportToApi } from '@/models/Lehrer'
 import { klasseImportToApi } from '@/models/Klassen'
 import { jahrgangImportToApi } from '@/models/Jahrgaenge'
-import type { ImportModule, MappedRow, ImportContext, EntityType } from '@/models/ImportSchema'
+import type { ImportModule, MappedRow, ImportContext, EntityType, OrtKatalogEintrag } from '@/models/ImportSchema'
 import { resolveWohnortId, resolveReligionId } from './katalogService'
 
 export interface UploadResult {
@@ -82,9 +82,79 @@ export async function sendMappedRow(
   try {
     const payload = module.toApiPayload(row, context)
     const response = await getApiClient().post(endpoint, payload)
-    return { success: true, id: response.data?.id }
+    const newId: number = response.data?.id
+
+    if (module.entityType === 'schueler' && newId) {
+      await patchSchuelerAfterCreate(newId, row, context)
+    }
+
+    return { success: true, id: newId }
   } catch (error: unknown) {
     return { success: false, error: extractErrorMessage(error) }
+  }
+}
+
+async function patchSchuelerAfterCreate(
+  newId: number,
+  row: MappedRow,
+  context: ImportContext,
+): Promise<void> {
+  const str = (key: string) => String(row[key] ?? '').trim()
+
+  // ── Stammdaten-Patch ───────────────────────────────────────────────────────
+  const stammdatenPatch: Record<string, unknown> = {}
+  if (str('geburtsname'))  stammdatenPatch.geburtsname  = str('geburtsname')
+  if (str('geburtsort'))   stammdatenPatch.geburtsort   = str('geburtsort')
+  if (str('strassenname')) stammdatenPatch.strassenname = str('strassenname')
+  if (str('hausnummer'))   stammdatenPatch.hausnummer   = str('hausnummer')
+  if (str('telefon'))      stammdatenPatch.telefon      = str('telefon')
+  if (str('email'))        stammdatenPatch.emailPrivat  = str('email')
+
+  if (context.kataloge?.orte) {
+    const wohnortID = resolveWohnortId(context.kataloge.orte, str('plz'), str('ort'))
+    if (wohnortID !== null) {
+      stammdatenPatch.wohnortID  = wohnortID
+      stammdatenPatch.ortsteilID = null
+    }
+  }
+
+  if (context.kataloge?.religionen) {
+    const religionID = resolveReligionId(
+      context.kataloge.religionen,
+      str('religionKuerzel'),
+      str('religionID'),
+    )
+    if (religionID !== null) stammdatenPatch.religionID = religionID
+  }
+
+  if (Object.keys(stammdatenPatch).length > 0) {
+    await getApiClient().patch(`/schueler/${newId}/stammdaten`, stammdatenPatch)
+  }
+
+  // ── Lernabschnitt-Patch ────────────────────────────────────────────────────
+  const lernabschnittPatch: Record<string, unknown> = {}
+
+  if (context.kataloge?.klassen) {
+    const klassenID = resolveByKuerzel(context.kataloge.klassen, str('klasse'))
+    if (klassenID !== null) lernabschnittPatch.klassenID = klassenID
+  }
+
+  if (context.kataloge?.jahrgaenge) {
+    const jahrgangID = resolveByKuerzel(context.kataloge.jahrgaenge, str('jahrgang'))
+    if (jahrgangID !== null) lernabschnittPatch.jahrgangID = jahrgangID
+  }
+
+  if (Object.keys(lernabschnittPatch).length > 0 && context.idSchuljahresabschnitt) {
+    const laResp = await getApiClient().get<SchuelerLernabschnitt[]>(
+      `/schueler/lernabschnittsdaten/${newId}/${context.idSchuljahresabschnitt}`,
+    )
+    const lernabschnitt = laResp.data.find(la => la.wechselNr === 0) ?? laResp.data[0]
+    if (lernabschnitt?.id) {
+      await getApiClient().patch(
+        `/schueler/lernabschnittsdaten/${lernabschnitt.id}`,
+        lernabschnittPatch,
+      )
+    }
   }
 }
 
@@ -219,9 +289,80 @@ export async function createKlasse(row: KlasseImportRow, idSchuljahresabschnitt:
   }
 }
 
+export async function fetchOrteById(): Promise<Map<number, OrtKatalogEintrag>> {
+  const response = await getApiClient().get<OrtKatalogEintrag[]>('/orte')
+  const map = new Map<number, OrtKatalogEintrag>()
+  for (const entry of response.data) {
+    if (entry.id) map.set(entry.id, entry)
+  }
+  return map
+}
+
 export async function fetchForExport(endpoint: string): Promise<Record<string, unknown>[]> {
   const response = await getApiClient().get(endpoint)
   return Array.isArray(response.data) ? response.data : []
+}
+
+export interface SchuelerAuswahl {
+  id: number
+  nachname: string
+  vorname: string
+  status: number
+  idKlasse?: number
+  klasse?: string
+  jahrgang?: string
+  [key: string]: unknown
+}
+
+export async function enrichSchueler(
+  students: SchuelerAuswahl[],
+  endpointFns: Array<(id: number) => string>,
+  onProgress: (done: number, total: number) => void,
+  concurrency = 15,
+): Promise<Record<string, unknown>[]> {
+  const client = getApiClient()
+  const results: Record<string, unknown>[] = new Array(students.length)
+  let cursor = 0
+  let done = 0
+
+  async function work(): Promise<void> {
+    while (cursor < students.length) {
+      const i = cursor++
+      const student = students[i]
+      const enrichments = await Promise.all(
+        endpointFns.map(fn =>
+          client.get(fn(student.id))
+            .then(r => r.data as Record<string, unknown>)
+            .catch(() => ({} as Record<string, unknown>)),
+        ),
+      )
+      results[i] = Object.assign({}, student as Record<string, unknown>, ...enrichments)
+      onProgress(++done, students.length)
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(concurrency, students.length) }, work))
+  return results
+}
+
+export async function fetchSchuelerAuswahlliste(abschnittId: number): Promise<SchuelerAuswahl[]> {
+  const response = await getApiClient().get(`/schueler/abschnitt/${abschnittId}/auswahlliste`)
+  const raw = response.data
+
+  // Response is { schueler: [...], klassen: [...], ... }, not a plain array
+  const schueler: SchuelerAuswahl[] = Array.isArray(raw?.schueler) ? raw.schueler : (Array.isArray(raw) ? raw : [])
+
+  const klassenMap = new Map<number, string>()
+  if (Array.isArray(raw?.klassen)) {
+    for (const k of raw.klassen as { id: number; kuerzel: string }[]) {
+      if (k.id && k.kuerzel) klassenMap.set(k.id, k.kuerzel)
+    }
+  }
+
+  return schueler.map(s => ({
+    ...s,
+    klasse: klassenMap.get(s.idKlasse as number) ?? (s.idKlasse != null ? String(s.idKlasse) : ''),
+  }))
 }
 
 function extractErrorMessage(error: unknown): string {

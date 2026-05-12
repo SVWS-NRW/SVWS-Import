@@ -133,7 +133,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import Button from 'primevue/button'
 import InputNumber from 'primevue/inputnumber'
 import Select from 'primevue/select'
@@ -142,7 +142,7 @@ import Tag from 'primevue/tag'
 import { useWizardStore } from '@/stores/wizardStore'
 import { useAuthStore } from '@/stores/auth'
 import { useSchuleStore } from '@/stores/schule'
-import { sendMappedRow } from '@/services/svwsService'
+import { sendMappedRow, fetchKlassenDetails, fetchJahrgaenge, buildKlassenMap, buildJahrgaengeMap } from '@/services/svwsService'
 import type { ImportModule, MappedRow } from '@/models/ImportSchema'
 
 const props = defineProps<{ module: ImportModule }>()
@@ -164,6 +164,31 @@ onMounted(() => {
   const defaultId = schuleStore.aktuellerAbschnittId ?? schuleStore.abschnitteOptions[0]?.id ?? null
   if (defaultId !== null) wizardStore.setContext({ idSchuljahresabschnitt: defaultId })
 })
+
+async function loadSchuelerKataloge(abschnittId: number): Promise<void> {
+  if (props.module.entityType !== 'schueler' || abschnittId <= 0) return
+  try {
+    const [klassen, jahrgaenge] = await Promise.all([
+      fetchKlassenDetails(abschnittId),
+      fetchJahrgaenge(),
+    ])
+    wizardStore.setContext({
+      kataloge: {
+        ...wizardStore.context.kataloge,
+        klassen:   buildKlassenMap(klassen),
+        jahrgaenge: buildJahrgaengeMap(jahrgaenge),
+      },
+    })
+  } catch {
+    // Kataloge nicht verfügbar — Lookups werden übersprungen
+  }
+}
+
+watch(
+  idSchuljahresabschnitt,
+  (id) => { if (id > 0) loadSchuelerKataloge(id) },
+  { immediate: true },
+)
 
 const canSend = computed(() => {
   if (props.module.entityType === 'schueler') {

@@ -47,6 +47,10 @@ export interface ImportKataloge {
   orte?: Map<string, OrtKatalogEintrag>
   /** kuerzel (uppercase) → ReligionKatalogEintrag */
   religionen?: Map<string, ReligionKatalogEintrag>
+  /** kuerzel.toLowerCase() → id */
+  klassen?: Map<string, number>
+  /** kuerzel.toLowerCase() → id */
+  jahrgaenge?: Map<string, number>
 }
 
 export interface ImportContext {

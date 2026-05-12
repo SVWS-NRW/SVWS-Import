@@ -1,4 +1,4 @@
-export type PersonalTyp = 'LEHRKRAFT' | 'VERWALTUNG_TECHNIK' | 'SONSTIGER'
+export type PersonalTyp = 'LEHRKRAFT' | 'SEKRETARIAT' | 'PERSONAL' | 'EXTERN' | 'SONSTIGE'
 
 export interface LehrerStammdaten {
   id?: number
@@ -76,11 +76,19 @@ export function lehrerImportToApi(row: LehrerImportRow): LehrerStammdaten {
 function parsePersonalTyp(raw: string): PersonalTyp {
   const map: Record<string, PersonalTyp> = {
     'lehrkraft': 'LEHRKRAFT',
-    'lehrer': 'LEHRKRAFT',
-    'verwaltung': 'VERWALTUNG_TECHNIK',
-    'technik': 'VERWALTUNG_TECHNIK',
-    'sonstig': 'SONSTIGER',
-    'sonstiger': 'SONSTIGER',
+    'lehrer':    'LEHRKRAFT',
+    'sekretariat': 'SEKRETARIAT',
+    'sekretär':    'SEKRETARIAT',
+    'sekretaer':   'SEKRETARIAT',
+    'personal':    'PERSONAL',
+    'verwaltung':  'PERSONAL',
+    'angestellte': 'PERSONAL',
+    'angestellter':'PERSONAL',
+    'extern':      'EXTERN',
+    'externe':     'EXTERN',
+    'sonstige':    'SONSTIGE',
+    'sonstiger':   'SONSTIGE',
+    'sonstig':     'SONSTIGE',
   }
   return map[raw.toLowerCase().trim()] ?? 'LEHRKRAFT'
 }

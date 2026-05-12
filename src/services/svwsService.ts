@@ -314,35 +314,44 @@ export interface SchuelerAuswahl {
   [key: string]: unknown
 }
 
+export async function enrichRecords(
+  records: Array<Record<string, unknown>>,
+  endpointFns: Array<(id: number) => string>,
+  onProgress: (done: number, total: number) => void,
+  concurrency = 15,
+): Promise<Record<string, unknown>[]> {
+  const client = getApiClient()
+  const results: Record<string, unknown>[] = new Array(records.length)
+  let cursor = 0
+  let done = 0
+
+  async function work(): Promise<void> {
+    while (cursor < records.length) {
+      const i = cursor++
+      const record = records[i]
+      const enrichments = await Promise.all(
+        endpointFns.map(fn =>
+          client.get(fn(record.id as number))
+            .then(r => r.data as Record<string, unknown>)
+            .catch(() => ({} as Record<string, unknown>)),
+        ),
+      )
+      results[i] = Object.assign({}, record, ...enrichments)
+      onProgress(++done, records.length)
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(concurrency, records.length) }, work))
+  return results
+}
+
 export async function enrichSchueler(
   students: SchuelerAuswahl[],
   endpointFns: Array<(id: number) => string>,
   onProgress: (done: number, total: number) => void,
   concurrency = 15,
 ): Promise<Record<string, unknown>[]> {
-  const client = getApiClient()
-  const results: Record<string, unknown>[] = new Array(students.length)
-  let cursor = 0
-  let done = 0
-
-  async function work(): Promise<void> {
-    while (cursor < students.length) {
-      const i = cursor++
-      const student = students[i]
-      const enrichments = await Promise.all(
-        endpointFns.map(fn =>
-          client.get(fn(student.id))
-            .then(r => r.data as Record<string, unknown>)
-            .catch(() => ({} as Record<string, unknown>)),
-        ),
-      )
-      results[i] = Object.assign({}, student as Record<string, unknown>, ...enrichments)
-      onProgress(++done, students.length)
-    }
-  }
-
-  await Promise.all(Array.from({ length: Math.min(concurrency, students.length) }, work))
-  return results
+  return enrichRecords(students as Array<Record<string, unknown>>, endpointFns, onProgress, concurrency)
 }
 
 export async function fetchSchuelerAuswahlliste(abschnittId: number): Promise<SchuelerAuswahl[]> {

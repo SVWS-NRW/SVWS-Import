@@ -70,11 +70,11 @@
               severity="secondary"
               outlined
               :loading="loading"
-              :disabled="selectedFields.length === 0 || (selectedTile === 'schueler' && schuelerAuswahl.length === 0)"
+              :disabled="selectedFields.length === 0 || (selectedTile === 'schueler' && schuelerAuswahl.length === 0) || (selectedTile === 'lehrer' && lehrerListe.length === 0)"
               @click="loadData"
             />
             <Button
-              v-if="data.length > 0 && selectedTile !== 'schueler'"
+              v-if="data.length > 0 && selectedTile !== 'schueler' && selectedTile !== 'lehrer'"
               label="Exportieren"
               icon="pi pi-file-export"
               :disabled="selectedFields.length === 0"
@@ -83,7 +83,7 @@
           </div>
         </div>
         <div v-if="exportProgress > 0" class="export-progress">
-          <span class="progress-text">Lade {{ exportDone }} / {{ exportTotal }} Schülerdaten…</span>
+          <span class="progress-text">Lade {{ exportDone }} / {{ exportTotal }} {{ selectedTile === 'lehrer' ? 'Lehrerstammdaten' : 'Schülerdaten' }}…</span>
           <ProgressBar :value="Math.round(exportProgress * 100)" style="height: 6px; flex: 1" />
         </div>
       </div>
@@ -189,6 +189,88 @@
         </DataTable>
       </div>
 
+      <!-- Lehrerliste -->
+      <div v-if="selectedTile === 'lehrer'" class="config-section">
+        <div class="section-header">
+          <h3 class="section-title">
+            Lehrerliste
+            <span v-if="lehrerListe.length > 0" class="count-badge">
+              {{ filteredLehrer.length }} von {{ lehrerListe.length }}
+              <template v-if="selectedLehrer.length > 0"> · {{ selectedLehrer.length }} ausgewählt</template>
+            </span>
+          </h3>
+          <div class="section-actions">
+            <MultiSelect
+              v-model="lehrerSichtbarFilter"
+              :options="LEHRER_SICHTBAR_OPTIONS"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Sichtbarkeit"
+              style="width: 170px"
+            />
+            <MultiSelect
+              v-model="lehrerPersonalTypFilter"
+              :options="LEHRER_PERSONALTYP_OPTIONS"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Personaltyp"
+              style="width: 185px"
+            />
+            <Button
+              icon="pi pi-refresh"
+              severity="secondary"
+              text
+              :loading="lehrerListLoading"
+              aria-label="Neu laden"
+              @click="reloadLehrerListe"
+            />
+          </div>
+        </div>
+        <div v-if="lehrerListLoading" class="list-empty">
+          <i class="pi pi-spin pi-spinner" />
+          <span>Lehrkräfte werden geladen…</span>
+        </div>
+        <div v-else-if="lehrerListError" class="list-error">
+          <i class="pi pi-exclamation-triangle" />
+          <span>{{ lehrerListError }}</span>
+        </div>
+        <DataTable
+          v-else
+          v-model:selection="selectedLehrer"
+          :value="filteredLehrer"
+          dataKey="id"
+          scrollable
+          scrollHeight="400px"
+          :virtualScrollerOptions="{ itemSize: 36 }"
+          size="small"
+          sortMode="single"
+        >
+          <Column selectionMode="multiple" style="width: 3rem; flex: none" />
+          <Column field="kuerzel"  header="Kürzel"   sortable style="min-width: 80px" />
+          <Column field="nachname" header="Nachname" sortable style="min-width: 140px" />
+          <Column field="vorname"  header="Vorname"  sortable style="min-width: 120px" />
+          <Column header="Personaltyp" sortField="personTyp" sortable style="min-width: 160px">
+            <template #body="{ data: row }">
+              <span :class="['status-badge', `ptyp-${row.personTyp}`]">
+                {{ lehrerPersonalTypLabel(row.personTyp as string) }}
+              </span>
+            </template>
+          </Column>
+          <Column header="Sichtbar" sortField="istSichtbar" sortable style="min-width: 110px">
+            <template #body="{ data: row }">
+              <span :class="['status-badge', row.istSichtbar ? 'sichtbar-ja' : 'sichtbar-nein']">
+                {{ row.istSichtbar ? 'Sichtbar' : 'Versteckt' }}
+              </span>
+            </template>
+          </Column>
+          <template #empty>
+            <span style="color: var(--p-text-muted-color); font-size: 0.875rem;">
+              Keine Lehrkräfte für den gewählten Filter.
+            </span>
+          </template>
+        </DataTable>
+      </div>
+
     </template>
   </div>
 </template>
@@ -205,7 +287,7 @@ import InputNumber from 'primevue/inputnumber'
 import Message from 'primevue/message'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
-import { fetchForExport, fetchSchuelerAuswahlliste, enrichSchueler, fetchOrteById, type SchuelerAuswahl } from '@/services/svwsService'
+import { fetchForExport, fetchSchuelerAuswahlliste, enrichSchueler, enrichRecords, fetchOrteById, type SchuelerAuswahl } from '@/services/svwsService'
 import type { OrtKatalogEintrag } from '@/models/ImportSchema'
 import { exportAsCsv, exportAsJson } from '@/utils/exportUtils'
 import { useSchuleStore } from '@/stores/schule'
@@ -275,12 +357,21 @@ const TILES: ExportTile[] = [
     label: 'Lehrerdaten',
     description: 'Lehrkräfte exportieren',
     icon: 'pi pi-id-card',
-    endpoint: '/lehrer',
+    subEndpoints: [
+      {
+        path: id => `/lehrer/${id}/stammdaten`,
+        fieldKeys: [
+          'anrede', 'amtsbezeichnung', 'geschlecht', 'geburtsdatum',
+          'staatsangehoerigkeitID', 'strassenname', 'hausnummer', 'plz', 'ort',
+          'telefon', 'telefonMobil', 'emailPrivat', 'emailDienstlich',
+        ],
+      },
+    ],
     fields: [
       { key: 'kuerzel',               label: 'Kürzel'            },
       { key: 'nachname',              label: 'Nachname'          },
       { key: 'vorname',               label: 'Vorname'           },
-      { key: 'personalTyp',           label: 'Personaltyp'       },
+      { key: 'personTyp',             label: 'Personaltyp'       },
       { key: 'anrede',                label: 'Anrede'            },
       { key: 'titel',                 label: 'Titel'             },
       { key: 'amtsbezeichnung',       label: 'Amtsbezeichnung'   },
@@ -339,6 +430,27 @@ function statusLabel(status: number): string {
   return SCHUELER_STATUS_LABELS[status] ?? `Status ${status}`
 }
 
+const LEHRER_PERSONALTYP_OPTIONS = [
+  { value: 'LEHRKRAFT',   label: 'Lehrkraft'                                      },
+  { value: 'SEKRETARIAT', label: 'Sekretär / Sekretärin'                          },
+  { value: 'PERSONAL',    label: 'Angestelltes Personal'                          },
+  { value: 'EXTERN',      label: 'Externe Lehrkraft'                              },
+  { value: 'SONSTIGE',    label: 'Sonstiges Personal'                             },
+]
+
+const LEHRER_PERSONALTYP_LABELS: Record<string, string> = Object.fromEntries(
+  LEHRER_PERSONALTYP_OPTIONS.map(o => [o.value, o.label]),
+)
+
+const LEHRER_SICHTBAR_OPTIONS = [
+  { value: true,  label: 'Sichtbar'       },
+  { value: false, label: 'Nicht sichtbar' },
+]
+
+function lehrerPersonalTypLabel(typ: string): string {
+  return LEHRER_PERSONALTYP_LABELS[typ] ?? typ
+}
+
 const schuleStore = useSchuleStore()
 
 const selectedTile        = ref<string | null>(null)
@@ -353,11 +465,17 @@ const statusFilter        = ref<number[]>([2])
 const jahrgangFilter      = ref<string[]>([])
 const klasseFilter        = ref<string[]>([])
 const selectedAbschnittId = ref<number | null>(null)
-const listLoading         = ref(false)
-const listError           = ref('')
-const exportProgress      = ref(0)
-const exportDone          = ref(0)
-const exportTotal         = ref(0)
+const listLoading             = ref(false)
+const listError               = ref('')
+const exportProgress          = ref(0)
+const exportDone              = ref(0)
+const exportTotal             = ref(0)
+const lehrerListe             = ref<Record<string, unknown>[]>([])
+const selectedLehrer          = ref<Record<string, unknown>[]>([])
+const lehrerListLoading       = ref(false)
+const lehrerListError         = ref('')
+const lehrerSichtbarFilter    = ref<boolean[]>([true])
+const lehrerPersonalTypFilter = ref<string[]>([])
 
 const activeTile = computed(() => TILES.find(t => t.id === selectedTile.value))
 
@@ -368,7 +486,23 @@ const loadBtnLabel = computed(() => {
       : filteredSchueler.value.length
     return count > 0 ? `${count} Schüler exportieren` : 'Exportieren'
   }
+  if (selectedTile.value === 'lehrer') {
+    const count = selectedLehrer.value.length > 0
+      ? selectedLehrer.value.length
+      : filteredLehrer.value.length
+    return count > 0 ? `${count} Lehrkräfte exportieren` : 'Exportieren'
+  }
   return data.value.length ? `Neu laden (${data.value.length} Datensätze)` : 'Daten laden'
+})
+
+const filteredLehrer = computed(() => {
+  const sichtbarSet = lehrerSichtbarFilter.value.length > 0 ? new Set(lehrerSichtbarFilter.value) : null
+  const typSet      = lehrerPersonalTypFilter.value.length > 0 ? new Set(lehrerPersonalTypFilter.value) : null
+  if (!sichtbarSet && !typSet) return lehrerListe.value
+  return lehrerListe.value.filter(l =>
+    (!sichtbarSet || sichtbarSet.has(l.istSichtbar as boolean)) &&
+    (!typSet      || typSet.has(l.personTyp as string)),
+  )
 })
 
 const jahrgaengeOptions = computed(() =>
@@ -415,9 +549,13 @@ function selectTile(id: string): void {
   jahrgangFilter.value = []
   klasseFilter.value = []
   listError.value = ''
+  lehrerListe.value = []
+  selectedLehrer.value = []
+  lehrerListError.value = ''
   const tile = TILES.find(t => t.id === id)
   selectedFields.value = tile?.fields?.map(f => f.key) ?? []
   if (id === 'schueler') reloadAuswahlliste()
+  if (id === 'lehrer')   reloadLehrerListe()
 }
 
 function selectAll(): void {
@@ -440,6 +578,20 @@ async function reloadAuswahlliste(): Promise<void> {
     schuelerAuswahl.value = []
   } finally {
     listLoading.value = false
+  }
+}
+
+async function reloadLehrerListe(): Promise<void> {
+  lehrerListLoading.value = true
+  lehrerListError.value = ''
+  selectedLehrer.value = []
+  try {
+    lehrerListe.value = await fetchForExport('/lehrer')
+  } catch (e) {
+    lehrerListError.value = e instanceof Error ? e.message : 'Fehler beim Laden der Lehrerliste'
+    lehrerListe.value = []
+  } finally {
+    lehrerListLoading.value = false
   }
 }
 
@@ -500,6 +652,60 @@ async function loadData(): Promise<void> {
 
       const date = new Date().toISOString().slice(0, 10)
       const filename = `schueler_export_${date}`
+      format.value === 'csv'
+        ? exportAsCsv(resolved, selectedFields.value, `${filename}.csv`)
+        : exportAsJson(resolved, selectedFields.value, `${filename}.json`)
+    } catch (e) {
+      loadError.value = e instanceof Error ? e.message : 'Fehler beim Exportieren'
+    } finally {
+      loading.value = false
+      exportProgress.value = 0
+      exportDone.value = 0
+      exportTotal.value = 0
+    }
+    return
+  }
+
+  if (tile.id === 'lehrer') {
+    const teachers = selectedLehrer.value.length > 0 ? selectedLehrer.value : filteredLehrer.value
+    if (teachers.length === 0) { loadError.value = 'Keine Lehrkräfte zum Exportieren vorhanden.'; return }
+    if (selectedFields.value.length === 0) { loadError.value = 'Bitte mindestens ein Feld auswählen.'; return }
+
+    const neededEndpoints = (tile.subEndpoints ?? [])
+      .filter(ep => ep.fieldKeys.some(k => selectedFields.value.includes(k)))
+      .map(ep => ep.path)
+
+    loading.value = true
+    exportProgress.value = 0
+    exportDone.value = 0
+    exportTotal.value = teachers.length
+    try {
+      const needsOrt = selectedFields.value.some(f => f === 'plz' || f === 'ort')
+      const [enriched, orteById] = await Promise.all([
+        neededEndpoints.length > 0
+          ? enrichRecords(
+              teachers,
+              neededEndpoints,
+              (done, total) => { exportDone.value = done; exportTotal.value = total; exportProgress.value = done / total },
+            )
+          : Promise.resolve(teachers),
+        needsOrt ? fetchOrteById() : Promise.resolve(null as unknown as Map<number, OrtKatalogEintrag>),
+      ])
+
+      const resolved = enriched.map(row => {
+        const r: Record<string, unknown> = { ...row }
+        if (orteById) {
+          const entry = orteById.get(r.wohnortID as number)
+          r.plz = entry?.plz ?? ''
+          r.ort = entry?.ortsname ?? ''
+        }
+        const zusatz = String(r.hausnummerZusatz ?? '').trim()
+        if (zusatz) r.hausnummer = `${String(r.hausnummer ?? '').trim()}${zusatz}`
+        return r
+      })
+
+      const date = new Date().toISOString().slice(0, 10)
+      const filename = `lehrer_export_${date}`
       format.value === 'csv'
         ? exportAsCsv(resolved, selectedFields.value, `${filename}.csv`)
         : exportAsJson(resolved, selectedFields.value, `${filename}.json`)
@@ -753,4 +959,20 @@ h2 { margin: 0; font-size: 1.5rem; }
 :global(.dark) .status-8  { background: #14532d; color: #86efac; }
 :global(.dark) .status-9  { background: #7f1d1d; color: #fca5a5; }
 :global(.dark) .status-10 { background: #1e293b; color: #94a3b8; }
+
+.ptyp-LEHRKRAFT   { background: #dbeafe; color: #1e40af; }
+.ptyp-SEKRETARIAT { background: #fef9c3; color: #854d0e; }
+.ptyp-PERSONAL    { background: #f3e8ff; color: #6b21a8; }
+.ptyp-EXTERN      { background: #ffedd5; color: #9a3412; }
+.ptyp-SONSTIGE    { background: #f1f5f9; color: #475569; }
+.sichtbar-ja      { background: #dcfce7; color: #166534; }
+.sichtbar-nein    { background: #fef2f2; color: #991b1b; }
+
+:global(.dark) .ptyp-LEHRKRAFT   { background: #1e3a8a; color: #93c5fd; }
+:global(.dark) .ptyp-SEKRETARIAT { background: #713f12; color: #fde68a; }
+:global(.dark) .ptyp-PERSONAL    { background: #4c1d95; color: #d8b4fe; }
+:global(.dark) .ptyp-EXTERN      { background: #7c2d12; color: #fed7aa; }
+:global(.dark) .ptyp-SONSTIGE    { background: #1e293b; color: #94a3b8; }
+:global(.dark) .sichtbar-ja      { background: #14532d; color: #86efac; }
+:global(.dark) .sichtbar-nein    { background: #7f1d1d; color: #fca5a5; }
 </style>

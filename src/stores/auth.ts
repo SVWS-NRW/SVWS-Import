@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { createApiClient, destroyApiClient, type ConnectionConfig } from '@/services/apiClient'
 import { testConnection } from '@/services/svwsService'
+import { toAppError } from '@/services/errorService'
 
 export const useAuthStore = defineStore('auth', () => {
   const baseUrl = ref('')
@@ -33,7 +34,7 @@ export const useAuthStore = defineStore('auth', () => {
       }
     } catch (e) {
       destroyApiClient()
-      error.value = e instanceof Error ? e.message : 'Verbindungsfehler'
+      error.value = toAppError(e, 'auth').messageUser
       connected.value = false
       return false
     } finally {

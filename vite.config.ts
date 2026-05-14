@@ -17,6 +17,16 @@ function removeModuleType(): Plugin {
 export default defineConfig({
   plugins: [vue(), removeModuleType()],
   base: './',
+  server: {
+    proxy: {
+      '/svws-proxy': {
+        target: process.env.VITE_SVWS_URL ?? 'https://localhost:8444',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/svws-proxy/, ''),
+      },
+    },
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

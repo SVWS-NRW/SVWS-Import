@@ -9,9 +9,18 @@ export interface ConnectionConfig {
   password: string
 }
 
+function resolveBaseUrl(config: ConnectionConfig): string {
+  // Im Dev-Modus über den Vite-Proxy leiten, damit CORS nicht greift.
+  // Der Proxy in vite.config.ts leitet /svws-proxy/* an VITE_SVWS_URL weiter.
+  if (import.meta.env.DEV) {
+    return `/svws-proxy/db/${config.schema}`
+  }
+  return `${config.baseUrl}/db/${config.schema}`
+}
+
 export function createApiClient(config: ConnectionConfig): AxiosInstance {
   client = axios.create({
-    baseURL: `${config.baseUrl}/db/${config.schema}`,
+    baseURL: resolveBaseUrl(config),
     headers: {
       'Authorization': `Basic ${btoa(`${config.username}:${config.password}`)}`,
       'Content-Type': 'application/json',

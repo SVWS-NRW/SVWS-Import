@@ -1,4 +1,5 @@
 import { getApiClient } from './apiClient'
+import { toAppError } from './errorService'
 import type { SchuelerNeu, SchuelerImportRow } from '@/models/Schueler'
 import type { LehrerStammdaten, LehrerImportRow } from '@/models/Lehrer'
 import type { KlasseImportRow, KlasseDetails } from '@/models/Klassen'
@@ -90,7 +91,7 @@ export async function sendMappedRow(
 
     return { success: true, id: newId }
   } catch (error: unknown) {
-    return { success: false, error: extractErrorMessage(error) }
+    return { success: false, error: toAppError(error).messageUser }
   }
 }
 
@@ -226,7 +227,7 @@ export async function createSchueler(
 
     return { success: true, id: newId }
   } catch (error: unknown) {
-    return { success: false, error: extractErrorMessage(error) }
+    return { success: false, error: toAppError(error).messageUser }
   }
 }
 
@@ -236,7 +237,7 @@ export async function createLehrer(row: LehrerImportRow): Promise<UploadResult> 
     const response = await getApiClient().post('/lehrer/create', payload)
     return { success: true, id: response.data.id }
   } catch (error: unknown) {
-    return { success: false, error: extractErrorMessage(error) }
+    return { success: false, error: toAppError(error).messageUser }
   }
 }
 
@@ -261,7 +262,7 @@ export async function createJahrgang(row: JahrgangImportRow): Promise<UploadResu
     const response = await getApiClient().post('/jahrgaenge/create', payload)
     return { success: true, id: response.data?.id }
   } catch (error: unknown) {
-    return { success: false, error: extractErrorMessage(error) }
+    return { success: false, error: toAppError(error).messageUser }
   }
 }
 
@@ -285,7 +286,7 @@ export async function createKlasse(row: KlasseImportRow, idSchuljahresabschnitt:
     }
     return { success: true, id: newId }
   } catch (error: unknown) {
-    return { success: false, error: extractErrorMessage(error) }
+    return { success: false, error: toAppError(error).messageUser }
   }
 }
 
@@ -374,17 +375,3 @@ export async function fetchSchuelerAuswahlliste(abschnittId: number): Promise<Sc
   }))
 }
 
-function extractErrorMessage(error: unknown): string {
-  if (error && typeof error === 'object' && 'response' in error) {
-    const axiosError = error as { response?: { status: number; data?: unknown } }
-    const status = axiosError.response?.status
-    const data = axiosError.response?.data
-    if (status === 401) return 'Nicht autorisiert – Zugangsdaten prüfen'
-    if (status === 409) return 'Datensatz existiert bereits'
-    if (data && typeof data === 'string') return data
-    if (data && typeof data === 'object') return JSON.stringify(data)
-    return `HTTP ${status}`
-  }
-  if (error instanceof Error) return error.message
-  return 'Unbekannter Fehler'
-}

@@ -178,6 +178,7 @@ import { importModules } from '@/schemas'
 import { parseRawFile } from '@/utils/rawParser'
 import { applyMapping } from '@/utils/applyMapping'
 import { loadKataloge } from '@/services/katalogService'
+import { toAppError } from '@/services/errorService'
 import StepColumnMapping from '@/components/import/StepColumnMapping.vue'
 import StepDataPreview from '@/components/import/StepDataPreview.vue'
 import StepSend from '@/components/import/StepSend.vue'
@@ -222,7 +223,7 @@ async function goNext(): Promise<void> {
       wizardStore.setContext({ kataloge })
       wizardStore.advanceStep()
     } catch (e) {
-      parseError.value = e instanceof Error ? e.message : 'Fehler beim Einlesen der Datei'
+      parseError.value = toAppError(e, 'ImportWizard').messageUser
     } finally {
       parsing.value = false
     }

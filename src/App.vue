@@ -65,11 +65,14 @@ import { useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Badge from 'primevue/badge'
 import Toast from 'primevue/toast'
+import { useToast } from 'primevue/usetoast'
 import { useAuthStore } from '@/stores/auth'
 import { useSchuelerStore } from '@/stores/schueler'
 import { useLehrerStore } from '@/stores/lehrer'
 import { useDarkMode } from '@/composables/useDarkMode'
+import { setToastService } from '@/services/errorService'
 
+setToastService(useToast())
 const { isDark, toggle: toggleDark } = useDarkMode()
 const auth = useAuthStore()
 const schuelerStore = useSchuelerStore()

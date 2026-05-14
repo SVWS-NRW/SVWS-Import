@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { type Schuljahresabschnitt, abschnittLabel } from '@/models/Schule'
 import { fetchSchuleStammdaten } from '@/services/svwsService'
+import { toAppError, reportError } from '@/services/errorService'
 
 export const useSchuleStore = defineStore('schule', () => {
   const abschnitte = ref<Schuljahresabschnitt[]>([])
@@ -26,7 +27,6 @@ export const useSchuleStore = defineStore('schule', () => {
   async function fetch(): Promise<void> {
     try {
       const raw = await fetchSchuleStammdaten() as Record<string, unknown>
-      console.log('[SchuleStore] /schule/stammdaten:', raw)
 
       // Abschnitte-Array: erst bekannte Feldnamen, dann alle Keys nach passendem Array durchsuchen
       let arr: Schuljahresabschnitt[] = []
@@ -69,7 +69,7 @@ export const useSchuleStore = defineStore('schule', () => {
 
       loaded.value = true
     } catch (e) {
-      console.error('[SchuleStore] fetch fehlgeschlagen:', e)
+      reportError(toAppError(e, 'SchuleStore'))
       loaded.value = false
     }
   }

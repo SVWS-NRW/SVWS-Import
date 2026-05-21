@@ -53,6 +53,13 @@
           <small>Jahrgangsstufen anlegen</small>
         </div>
       </div>
+      <div class="import-card" @click="router.push({ name: 'schuljahresabschnitte' })">
+        <i class="pi pi-calendar-plus card-icon" />
+        <div>
+          <strong>Schuljahresabschnitte anlegen</strong>
+          <small>Bestehende Abschnitte laden und neue anlegen</small>
+        </div>
+      </div>
     </div>
 
     <div class="import-cards coming-soon-cards">

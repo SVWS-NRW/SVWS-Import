@@ -4,7 +4,7 @@ import type { SchuelerNeu, SchuelerImportRow } from '@/models/Schueler'
 import type { LehrerStammdaten, LehrerImportRow } from '@/models/Lehrer'
 import type { KlasseImportRow, KlasseDetails } from '@/models/Klassen'
 import type { JahrgangImportRow, JahrgangDetails } from '@/models/Jahrgaenge'
-import type { SchuleStammdaten } from '@/models/Schule'
+import type { SchuleStammdaten, Schuljahresabschnitt } from '@/models/Schule'
 import { schuelerImportToApi } from '@/models/Schueler'
 import { lehrerImportToApi } from '@/models/Lehrer'
 import { klasseImportToApi } from '@/models/Klassen'
@@ -269,6 +269,47 @@ export async function createJahrgang(row: JahrgangImportRow): Promise<UploadResu
 export async function fetchSchuleStammdaten(): Promise<SchuleStammdaten> {
   const response = await getApiClient().get('/schule/stammdaten')
   return response.data
+}
+
+export async function fetchSchuljahresabschnitte(): Promise<Schuljahresabschnitt[]> {
+  const stammdaten = await fetchSchuleStammdaten()
+  const abschnitte = stammdaten.schuljahresabschnitte
+  return Array.isArray(abschnitte) ? abschnitte : []
+}
+
+export async function createSchuljahresabschnitt(schuljahr: number, abschnitt: number): Promise<UploadResult> {
+  const endpointCandidates = [
+    '/schule/schuljahresabschnitte/create',
+    '/schule/schuljahresabschnitt/create',
+    '/schuljahresabschnitte/create',
+  ]
+  const payloadCandidates = [
+    { schuljahr, abschnitt },
+    { jahr: schuljahr, abschnitt },
+  ]
+
+  for (const endpoint of endpointCandidates) {
+    for (const payload of payloadCandidates) {
+      try {
+        const response = await getApiClient().post(endpoint, payload)
+        return { success: true, id: response.data?.id }
+      } catch (error: unknown) {
+        const status =
+          error && typeof error === 'object' && 'response' in error
+            ? (error as { response?: { status?: number } }).response?.status
+            : undefined
+
+        // Endpoint/Payload-Varianten bei 404/405/400 durchprobieren.
+        if (status === 404 || status === 405 || status === 400) continue
+        return { success: false, error: toAppError(error).messageUser }
+      }
+    }
+  }
+
+  return {
+    success: false,
+    error: 'Schuljahresabschnitt konnte nicht angelegt werden (unbekannter API-Endpunkt oder ungültiges Payload).',
+  }
 }
 
 export async function fetchKlassenDetails(idSchuljahresabschnitt: number): Promise<KlasseDetails[]> {

@@ -20,7 +20,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/svws-proxy': {
-        target: process.env.VITE_SVWS_URL ?? 'https://localhost:8444',
+        target: process.env.VITE_SVWS_URL ?? 'https://localhost:8443',
         changeOrigin: true,
         secure: false,
         rewrite: (path) => path.replace(/^\/svws-proxy/, ''),

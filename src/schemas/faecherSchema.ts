@@ -7,6 +7,6 @@ export const faecherSchema: ImportModule = {
   label: 'Fächer',
   description: 'Fächer anlegen: Kürzel, Bezeichnung, Statistikschlüssel',
   icon: 'pi pi-book',
-  comingSoon: true,
+  comingSoon: false,
   fields: [],
 }

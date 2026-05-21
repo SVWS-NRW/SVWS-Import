@@ -3,6 +3,7 @@ import { type SchuelerImportRow } from '@/models/Schueler'
 import { type LehrerImportRow } from '@/models/Lehrer'
 import { type KlasseImportRow } from '@/models/Klassen'
 import { type JahrgangImportRow } from '@/models/Jahrgaenge'
+import { type FachImportRow } from '@/models/Faecher'
 import { generateId } from './idHelper'
 
 // Normalisiert Spaltennamen: Leerzeichen/Groß-Klein entfernen
@@ -169,6 +170,38 @@ export async function parseJahrgaengeCsv(file: File): Promise<JahrgangImportRow[
             kuerzelStatistik: get(m, 'statistikkrz', 'kuerzelstatistik', 'statistikkuerzel'),
             gliederung:       get(m, 'gliederung'),
           }
+        })
+        resolve(rows)
+      },
+      error(err) {
+        reject(new Error(`CSV-Fehler: ${err.message}`))
+      },
+    })
+  })
+}
+
+export async function parseFaecherCsv(file: File): Promise<FachImportRow[]> {
+  return new Promise((resolve, reject) => {
+    Papa.parse<Record<string, string>>(file, {
+      header: true,
+      skipEmptyLines: true,
+      delimiter: /\.dat$/i.test(file.name) ? '|' : '',
+      complete(results) {
+        const rows: FachImportRow[] = results.data.map(record => {
+          const m = buildLookup(record)
+          const row: FachImportRow = {
+            _id: generateId(),
+            _valid: true,
+            _errors: [],
+            _sent: false,
+            kuerzel:          get(m, 'internkrz', 'kuerzel', 'kürzel', 'fach'),
+            kuerzelStatistik: get(m, 'statistikkrz', 'kuerzelstatistik', 'statistikkuerzel'),
+            bezeichnung:      get(m, 'bezeichnung', 'beschreibung', 'fachbezeichnung', 'name'),
+          }
+          for (const [key, value] of Object.entries(record)) {
+            row[key] = value ?? ''
+          }
+          return row
         })
         resolve(rows)
       },

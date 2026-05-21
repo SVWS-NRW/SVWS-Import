@@ -53,6 +53,13 @@
           <small>Jahrgangsstufen anlegen</small>
         </div>
       </div>
+      <div class="import-card" :class="{ active: dataType === 'faecher' }" @click="dataType = 'faecher'">
+        <i class="pi pi-book card-icon" />
+        <div>
+          <strong>Fächer</strong>
+          <small>Fächer anlegen</small>
+        </div>
+      </div>
       <div class="import-card" @click="router.push({ name: 'schuljahresabschnitte' })">
         <i class="pi pi-calendar-plus card-icon" />
         <div>
@@ -126,7 +133,8 @@ import { useSchuelerStore } from '@/stores/schueler'
 import { useLehrerStore } from '@/stores/lehrer'
 import { useKlassenStore } from '@/stores/klassen'
 import { useJahrgaengeStore } from '@/stores/jahrgaenge'
-import { parseSchuelerCsv, parseLehrerCsv, parseKlassenCsv, parseJahrgaengeCsv } from '@/utils/csvParser'
+import { useFaecherStore } from '@/stores/faecher'
+import { parseSchuelerCsv, parseLehrerCsv, parseKlassenCsv, parseJahrgaengeCsv, parseFaecherCsv } from '@/utils/csvParser'
 import { parseSchuelerXlsx, parseLehrerXlsx } from '@/utils/xlsxParser'
 
 const router = useRouter()
@@ -134,10 +142,11 @@ const schuelerStore = useSchuelerStore()
 const lehrerStore = useLehrerStore()
 const klassenStore = useKlassenStore()
 const jahrgaengeStore = useJahrgaengeStore()
+const faecherStore = useFaecherStore()
 
 const comingSoonModules = importModules.filter(m => m.comingSoon)
 
-const dataType = ref<'schueler' | 'lehrer' | 'klassen' | 'jahrgaenge'>('schueler')
+const dataType = ref<'schueler' | 'lehrer' | 'klassen' | 'jahrgaenge' | 'faecher'>('schueler')
 const selectedFile = ref<File | null>(null)
 const parsing = ref(false)
 const parseError = ref('')
@@ -182,12 +191,18 @@ async function handleImport(): Promise<void> {
       klassenStore.setRows(rows)
       klassenStore.validateAll()
       router.push({ name: 'klassen' })
-    } else {
+    } else if (dataType.value === 'jahrgaenge') {
       const rows = await parseJahrgaengeCsv(file)
       if (rows.length === 0) throw new Error('Keine Datensätze gefunden')
       jahrgaengeStore.setRows(rows)
       jahrgaengeStore.validateAll()
       router.push({ name: 'jahrgaenge' })
+    } else {
+      const rows = await parseFaecherCsv(file)
+      if (rows.length === 0) throw new Error('Keine Datensätze gefunden')
+      faecherStore.setRows(rows)
+      faecherStore.validateAll()
+      router.push({ name: 'faecher' })
     }
   } catch (e) {
     parseError.value = e instanceof Error ? e.message : 'Fehler beim Einlesen der Datei'

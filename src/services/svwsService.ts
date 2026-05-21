@@ -4,11 +4,13 @@ import type { SchuelerNeu, SchuelerImportRow } from '@/models/Schueler'
 import type { LehrerStammdaten, LehrerImportRow } from '@/models/Lehrer'
 import type { KlasseImportRow, KlasseDetails } from '@/models/Klassen'
 import type { JahrgangImportRow, JahrgangDetails } from '@/models/Jahrgaenge'
+import type { FachImportRow, FachDetails } from '@/models/Faecher'
 import type { SchuleStammdaten, Schuljahresabschnitt } from '@/models/Schule'
 import { schuelerImportToApi } from '@/models/Schueler'
 import { lehrerImportToApi } from '@/models/Lehrer'
 import { klasseImportToApi } from '@/models/Klassen'
 import { jahrgangImportToApi } from '@/models/Jahrgaenge'
+import { fachImportToApi } from '@/models/Faecher'
 import type { ImportModule, MappedRow, ImportContext, EntityType, OrtKatalogEintrag } from '@/models/ImportSchema'
 import { resolveWohnortId, resolveReligionId } from './katalogService'
 
@@ -53,6 +55,7 @@ const ENTITY_ENDPOINTS: Partial<Record<EntityType, string>> = {
   lehrer:   '/lehrer/create',
   klassen:   '/klassen/create',
   jahrgaenge: '/jahrgaenge/create',
+  faecher: '/faecher/create',
 }
 
 export async function testConnection(): Promise<boolean> {
@@ -260,6 +263,21 @@ export async function createJahrgang(row: JahrgangImportRow): Promise<UploadResu
   try {
     const payload = jahrgangImportToApi(row)
     const response = await getApiClient().post('/jahrgaenge/create', payload)
+    return { success: true, id: response.data?.id }
+  } catch (error: unknown) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}
+
+export async function fetchFaecher(): Promise<FachDetails[]> {
+  const response = await getApiClient().get('/faecher')
+  return Array.isArray(response.data) ? response.data : []
+}
+
+export async function createFach(row: FachImportRow): Promise<UploadResult> {
+  try {
+    const payload = fachImportToApi(row)
+    const response = await getApiClient().post('/faecher/create', payload)
     return { success: true, id: response.data?.id }
   } catch (error: unknown) {
     return { success: false, error: toAppError(error).messageUser }

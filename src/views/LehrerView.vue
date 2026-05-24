@@ -18,6 +18,17 @@
         :sent="store.sentCount"
       />
       <div class="header-actions">
+        <FileUpload
+          mode="basic"
+          :auto="false"
+          :multiple="false"
+          accept=".csv,.xlsx,.xls,.dat"
+          chooseLabel="Datei laden"
+          chooseIcon="pi pi-folder-open"
+          :maxFileSize="10000000"
+          :disabled="parsing"
+          @select="onFileSelect"
+        />
         <Button
           label="Alles senden"
           icon="pi pi-upload"
@@ -34,6 +45,10 @@
         />
       </div>
     </div>
+
+    <Message v-if="parseError" severity="error" :closable="true" @close="parseError = ''">
+      {{ parseError }}
+    </Message>
 
     <Message v-if="uploadResult" :severity="uploadResult.failed > 0 ? 'warn' : 'success'" :closable="true" @close="uploadResult = null">
       {{ uploadResult.sent }} Datensätze übertragen
@@ -63,6 +78,7 @@ import { AgGridVue } from '@ag-grid-community/vue3'
 import { ClientSideRowModelModule } from '@ag-grid-community/client-side-row-model'
 import { ModuleRegistry, type ColDef, type GetRowIdParams, type CellValueChangedEvent } from '@ag-grid-community/core'
 import Button from 'primevue/button'
+import FileUpload from 'primevue/fileupload'
 import Message from 'primevue/message'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
@@ -70,6 +86,8 @@ import { useLehrerStore } from '@/stores/lehrer'
 import { type LehrerImportRow } from '@/models/Lehrer'
 import ImportStats from '@/components/ImportStats.vue'
 import { useDarkMode } from '@/composables/useDarkMode'
+import { parseLehrerCsv } from '@/utils/csvParser'
+import { parseLehrerXlsx } from '@/utils/xlsxParser'
 
 ModuleRegistry.registerModules([ClientSideRowModelModule])
 
@@ -78,6 +96,26 @@ const store = useLehrerStore()
 const confirm = useConfirm()
 const { isDark } = useDarkMode()
 const uploadResult = ref<{ sent: number; failed: number } | null>(null)
+const parseError = ref('')
+const parsing = ref(false)
+
+async function onFileSelect(event: { files: File[] }): Promise<void> {
+  const file = event.files[0]
+  if (!file) return
+  parsing.value = true
+  parseError.value = ''
+  try {
+    const isXlsx = /\.(xlsx|xls)$/i.test(file.name)
+    const rows = isXlsx ? await parseLehrerXlsx(file) : await parseLehrerCsv(file)
+    if (rows.length === 0) throw new Error('Keine Datensätze gefunden')
+    store.setRows(rows)
+    store.validateAll()
+  } catch (e) {
+    parseError.value = e instanceof Error ? e.message : 'Fehler beim Einlesen der Datei'
+  } finally {
+    parsing.value = false
+  }
+}
 
 const defaultColDef: ColDef = {
   editable: (params) => !params.data._sent,

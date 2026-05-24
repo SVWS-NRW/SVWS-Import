@@ -36,6 +36,17 @@
             style="width: 130px"
           />
         </div>
+        <FileUpload
+          mode="basic"
+          :auto="false"
+          :multiple="false"
+          accept=".csv,.dat"
+          chooseLabel="Datei laden"
+          chooseIcon="pi pi-folder-open"
+          :maxFileSize="10000000"
+          :disabled="parsing"
+          @select="onFileSelect"
+        />
         <Button
           label="DB laden"
           icon="pi pi-refresh"
@@ -59,6 +70,10 @@
         />
       </div>
     </div>
+
+    <Message v-if="parseError" severity="error" :closable="true" @close="parseError = ''">
+      {{ parseError }}
+    </Message>
 
     <Message v-if="uploadResult" :severity="uploadResult.failed > 0 ? 'warn' : 'success'" :closable="true" @close="uploadResult = null">
       {{ uploadResult.sent }} Datensätze übertragen
@@ -116,6 +131,7 @@ import { AgGridVue } from '@ag-grid-community/vue3'
 import { ClientSideRowModelModule } from '@ag-grid-community/client-side-row-model'
 import { ModuleRegistry, type ColDef, type GetRowIdParams, type CellValueChangedEvent, type GridApi } from '@ag-grid-community/core'
 import Button from 'primevue/button'
+import FileUpload from 'primevue/fileupload'
 import InputNumber from 'primevue/inputnumber'
 import Select from 'primevue/select'
 import Message from 'primevue/message'
@@ -128,6 +144,7 @@ import { type KlasseImportRow } from '@/models/Klassen'
 import { fetchLehrkraefte } from '@/services/svwsService'
 import ImportStats from '@/components/ImportStats.vue'
 import { useDarkMode } from '@/composables/useDarkMode'
+import { parseKlassenCsv } from '@/utils/csvParser'
 
 ModuleRegistry.registerModules([ClientSideRowModelModule])
 
@@ -161,6 +178,25 @@ onMounted(async () => {
 })
 const uploadResult = ref<{ sent: number; failed: number } | null>(null)
 const loadError = ref('')
+const parseError = ref('')
+const parsing = ref(false)
+
+async function onFileSelect(event: { files: File[] }): Promise<void> {
+  const file = event.files[0]
+  if (!file) return
+  parsing.value = true
+  parseError.value = ''
+  try {
+    const rows = await parseKlassenCsv(file)
+    if (rows.length === 0) throw new Error('Keine Datensätze gefunden')
+    store.setRows(rows)
+    store.validateAll()
+  } catch (e) {
+    parseError.value = e instanceof Error ? e.message : 'Fehler beim Einlesen der Datei'
+  } finally {
+    parsing.value = false
+  }
+}
 
 const readOnlyColDef: ColDef = {
   editable: false,

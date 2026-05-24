@@ -33,18 +33,44 @@
         Floskelgruppen
         <Tag v-if="floskelgruppen.length" :value="String(floskelgruppen.length)" severity="secondary" />
       </h3>
+
+      <div v-if="selectedGruppen.length > 0" class="selection-bar">
+        <i class="pi pi-check-circle selection-icon" />
+        <span>{{ selectedGruppen.length }} Gruppe{{ selectedGruppen.length === 1 ? '' : 'n' }} ausgewählt</span>
+        <Button
+          :label="`${selectedGruppen.length} löschen`"
+          icon="pi pi-trash"
+          severity="danger"
+          size="small"
+          :loading="deletingGruppen"
+          @click="confirmDeleteGruppen"
+        />
+        <Button
+          label="Aufheben"
+          text
+          severity="secondary"
+          size="small"
+          @click="selectedGruppen = []"
+        />
+      </div>
+
       <DataTable
+        v-model:selection="selectedGruppen"
         :value="floskelgruppen"
         :loading="loadingGruppen"
+        :isDataSelectable="(e: { data: Floskelgruppe }) => !e.data.referenziertInAnderenTabellen && !(floskelCountByGruppe[e.data.id] > 0)"
         dataKey="id"
+        selectionMode="multiple"
+        :metaKeySelection="false"
         size="small"
         stripedRows
         scrollable
         scrollHeight="240px"
         class="gruppen-table"
         :rowClass="(d: Floskelgruppe) => filterGruppe === d.id ? 'row-active' : ''"
-        @row-click="(e) => toggleGruppeFilter(e.data.id)"
+        @row-click="(e) => { if (!(e.originalEvent.target as HTMLElement).closest('.p-checkbox')) toggleGruppeFilter(e.data.id) }"
       >
+        <Column selectionMode="multiple" style="width: 2.5rem; flex: 0 0 2.5rem" frozen />
         <Column field="kuerzel" header="Kürzel" style="width: 100px" sortable />
         <Column field="bezeichnung" header="Bezeichnung" sortable />
         <Column header="Art" style="width: 130px" sortable :sortField="(d: Floskelgruppe) => FLOSKELGRUPPENARTEN.get(d.idFloskelgruppenart ?? -1)?.kuerzel ?? ''">
@@ -293,6 +319,68 @@
     </section>
 
     <ConfirmDialog />
+
+    <Dialog
+      v-model:visible="showGruppenModal"
+      header="Unbekannte Floskelgruppen"
+      :modal="true"
+      :closable="false"
+      style="width: min(95vw, 960px)"
+    >
+      <p class="modal-hint">
+        Die folgenden Floskelgruppen aus der Datei sind noch nicht im Server vorhanden.
+        Wähle pro Gruppe, ob sie angelegt oder die zugehörigen Floskeln übersprungen werden sollen.
+      </p>
+      <Message v-if="modalError" severity="error" :closable="true" @close="modalError = ''" style="margin-bottom: 0.75rem">
+        {{ modalError }}
+      </Message>
+
+      <DataTable :value="unknownGruppen" size="small" class="modal-table">
+        <Column field="kuerzel" header="Kürzel" style="width: 90px" />
+        <Column header="Bezeichnung">
+          <template #body="{ data, index }">
+            <InputText
+              v-model="unknownGruppen[index].bezeichnung"
+              :disabled="data.aktion === 'ueberspringen'"
+              style="width: 100%"
+            />
+          </template>
+        </Column>
+        <Column header="Art" style="width: 260px; min-width: 260px">
+          <template #body="{ data, index }">
+            <Select
+              v-model="unknownGruppen[index].idFloskelgruppenart"
+              :options="gruppenartOptions"
+              optionLabel="label"
+              optionValue="value"
+              :disabled="data.aktion === 'ueberspringen'"
+              style="width: 100%"
+            />
+          </template>
+        </Column>
+        <Column header="Aktion" style="width: 190px; min-width: 190px">
+          <template #body="{ index }">
+            <div class="aktion-toggle">
+              <button
+                type="button"
+                :class="['aktion-btn', unknownGruppen[index].aktion === 'anlegen' ? 'aktion-btn--active' : '']"
+                @click="unknownGruppen[index].aktion = 'anlegen'"
+              >Anlegen</button>
+              <button
+                type="button"
+                :class="['aktion-btn', 'aktion-btn--skip', unknownGruppen[index].aktion === 'ueberspringen' ? 'aktion-btn--skip-active' : '']"
+                @click="unknownGruppen[index].aktion = 'ueberspringen'"
+              >Überspringen</button>
+            </div>
+          </template>
+        </Column>
+      </DataTable>
+
+      <template #footer>
+        <Button label="Abbrechen" severity="secondary" text @click="cancelGruppenModal" />
+        <Button label="Weiter" icon="pi pi-arrow-right" :loading="creatingGruppen" @click="confirmGruppenModal" />
+      </template>
+    </Dialog>
   </div>
 </template>
 
@@ -307,6 +395,7 @@ import Tag from 'primevue/tag'
 import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
 import FileUpload from 'primevue/fileupload'
+import Dialog from 'primevue/dialog'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
 import {
@@ -314,8 +403,10 @@ import {
   fetchFloskeln,
   fetchJahrgaenge,
   fetchFaecher,
+  deleteFloskelgruppen,
   deleteFloskeln,
   createFloskel,
+  createFloskelgruppe,
   type Floskelgruppe,
   type Floskel,
 } from '@/services/svwsService'
@@ -343,6 +434,8 @@ const floskeln = ref<Floskel[]>([])
 const jahrgaenge = ref<JahrgangDetails[]>([])
 const faecher = ref<FachDetails[]>([])
 const selectedFloskeln = ref<Floskel[]>([])
+const selectedGruppen = ref<Floskelgruppe[]>([])
+const deletingGruppen = ref(false)
 
 const filterText = ref('')
 const filterJahrgang = ref<number | null>(null)
@@ -354,6 +447,27 @@ const fileUploadRef = ref()
 const importFile = ref<File | null>(null)
 const importRows = ref<FloskelImportRow[]>([])
 const importProgress = ref('')
+
+// ── Unbekannte Floskelgruppen Modal ──────────────────────────────────────────
+interface UnknownGruppe {
+  kuerzel: string
+  bezeichnung: string
+  idFloskelgruppenart: number
+  aktion: 'anlegen' | 'ueberspringen'
+}
+
+const showGruppenModal = ref(false)
+const creatingGruppen = ref(false)
+const unknownGruppen = ref<UnknownGruppe[]>([])
+const modalError = ref('')
+
+const artByKuerzel = new Map(
+  Array.from(FLOSKELGRUPPENARTEN.entries()).map(([id, art]) => [art.kuerzel, id]),
+)
+
+const gruppenartOptions = Array.from(FLOSKELGRUPPENARTEN.entries())
+  .sort(([a], [b]) => a - b)
+  .map(([id, art]) => ({ label: `${art.kuerzel} – ${art.text}`, value: id }))
 
 const gruppenById = computed(() => new Map(floskelgruppen.value.map(g => [g.id, g])))
 const faecherById = computed(() => new Map(faecher.value.map(f => [f.id, f])))
@@ -514,7 +628,114 @@ async function handleDelete(): Promise<void> {
   }
 }
 
+function confirmDeleteGruppen(): void {
+  const n = selectedGruppen.value.length
+  confirm.require({
+    message: `${n} Floskelgruppe${n === 1 ? '' : 'n'} unwiderruflich löschen?`,
+    header: 'Floskelgruppen löschen',
+    icon: 'pi pi-exclamation-triangle',
+    acceptLabel: 'Ja, löschen',
+    rejectLabel: 'Abbrechen',
+    acceptClass: 'p-button-danger',
+    accept: () => handleDeleteGruppen(),
+  })
+}
+
+async function handleDeleteGruppen(): Promise<void> {
+  deletingGruppen.value = true
+  errorMsg.value = ''
+  const ids = selectedGruppen.value.map(g => g.id)
+  const n = ids.length
+  const result = await deleteFloskelgruppen(ids)
+  selectedGruppen.value = []
+  await loadGruppen()
+  deletingGruppen.value = false
+  if (!result.success) {
+    errorMsg.value = result.error ?? 'Löschen fehlgeschlagen.'
+  } else {
+    successMsg.value = `${n} Floskelgruppe${n === 1 ? '' : 'n'} erfolgreich gelöscht.`
+  }
+}
+
 // ── Import ───────────────────────────────────────────────────────────────────
+function checkForUnknownGruppen(): void {
+  const knownKuerzel = new Set(floskelgruppen.value.map(g => g.kuerzel.toLowerCase()))
+  const unknownSet = new Set<string>()
+  for (const row of importRows.value) {
+    const kuerzel = row.floskelgruppe as string
+    if (kuerzel && !row.idFloskelgruppe && !knownKuerzel.has(kuerzel.toLowerCase())) {
+      unknownSet.add(kuerzel)
+    }
+  }
+  if (unknownSet.size === 0) return
+  unknownGruppen.value = Array.from(unknownSet).map(kuerzel => ({
+    kuerzel,
+    bezeichnung: kuerzel,
+    idFloskelgruppenart: artByKuerzel.get(kuerzel.toUpperCase()) ?? 0,
+    aktion: 'anlegen' as const,
+  }))
+  creatingGruppen.value = false
+  modalError.value = ''
+  console.log('[Floskel] Unbekannte Gruppen:', unknownGruppen.value)
+  showGruppenModal.value = true
+}
+
+function cancelGruppenModal(): void {
+  showGruppenModal.value = false
+  resetImport()
+}
+
+async function confirmGruppenModal(): Promise<void> {
+  console.log('[Floskel] confirmGruppenModal gestartet, Gruppen:', JSON.parse(JSON.stringify(unknownGruppen.value)))
+  creatingGruppen.value = true
+  modalError.value = ''
+  const errors: string[] = []
+
+  try {
+    for (const gruppe of unknownGruppen.value) {
+      console.log('[Floskel] Verarbeite Gruppe:', gruppe.kuerzel, 'Aktion:', gruppe.aktion)
+      if (gruppe.aktion === 'anlegen') {
+        const payload = {
+          kuerzel: gruppe.kuerzel,
+          bezeichnung: gruppe.bezeichnung,
+          idFloskelgruppenart: gruppe.idFloskelgruppenart,
+        }
+        console.log('[Floskel] createFloskelgruppe Payload:', payload)
+        const result = await createFloskelgruppe(payload)
+        console.log('[Floskel] createFloskelgruppe Ergebnis:', result)
+        if (!result.success) {
+          errors.push(`„${gruppe.kuerzel}": ${result.error ?? 'Unbekannter Fehler'}`)
+        }
+      }
+    }
+  } catch (e) {
+    console.error('[Floskel] Unerwarteter Fehler:', e)
+    errors.push(e instanceof Error ? e.message : 'Unbekannter Fehler')
+  } finally {
+    creatingGruppen.value = false
+  }
+
+  if (errors.length > 0) {
+    modalError.value = `Anlegen fehlgeschlagen:\n${errors.join('\n')}`
+    return
+  }
+
+  await loadGruppen()
+
+  const skippedKuerzel = new Set(
+    unknownGruppen.value
+      .filter(g => g.aktion === 'ueberspringen')
+      .map(g => g.kuerzel.toLowerCase()),
+  )
+  if (skippedKuerzel.size > 0) {
+    importRows.value = importRows.value.filter(
+      row => !skippedKuerzel.has((row.floskelgruppe as string).toLowerCase()),
+    )
+  }
+
+  showGruppenModal.value = false
+}
+
 async function onFileSelect(event: { files: File[] }): Promise<void> {
   const file = event.files[0]
   if (!file) return
@@ -526,7 +747,9 @@ async function onFileSelect(event: { files: File[] }): Promise<void> {
     importRows.value = isXlsx ? await parseFloskelXlsx(file) : await parseFloskelCsv(file)
     if (importRows.value.length === 0) {
       importError.value = 'Keine Datensätze in der Datei gefunden.'
+      return
     }
+    checkForUnknownGruppen()
   } catch (e) {
     importError.value = e instanceof Error ? e.message : 'Fehler beim Einlesen der Datei.'
   }
@@ -775,15 +998,11 @@ h2 {
   align-items: center;
   gap: 0.75rem;
   padding: 0.5rem 0.75rem;
-  background: var(--p-primary-50);
-  border: 1px solid var(--p-primary-200);
+  background: var(--p-surface-ground);
+  border: 1px solid var(--p-primary-color);
   border-radius: 8px;
   font-size: 0.9rem;
-}
-
-:global(.dark) .selection-bar {
-  background: color-mix(in srgb, var(--p-primary-color) 12%, var(--p-surface-card));
-  border-color: color-mix(in srgb, var(--p-primary-color) 40%, transparent);
+  color: var(--p-text-color);
 }
 
 .selection-icon {
@@ -851,5 +1070,44 @@ h2 {
 
 .muted {
   color: var(--p-text-muted-color);
+}
+
+.modal-hint {
+  margin: 0 0 1rem;
+  color: var(--p-text-muted-color);
+  font-size: 0.9rem;
+}
+
+.modal-table {
+  margin-bottom: 0.5rem;
+}
+
+.aktion-toggle {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.aktion-btn {
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--p-surface-border);
+  border-radius: 6px;
+  background: var(--p-surface-card);
+  color: var(--p-text-color);
+  font-size: 0.82rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.aktion-btn--active {
+  background: var(--p-primary-color);
+  border-color: var(--p-primary-color);
+  color: #fff;
+}
+
+.aktion-btn--skip.aktion-btn--skip-active {
+  background: var(--p-orange-500, #f97316);
+  border-color: var(--p-orange-500, #f97316);
+  color: #fff;
 }
 </style>

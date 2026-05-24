@@ -27,10 +27,34 @@ export async function fetchFloskeln(): Promise<Floskel[]> {
   return Array.isArray(response.data) ? response.data : []
 }
 
+export async function deleteFloskelgruppen(ids: number[]): Promise<UploadResult> {
+  try {
+    await getApiClient().delete('/schule/floskelgruppen/delete/multiple', { data: ids })
+    return { success: true }
+  } catch (error: unknown) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}
+
 export async function deleteFloskeln(ids: number[]): Promise<UploadResult> {
   try {
     await getApiClient().delete('/schule/floskeln/delete/multiple', { data: ids })
     return { success: true }
+  } catch (error: unknown) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}
+
+export interface FloskelgruppeCreatePayload {
+  kuerzel: string
+  bezeichnung: string
+  idFloskelgruppenart: number
+}
+
+export async function createFloskelgruppe(payload: FloskelgruppeCreatePayload): Promise<UploadResult> {
+  try {
+    const response = await getApiClient().post('/schule/floskelgruppen/create', payload)
+    return { success: true, id: response.data?.id }
   } catch (error: unknown) {
     return { success: false, error: toAppError(error).messageUser }
   }

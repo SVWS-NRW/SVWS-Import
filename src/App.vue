@@ -102,11 +102,11 @@ html, body {
   margin: 0;
   padding: 0;
   height: 100%;
+  font-family: system-ui, -apple-system, sans-serif;
 }
 
 #app {
   height: 100%;
-  font-family: system-ui, -apple-system, sans-serif;
 }
 </style>
 

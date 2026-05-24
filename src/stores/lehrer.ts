@@ -1,4 +1,4 @@
-import { defineStore } from 'pinia'
+import { defineStore, acceptHMRUpdate } from 'pinia'
 import { ref, computed } from 'vue'
 import { type LehrerImportRow } from '@/models/Lehrer'
 import { createLehrer } from '@/services/svwsService'
@@ -6,6 +6,9 @@ import { createLehrer } from '@/services/svwsService'
 export const useLehrerStore = defineStore('lehrer', () => {
   const rows = ref<LehrerImportRow[]>([])
   const uploading = ref(false)
+  const uploadProgress = ref(0)
+  const uploadTotal = ref(0)
+  const uploadCancelled = ref(false)
 
   const totalCount = computed(() => rows.value.length)
   const validCount = computed(() => rows.value.filter(r => r._valid).length)
@@ -56,7 +59,11 @@ export const useLehrerStore = defineStore('lehrer', () => {
     let sent = 0
     let failed = 0
     const updated = [...rows.value]
+    uploadTotal.value = updated.filter(r => r._valid && !r._sent).length
+    uploadProgress.value = 0
+    uploadCancelled.value = false
     for (let i = 0; i < updated.length; i++) {
+      if (uploadCancelled.value) break
       const row = updated[i]
       if (!row._valid || row._sent) continue
       const result = await createLehrer(row)
@@ -67,15 +74,24 @@ export const useLehrerStore = defineStore('lehrer', () => {
         updated[i] = { ...row, _errors: [result.error ?? 'Unbekannter Fehler'] }
         failed++
       }
+      uploadProgress.value++
     }
     rows.value = updated
     uploading.value = false
     return { sent, failed }
   }
 
+  function stopUpload(): void {
+    uploadCancelled.value = true
+  }
+
   return {
-    rows, uploading,
+    rows, uploading, uploadProgress, uploadTotal,
     totalCount, validCount, sentCount, errorCount,
-    setRows, updateRow, deleteRow, validateAll, clear, uploadAll,
+    setRows, updateRow, deleteRow, validateAll, clear, uploadAll, stopUpload,
   }
 })
+
+if (import.meta.hot) {
+  import.meta.hot.accept(acceptHMRUpdate(useLehrerStore, import.meta.hot))
+}

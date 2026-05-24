@@ -1,4 +1,4 @@
-import { defineStore } from 'pinia'
+import { defineStore, acceptHMRUpdate } from 'pinia'
 import { ref, computed } from 'vue'
 import { type SchuelerImportRow } from '@/models/Schueler'
 import { createSchueler, buildKlassenMap, fetchKlassenDetails, buildJahrgaengeMap, fetchJahrgaenge } from '@/services/svwsService'
@@ -8,6 +8,9 @@ import type { OrtKatalogEintrag } from '@/models/ImportSchema'
 export const useSchuelerStore = defineStore('schueler', () => {
   const rows = ref<SchuelerImportRow[]>([])
   const uploading = ref(false)
+  const uploadProgress = ref(0)
+  const uploadTotal = ref(0)
+  const uploadCancelled = ref(false)
   const idSchuljahresabschnitt = ref<number>(1)
 
   const totalCount = computed(() => rows.value.length)
@@ -74,7 +77,11 @@ export const useSchuelerStore = defineStore('schueler', () => {
     }
 
     const updated = [...rows.value]
+    uploadTotal.value = updated.filter(r => r._valid && !r._sent).length
+    uploadProgress.value = 0
+    uploadCancelled.value = false
     for (let i = 0; i < updated.length; i++) {
+      if (uploadCancelled.value) break
       const row = updated[i]
       if (!row._valid || row._sent) continue
       const result = await createSchueler(row, idSchuljahresabschnitt.value, orteKatalog, religionenKatalog, klassenMap, jahrgaengeMap)
@@ -85,15 +92,24 @@ export const useSchuelerStore = defineStore('schueler', () => {
         updated[i] = { ...row, _errors: [result.error ?? 'Unbekannter Fehler'] }
         failed++
       }
+      uploadProgress.value++
     }
     rows.value = updated
     uploading.value = false
     return { sent, failed }
   }
 
+  function stopUpload(): void {
+    uploadCancelled.value = true
+  }
+
   return {
-    rows, uploading, idSchuljahresabschnitt,
+    rows, uploading, uploadProgress, uploadTotal, idSchuljahresabschnitt,
     totalCount, validCount, sentCount, errorCount,
-    setRows, updateRow, deleteRow, validateAll, clear, uploadAll,
+    setRows, updateRow, deleteRow, validateAll, clear, uploadAll, stopUpload,
   }
 })
+
+if (import.meta.hot) {
+  import.meta.hot.accept(acceptHMRUpdate(useSchuelerStore, import.meta.hot))
+}

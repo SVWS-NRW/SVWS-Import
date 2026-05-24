@@ -1,4 +1,4 @@
-import { defineStore } from 'pinia'
+import { defineStore, acceptHMRUpdate } from 'pinia'
 import { ref, computed } from 'vue'
 import { type KlasseImportRow, type KlasseDetails } from '@/models/Klassen'
 import { type JahrgangDetails } from '@/models/Jahrgaenge'
@@ -8,6 +8,9 @@ export const useKlassenStore = defineStore('klassen', () => {
   const rows = ref<KlasseImportRow[]>([])
   const existingKlassen = ref<KlasseDetails[]>([])
   const uploading = ref(false)
+  const uploadProgress = ref(0)
+  const uploadTotal = ref(0)
+  const uploadCancelled = ref(false)
   const loadingExisting = ref(false)
   const idSchuljahresabschnitt = ref<number>(1)
 
@@ -96,7 +99,11 @@ export const useKlassenStore = defineStore('klassen', () => {
     let sent = 0
     let failed = 0
     const updated = [...rows.value]
+    uploadTotal.value = updated.filter(r => r._valid && !r._sent).length
+    uploadProgress.value = 0
+    uploadCancelled.value = false
     for (let i = 0; i < updated.length; i++) {
+      if (uploadCancelled.value) break
       const row = updated[i]
       if (!row._valid || row._sent) continue
       const result = await createKlasse(row, idSchuljahresabschnitt.value)
@@ -107,15 +114,24 @@ export const useKlassenStore = defineStore('klassen', () => {
         updated[i] = { ...row, _errors: [result.error ?? 'Unbekannter Fehler'] }
         failed++
       }
+      uploadProgress.value++
     }
     rows.value = updated
     uploading.value = false
     return { sent, failed }
   }
 
+  function stopUpload(): void {
+    uploadCancelled.value = true
+  }
+
   return {
-    rows, existingKlassen, uploading, loadingExisting, idSchuljahresabschnitt,
+    rows, existingKlassen, uploading, uploadProgress, uploadTotal, loadingExisting, idSchuljahresabschnitt,
     totalCount, validCount, sentCount, errorCount, fileJahr, fileAbschnitt,
-    setRows, updateRow, deleteRow, validateAll, resolveJahrgaenge, resolveLehrkraefte, clear, loadExisting, uploadAll,
+    setRows, updateRow, deleteRow, validateAll, resolveJahrgaenge, resolveLehrkraefte, clear, loadExisting, uploadAll, stopUpload,
   }
 })
+
+if (import.meta.hot) {
+  import.meta.hot.accept(acceptHMRUpdate(useKlassenStore, import.meta.hot))
+}

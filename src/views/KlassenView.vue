@@ -57,18 +57,18 @@
           @click="handleLoadExisting"
         />
         <Button
-          label="Alles senden"
+          :label="store.uploading ? `${store.uploadProgress} / ${store.uploadTotal}` : 'Alles senden'"
           icon="pi pi-upload"
           :disabled="store.validCount === 0 || store.uploading"
           :loading="store.uploading"
           @click="handleUploadAll"
         />
         <Button
-          label="Leeren"
-          icon="pi pi-trash"
-          severity="danger"
+          :label="store.uploading ? 'Stoppen' : 'Leeren'"
+          :icon="store.uploading ? 'pi pi-stop' : 'pi pi-trash'"
+          :severity="store.uploading ? 'warn' : 'danger'"
           text
-          @click="confirmClear"
+          @click="store.uploading ? store.stopUpload() : confirmClear()"
         />
       </div>
     </div>

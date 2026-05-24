@@ -319,6 +319,18 @@
 
     <ConfirmDialog />
 
+    <ConfirmDialog group="gruppen-delete">
+      <template #message="{ message }">
+        <div class="gruppen-delete-msg">
+          <p>{{ message.message }}</p>
+          <p v-if="gruppenDeleteWarning" class="gruppen-delete-warning">
+            <i class="pi pi-exclamation-circle" />
+            {{ gruppenDeleteWarning }}
+          </p>
+        </div>
+      </template>
+    </ConfirmDialog>
+
     <Dialog
       v-model:visible="showGruppenModal"
       header="Unbekannte Floskelgruppen"
@@ -435,6 +447,7 @@ const faecher = ref<FachDetails[]>([])
 const selectedFloskeln = ref<Floskel[]>([])
 const selectedGruppen = ref<Floskelgruppe[]>([])
 const deletingGruppen = ref(false)
+const gruppenDeleteWarning = ref('')
 
 const filterText = ref('')
 const filterJahrgang = ref<number | null>(null)
@@ -654,12 +667,13 @@ function confirmDeleteGruppen(): void {
     return
   }
 
-  let message = `${loeschbar.length} Floskelgruppe${loeschbar.length === 1 ? '' : 'n'} unwiderruflich löschen?`
-  if (geschuetzt.length > 0) {
-    message += ` Die Gruppe${geschuetzt.length === 1 ? '' : 'n'} ${geschuetzt.map(g => `„${g.kuerzel}"`).join(', ')} ${geschuetzt.length === 1 ? 'wird' : 'werden'} übersprungen, da sie verwendet ${geschuetzt.length === 1 ? 'wird' : 'werden'}.`
-  }
+  const message = `${loeschbar.length} Floskelgruppe${loeschbar.length === 1 ? '' : 'n'} unwiderruflich löschen?`
+  gruppenDeleteWarning.value = geschuetzt.length > 0
+    ? `Die Gruppe${geschuetzt.length === 1 ? '' : 'n'} ${geschuetzt.map(g => `„${g.kuerzel}"`).join(', ')} ${geschuetzt.length === 1 ? 'wird' : 'werden'} übersprungen, da sie verwendet ${geschuetzt.length === 1 ? 'wird' : 'werden'}.`
+    : ''
 
   confirm.require({
+    group: 'gruppen-delete',
     message,
     header: 'Floskelgruppen löschen',
     icon: 'pi pi-exclamation-triangle',
@@ -1105,6 +1119,26 @@ h2 {
 
 .muted {
   color: var(--p-text-muted-color);
+}
+
+.gruppen-delete-msg p {
+  margin: 0;
+}
+
+.gruppen-delete-msg p + p {
+  margin-top: 0.75rem;
+}
+
+.gruppen-delete-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  color: var(--p-yellow-600);
+}
+
+.gruppen-delete-warning .pi {
+  flex-shrink: 0;
+  margin-top: 0.15rem;
 }
 
 .modal-hint {

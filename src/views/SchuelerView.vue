@@ -2,22 +2,16 @@
   <div class="table-view">
     <div class="table-header">
       <div class="header-left">
-        <Button
-          icon="pi pi-arrow-left"
-          text
-          rounded
-          @click="router.push({ name: 'import' })"
-          aria-label="Zurück"
-        />
-        <h2>Schülerdaten</h2>
-      </div>
-      <ImportStats
-        :total="store.totalCount"
-        :valid="store.validCount"
-        :errors="store.errorCount"
-        :sent="store.sentCount"
-      />
-      <div class="header-actions">
+        <div class="header-title-row">
+          <Button
+            icon="pi pi-arrow-left"
+            text
+            rounded
+            @click="router.push({ name: 'import' })"
+            aria-label="Zurück"
+          />
+          <h2>Schülerdaten</h2>
+        </div>
         <div class="abschnitt-field">
           <label>Schuljahresabschnitt</label>
           <Select
@@ -36,6 +30,14 @@
             style="width: 130px"
           />
         </div>
+      </div>
+      <ImportStats
+        :total="store.totalCount"
+        :valid="store.validCount"
+        :errors="store.errorCount"
+        :sent="store.sentCount"
+      />
+      <div class="header-actions">
         <FileUpload
           mode="basic"
           :auto="false"
@@ -276,6 +278,13 @@ function confirmClear(): void {
 }
 
 .header-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+
+.header-title-row {
   display: flex;
   align-items: center;
   gap: 0.5rem;

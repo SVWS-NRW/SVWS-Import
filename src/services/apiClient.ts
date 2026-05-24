@@ -27,6 +27,13 @@ export function createApiClient(config: ConnectionConfig): AxiosInstance {
     },
     timeout: 30000,
   })
+  client.interceptors.request.use(config => {
+    if (!config.method || config.method.toLowerCase() === 'get') {
+      config.headers['Cache-Control'] = 'no-cache'
+      config.headers['Pragma'] = 'no-cache'
+    }
+    return config
+  })
   return client
 }
 

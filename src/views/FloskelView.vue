@@ -58,7 +58,6 @@
         v-model:selection="selectedGruppen"
         :value="floskelgruppen"
         :loading="loadingGruppen"
-        :isDataSelectable="(e: { data: Floskelgruppe }) => !e.data.referenziertInAnderenTabellen && !(floskelCountByGruppe[e.data.id] > 0)"
         dataKey="id"
         selectionMode="multiple"
         :metaKeySelection="false"
@@ -385,7 +384,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
@@ -533,6 +532,20 @@ const niveauOptions = computed(() => {
   return values.map(v => ({ label: String(v), value: v as number }))
 })
 
+// Filterwerte zurücksetzen wenn sie nach einem Datenladen nicht mehr existieren
+watch(gruppeOptions, opts => {
+  if (filterGruppe.value !== null && !opts.some(o => o.value === filterGruppe.value))
+    filterGruppe.value = null
+})
+watch(fachOptions, opts => {
+  if (filterFach.value !== null && !opts.some(o => o.value === filterFach.value))
+    filterFach.value = null
+})
+watch(niveauOptions, opts => {
+  if (filterNiveau.value !== null && !opts.some(o => o.value === filterNiveau.value))
+    filterNiveau.value = null
+})
+
 function toggleGruppeFilter(id: number): void {
   filterGruppe.value = filterGruppe.value === id ? null : id
 }
@@ -543,6 +556,10 @@ function resetFilter(): void {
   filterGruppe.value = null
   filterFach.value = null
   filterNiveau.value = null
+}
+
+function isGruppeLoeschbar(g: Floskelgruppe): boolean {
+  return !g.referenziertInAnderenTabellen && !(floskelCountByGruppe.value[g.id] > 0)
 }
 
 function niveauSeverity(niveau: number): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
@@ -629,9 +646,21 @@ async function handleDelete(): Promise<void> {
 }
 
 function confirmDeleteGruppen(): void {
-  const n = selectedGruppen.value.length
+  const loeschbar = selectedGruppen.value.filter(g => isGruppeLoeschbar(g))
+  const geschuetzt = selectedGruppen.value.filter(g => !isGruppeLoeschbar(g))
+
+  if (loeschbar.length === 0) {
+    errorMsg.value = `Die ausgewählten Gruppen (${geschuetzt.map(g => g.kuerzel).join(', ')}) werden verwendet und können nicht gelöscht werden.`
+    return
+  }
+
+  let message = `${loeschbar.length} Floskelgruppe${loeschbar.length === 1 ? '' : 'n'} unwiderruflich löschen?`
+  if (geschuetzt.length > 0) {
+    message += ` Die Gruppe${geschuetzt.length === 1 ? '' : 'n'} ${geschuetzt.map(g => `„${g.kuerzel}"`).join(', ')} ${geschuetzt.length === 1 ? 'wird' : 'werden'} übersprungen, da sie verwendet ${geschuetzt.length === 1 ? 'wird' : 'werden'}.`
+  }
+
   confirm.require({
-    message: `${n} Floskelgruppe${n === 1 ? '' : 'n'} unwiderruflich löschen?`,
+    message,
     header: 'Floskelgruppen löschen',
     icon: 'pi pi-exclamation-triangle',
     acceptLabel: 'Ja, löschen',
@@ -644,8 +673,14 @@ function confirmDeleteGruppen(): void {
 async function handleDeleteGruppen(): Promise<void> {
   deletingGruppen.value = true
   errorMsg.value = ''
-  const ids = selectedGruppen.value.map(g => g.id)
+  const loeschbar = selectedGruppen.value.filter(g => isGruppeLoeschbar(g))
+  const ids = loeschbar.map(g => g.id)
   const n = ids.length
+  if (n === 0) {
+    deletingGruppen.value = false
+    selectedGruppen.value = []
+    return
+  }
   const result = await deleteFloskelgruppen(ids)
   selectedGruppen.value = []
   await loadGruppen()

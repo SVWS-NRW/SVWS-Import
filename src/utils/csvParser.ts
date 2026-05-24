@@ -4,6 +4,7 @@ import { type LehrerImportRow } from '@/models/Lehrer'
 import { type KlasseImportRow } from '@/models/Klassen'
 import { type JahrgangImportRow } from '@/models/Jahrgaenge'
 import { type FachImportRow } from '@/models/Faecher'
+import { type FloskelImportRow } from '@/models/Floskel'
 import { generateId } from './idHelper'
 
 // Normalisiert Spaltennamen: Leerzeichen/Groß-Klein entfernen
@@ -202,6 +203,39 @@ export async function parseFaecherCsv(file: File): Promise<FachImportRow[]> {
             row[key] = value ?? ''
           }
           return row
+        })
+        resolve(rows)
+      },
+      error(err) {
+        reject(new Error(`CSV-Fehler: ${err.message}`))
+      },
+    })
+  })
+}
+
+export async function parseFloskelCsv(file: File): Promise<FloskelImportRow[]> {
+  return new Promise((resolve, reject) => {
+    Papa.parse<Record<string, string>>(file, {
+      header: true,
+      skipEmptyLines: true,
+      delimiter: /\.dat$/i.test(file.name) ? '|' : '',
+      complete(results) {
+        const rows: FloskelImportRow[] = results.data.map(record => {
+          const m = buildLookup(record)
+          return {
+            _id: generateId(),
+            _valid: true,
+            _errors: [],
+            _sent: false,
+            kuerzel:         get(m, 'kürzel', 'kuerzel', 'kz'),
+            text:            get(m, 'floskeltext', 'text', 'inhalt', 'beschreibung'),
+            floskelgruppe:   get(m, 'gruppe', 'floskelgruppe', 'fg'),
+            idFloskelgruppe: get(m, 'idfloskelgruppe', 'gruppeid', 'floskelgruppeid'),
+            fach:            get(m, 'fach'),
+            jahrgang:        get(m, 'jahrgang', 'jg', 'jahrgangsstufe', 'stufe'),
+            niveau:          get(m, 'niveau', 'niveaustufe'),
+            sortierung:      get(m, 'sortierung', 'sort'),
+          }
         })
         resolve(rows)
       },

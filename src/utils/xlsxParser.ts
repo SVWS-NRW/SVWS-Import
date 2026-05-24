@@ -1,10 +1,22 @@
 import readXlsxFile from 'read-excel-file/browser'
 import { type SchuelerImportRow } from '@/models/Schueler'
 import { type LehrerImportRow } from '@/models/Lehrer'
+import { type FloskelImportRow } from '@/models/Floskel'
 import { generateId } from './idHelper'
 import { normalisiereDatum } from './csvParser'
 
 type CellValue = string | number | boolean | Date | null
+type SheetObject = { sheet: string; data: CellValue[][] }
+
+/** Gleicht beide Rückgabeformate von readXlsxFile aus (flat CellValue[][] vs. [{sheet,data}][]) */
+function extractRows(raw: unknown): CellValue[][] {
+  if (!Array.isArray(raw) || raw.length === 0) return []
+  const first = raw[0]
+  if (!Array.isArray(first) && first !== null && typeof first === 'object' && 'data' in first) {
+    return (first as SheetObject).data
+  }
+  return raw as CellValue[][]
+}
 
 function normalize(val: CellValue): string {
   if (val === null || val === undefined) return ''
@@ -30,7 +42,7 @@ function col(row: CellValue[], headerMap: Map<string, number>, ...keys: string[]
 }
 
 export async function parseSchuelerXlsx(file: File): Promise<SchuelerImportRow[]> {
-  const rows = await readXlsxFile(file) as unknown as CellValue[][]
+  const rows = extractRows(await readXlsxFile(file) as unknown)
   if (rows.length < 2) return []
   const headerMap = buildHeaderMap(rows[0])
   return rows.slice(1).map(row => ({
@@ -65,8 +77,28 @@ export async function parseSchuelerXlsx(file: File): Promise<SchuelerImportRow[]
   }))
 }
 
+export async function parseFloskelXlsx(file: File): Promise<FloskelImportRow[]> {
+  const rows = extractRows(await readXlsxFile(file) as unknown)
+  if (rows.length < 2) return []
+  const headerMap = buildHeaderMap(rows[0])
+  return rows.slice(1).map(row => ({
+    _id: generateId(),
+    _valid: true,
+    _errors: [],
+    _sent: false,
+    kuerzel:         col(row, headerMap, 'kürzel', 'kuerzel', 'kz'),
+    text:            col(row, headerMap, 'floskeltext', 'text', 'inhalt', 'beschreibung'),
+    floskelgruppe:   col(row, headerMap, 'gruppe', 'floskelgruppe', 'fg'),
+    idFloskelgruppe: col(row, headerMap, 'idfloskelgruppe', 'gruppeid', 'floskelgruppeid'),
+    fach:            col(row, headerMap, 'fach'),
+    jahrgang:        col(row, headerMap, 'jahrgang', 'jg', 'jahrgangsstufe'),
+    niveau:          col(row, headerMap, 'niveau', 'niveaustufe'),
+    sortierung:      col(row, headerMap, 'sortierung', 'sort'),
+  }))
+}
+
 export async function parseLehrerXlsx(file: File): Promise<LehrerImportRow[]> {
-  const rows = await readXlsxFile(file) as unknown as CellValue[][]
+  const rows = extractRows(await readXlsxFile(file) as unknown)
   if (rows.length < 2) return []
   const headerMap = buildHeaderMap(rows[0])
   return rows.slice(1).map(row => ({

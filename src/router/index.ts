@@ -10,6 +10,7 @@ import KlassenView from '@/views/KlassenView.vue'
 import JahrgaengeView from '@/views/JahrgaengeView.vue'
 import FaecherView from '@/views/FaecherView.vue'
 import SchuljahresabschnitteView from '@/views/SchuljahresabschnitteView.vue'
+import FloskelView from '@/views/FloskelView.vue'
 import HelpView from '@/views/HelpView.vue'
 
 const router = createRouter({
@@ -76,6 +77,12 @@ const router = createRouter({
       path: '/schuljahresabschnitte',
       name: 'schuljahresabschnitte',
       component: SchuljahresabschnitteView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/floskeln',
+      name: 'floskeln',
+      component: FloskelView,
       meta: { requiresAuth: true },
     },
     {

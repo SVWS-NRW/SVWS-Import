@@ -67,6 +67,13 @@
           <small>Bestehende Abschnitte laden und neue anlegen</small>
         </div>
       </div>
+      <div class="import-card" @click="router.push({ name: 'floskeln' })">
+        <i class="pi pi-comment card-icon" />
+        <div>
+          <strong>Floskeln verwalten</strong>
+          <small>Floskeln anzeigen, filtern, löschen und importieren</small>
+        </div>
+      </div>
     </div>
 
     <div class="import-cards coming-soon-cards">

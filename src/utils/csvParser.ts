@@ -12,6 +12,68 @@ function normalizeKey(key: string): string {
   return key.toLowerCase().replace(/[\s_-]/g, '')
 }
 
+// Alle bekannten (normalisierten) Alias-Spaltennamen für Schüler-Imports
+export const SCHUELER_KNOWN_KEYS = new Set([
+  // nachname
+  'nachname', 'name', 'familienname', 'lastname',
+  // vorname
+  'vorname', 'firstname', 'rufname',
+  // alleVornamen
+  'allevornamen', 'vornamen',
+  // geburtsname
+  'geburtsname', 'mädchenname', 'maidenname',
+  // geburtsort / geburtsland
+  'geburtsort', 'birthplace',
+  'geburtsland', 'birthcountry',
+  // geschlecht
+  'geschlecht', 'gender', 'sex',
+  // geburtsdatum
+  'geburtsdatum', 'geburtstag', 'birthdate', 'birthday', 'geb.datum', 'geb',
+  // staatsangehörigkeit
+  '1.staatsang.', '1staatsang.', 'staatsangehoerigkeit', 'staatsangehörigkeit', 'nationalität', 'nationality', 'staatsang',
+  '2.staatsang.', '2staatsang.', 'staatsangehoerigkeit2', 'zweitestaatsangehoerigkeit',
+  // religion
+  'konfession', 'religion', 'religionszugehörigkeit', 'religionszugehoerigkeit',
+  'statistikkrzkonfession', 'statistikkrizkonfession', 'religionskuerzel', 'konfessionskuerzel',
+  'druckekonfession', 'konfessionaufzeugnisse', 'druckekonfessionaufzeugnisse',
+  'religionanmeldung', 'konfessionsanmeldung',
+  'religionabmeldung', 'konfessionsabmeldung',
+  // migration / herkunft
+  'migrationshintergrund', 'hatmigrationshintergrund',
+  'zuzugsjahr', 'einwanderungsjahr',
+  'verkehrssprache', 'familiensprache', 'muttersprache', 'verkehrssprachefamilie',
+  'geburtslandvater',
+  'geburtslandmutter',
+  // adresse
+  'straße', 'strasse', 'strassenname', 'street', 'adresse', 'wohnstraße', 'strae',
+  'hausnummer', 'hnr', 'hausnr',
+  'hausnummernzusatz', 'hausnrz', 'adresszusatz',
+  'plz', 'postleitzahl', 'postalcode', 'zip',
+  'ort', 'wohnort', 'stadt', 'city',
+  'ortsteil', 'stadtteil',
+  // kontakt
+  'telefon', 'tel', 'phone', 'telefonnummer',
+  'telefonmobil', 'mobiltelefon', 'handy', 'mobil', 'mobile',
+  'email', 'mail', 'emailadresse',
+  'emailschule', 'schulmail',
+  // schulbezogen
+  'status',
+  'externeschulnr', 'schulnummer', 'schulnr',
+  'beruf', 'profession',
+  'anmeldedatum', 'anmeldung',
+  'aufnahmedatum', 'aufnahme', 'einschulung',
+  'beginnbildungsgang',
+  'dauerbildungsgang',
+  'klasse', 'class', 'klassenbezeichnung', 'lerngruppe',
+  'jahrgang', 'jahrgangsstufe', 'stufe', 'grade', 'jg', 'jgst',
+  'schulgliederung', 'gliederung', 'bildungsgang', 'track',
+  // sonstiges
+  'masernimpfnachweis', 'masernimpfung', 'hatmasernimpfnachweis',
+  'keineauskunft', 'keineauskunftandritte', 'auskunftsperre',
+  'schuelerbafoeg', 'bafoeg', 'erhaeltschuelerbafoeg',
+  'meisterbafoeg', 'erhaeltmeisterbafoeg',
+])
+
 function buildLookup(record: Record<string, string>): Map<string, string> {
   const map = new Map<string, string>()
   for (const [k, v] of Object.entries(record)) {
@@ -28,7 +90,7 @@ function get(map: Map<string, string>, ...keys: string[]): string {
   return ''
 }
 
-export async function parseSchuelerCsv(file: File): Promise<SchuelerImportRow[]> {
+export async function parseSchuelerCsv(file: File): Promise<{ rows: SchuelerImportRow[]; unmappedHeaders: string[] }> {
   return new Promise((resolve, reject) => {
     Papa.parse<Record<string, string>>(file, {
       header: true,
@@ -42,34 +104,63 @@ export async function parseSchuelerCsv(file: File): Promise<SchuelerImportRow[]>
             _valid: true,
             _errors: [],
             _sent: false,
-            nachname:              get(m, 'nachname', 'name', 'familienname', 'last name', 'lastname'),
-            vorname:               get(m, 'vorname', 'firstname', 'first name', 'rufname'),
-            alleVornamen:          get(m, 'allevornamen', 'vornamen', 'alle vornamen'),
-            geburtsname:           get(m, 'geburtsname', 'mädchenname', 'maiden name'),
-            geburtsort:            get(m, 'geburtsort', 'birthplace'),
-            geschlecht:            get(m, 'geschlecht', 'gender', 'sex'),
-            geburtsdatum:          normalisiereDatum(get(m, 'geburtsdatum', 'geburtstag', 'birthdate', 'birthday', 'geb.datum', 'geb')),
-            staatsangehoerigkeitID: get(m, '1.staatsang.', 'staatsangehoerigkeit', 'staatsangehörigkeit', 'nationalität', 'nationality', 'staatsang'),
-            religionID:            get(m, 'konfession', 'religion', 'religionszugehörigkeit', 'religionszugehoerigkeit'),
-            religionKuerzel:       get(m, 'statistikkrzkonfession', 'statistikkrizkonfession', 'religionskuerzel', 'konfessionskuerzel'),
-            strassenname:          get(m, 'straße', 'strasse', 'strassenname', 'street', 'adresse', 'wohnstraße', 'strae'),
-            hausnummer:            get(m, 'hausnummer', 'hnr', 'hausnr'),
-            plz:                   get(m, 'plz', 'postleitzahl', 'postal code', 'zip'),
-            ort:                   get(m, 'ort', 'wohnort', 'stadt', 'city'),
-            ortsteil:              get(m, 'ortsteil', 'stadtteil'),
-            telefon:               get(m, 'telefon', 'tel', 'phone', 'telefonnummer'),
-            email:                 get(m, 'email', 'e-mail', 'mail', 'emailadresse'),
-            status:                get(m, 'status'),
-            anmeldedatum:          normalisiereDatum(get(m, 'anmeldedatum', 'anmeldung')),
-            aufnahmedatum:         normalisiereDatum(get(m, 'aufnahmedatum', 'aufnahme', 'einschulung')),
-            beginnBildungsgang:    normalisiereDatum(get(m, 'beginnbildungsgang', 'beginn bildungsgang')),
-            klasse:                get(m, 'klasse', 'class', 'klassenbezeichnung', 'lerngruppe'),
-            jahrgang:              get(m, 'jahrgang', 'jahrgangsstufe', 'stufe', 'grade', 'jg', 'jgst'),
-            schulgliederung:       get(m, 'schulgliederung', 'gliederung', 'bildungsgang', 'track'),
+            _rawData: record,
+            // Personaldaten
+            nachname:                    get(m, 'nachname', 'name', 'familienname', 'last name', 'lastname'),
+            vorname:                     get(m, 'vorname', 'firstname', 'first name', 'rufname'),
+            alleVornamen:                get(m, 'allevornamen', 'vornamen', 'alle vornamen'),
+            geburtsname:                 get(m, 'geburtsname', 'mädchenname', 'maiden name'),
+            geburtsort:                  get(m, 'geburtsort', 'birthplace'),
+            geburtsland:                 get(m, 'geburtsland', 'birthcountry'),
+            geschlecht:                  get(m, 'geschlecht', 'gender', 'sex'),
+            geburtsdatum:                normalisiereDatum(get(m, 'geburtsdatum', 'geburtstag', 'birthdate', 'birthday', 'geb.datum', 'geb')),
+            staatsangehoerigkeitID:      get(m, '1.staatsang.', 'staatsangehoerigkeit', 'staatsangehörigkeit', 'nationalität', 'nationality', 'staatsang'),
+            staatsangehoerigkeit2ID:     get(m, '2.staatsang.', 'staatsangehoerigkeit2', 'zweitestaatsangehoerigkeit'),
+            religionID:                  get(m, 'konfession', 'religion', 'religionszugehörigkeit', 'religionszugehoerigkeit'),
+            religionKuerzel:             get(m, 'statistikkrzkonfession', 'statistikkrizkonfession', 'religionskuerzel', 'konfessionskuerzel'),
+            druckeKonfessionAufZeugnisse: get(m, 'druckekonfession', 'konfessionaufzeugnisse', 'drucke konfession auf zeugnisse'),
+            religionanmeldung:           normalisiereDatum(get(m, 'religionanmeldung', 'konfessionsanmeldung')),
+            religionabmeldung:           normalisiereDatum(get(m, 'religionabmeldung', 'konfessionsabmeldung')),
+            // Herkunft / Migration
+            hatMigrationshintergrund:    get(m, 'migrationshintergrund', 'hatmigrationshintergrund'),
+            zuzugsjahr:                  get(m, 'zuzugsjahr', 'einwanderungsjahr'),
+            verkehrspracheFamilie:       get(m, 'verkehrssprache', 'familiensprache', 'muttersprache', 'verkehrssprache familie'),
+            geburtslandVater:            get(m, 'geburtslandvater', 'geburtsland vater'),
+            geburtslandMutter:           get(m, 'geburtslandmutter', 'geburtsland mutter'),
+            // Adresse
+            strassenname:                get(m, 'straße', 'strasse', 'strassenname', 'street', 'adresse', 'wohnstraße', 'strae'),
+            hausnummer:                  get(m, 'hausnummer', 'hnr', 'hausnr'),
+            hausnummerZusatz:            get(m, 'hausnummernzusatz', 'hausnrz', 'adresszusatz'),
+            plz:                         get(m, 'plz', 'postleitzahl', 'postal code', 'zip'),
+            ort:                         get(m, 'ort', 'wohnort', 'stadt', 'city'),
+            ortsteil:                    get(m, 'ortsteil', 'stadtteil'),
+            // Kontakt
+            telefon:                     get(m, 'telefon', 'tel', 'phone', 'telefonnummer'),
+            telefonMobil:                get(m, 'telefonmobil', 'mobiltelefon', 'handy', 'mobil', 'mobile'),
+            email:                       get(m, 'email', 'e-mail', 'mail', 'emailadresse'),
+            emailSchule:                 get(m, 'emailschule', 'schulmail', 'school email'),
+            // Schulbezogen
+            status:                      get(m, 'status'),
+            externeSchulNr:              get(m, 'externeschulnr', 'schulnummer', 'schulnr'),
+            beruf:                       get(m, 'beruf', 'profession'),
+            anmeldedatum:                normalisiereDatum(get(m, 'anmeldedatum', 'anmeldung')),
+            aufnahmedatum:               normalisiereDatum(get(m, 'aufnahmedatum', 'aufnahme', 'einschulung')),
+            beginnBildungsgang:          normalisiereDatum(get(m, 'beginnbildungsgang', 'beginn bildungsgang')),
+            dauerBildungsgang:           get(m, 'dauerbildungsgang', 'dauer bildungsgang'),
+            klasse:                      get(m, 'klasse', 'class', 'klassenbezeichnung', 'lerngruppe'),
+            jahrgang:                    get(m, 'jahrgang', 'jahrgangsstufe', 'stufe', 'grade', 'jg', 'jgst'),
+            schulgliederung:             get(m, 'schulgliederung', 'gliederung', 'bildungsgang', 'track'),
+            // Sonstiges
+            hatMasernimpfnachweis:       get(m, 'masernimpfnachweis', 'masernimpfung', 'hatmasernimpfnachweis'),
+            keineAuskunftAnDritte:       get(m, 'keineauskunft', 'keineauskunftandritte', 'auskunftsperre'),
+            erhaeltSchuelerBAFOEG:       get(m, 'schuelerbafoeg', 'bafoeg', 'erhaeltschuelerbafoeg'),
+            erhaeltMeisterBAFOEG:        get(m, 'meisterbafoeg', 'erhaeltmeisterbafoeg'),
           }
           return row
         })
-        resolve(rows)
+        const allHeaders = (results.meta.fields ?? [])
+        const unmappedHeaders = allHeaders.filter(h => !SCHUELER_KNOWN_KEYS.has(normalizeKey(h)))
+        resolve({ rows, unmappedHeaders })
       },
       error(err) {
         reject(new Error(`CSV-Fehler: ${err.message}`))

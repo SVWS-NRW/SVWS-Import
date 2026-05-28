@@ -27,34 +27,57 @@ export interface SchuelerImportRow {
   _valid: boolean
   _errors: string[]
   _sent: boolean
+  _rawData: Record<string, string>   // alle Original-Spaltennamen aus der Importdatei
   // Personaldaten
   nachname: string
   vorname: string
   alleVornamen: string
   geburtsname: string
   geburtsort: string
+  geburtsland: string
   geschlecht: string                 // Roh-String aus der Datei, wird beim Senden konvertiert
   geburtsdatum: string
   staatsangehoerigkeitID: string
+  staatsangehoerigkeit2ID: string
   religionID: string                 // Klartext (z.B. "römisch-katholisch")
   religionKuerzel: string            // Kürzel aus Schild-NRW StatistikKrz (z.B. "KR"), bevorzugter Lookup-Schlüssel
+  druckeKonfessionAufZeugnisse: string
+  religionanmeldung: string
+  religionabmeldung: string
+  // Herkunft / Migration
+  hatMigrationshintergrund: string
+  zuzugsjahr: string
+  verkehrspracheFamilie: string
+  geburtslandVater: string
+  geburtslandMutter: string
   // Adresse
   strassenname: string
   hausnummer: string
+  hausnummerZusatz: string
   plz: string
   ort: string
   ortsteil: string
   // Kontakt
   telefon: string
+  telefonMobil: string
   email: string
+  emailSchule: string
   // Schulbezogen
   status: string
+  externeSchulNr: string
+  beruf: string
   anmeldedatum: string
   aufnahmedatum: string
   beginnBildungsgang: string
+  dauerBildungsgang: string
   klasse: string
   jahrgang: string
   schulgliederung: string
+  // Sonstiges
+  hatMasernimpfnachweis: string
+  keineAuskunftAnDritte: string
+  erhaeltSchuelerBAFOEG: string
+  erhaeltMeisterBAFOEG: string
 }
 
 export function schuelerImportToApi(row: SchuelerImportRow, idSchuljahresabschnitt: number): SchuelerNeu {
@@ -67,9 +90,9 @@ export function schuelerImportToApi(row: SchuelerImportRow, idSchuljahresabschni
     status: 2,
     anmeldedatum: row.anmeldedatum || null,
     aufnahmedatum: row.aufnahmedatum || null,
-    beginnBildungsgang: null,
-    dauerBildungsgang: null,
-    staatsangehoerigkeitID: null,
+    beginnBildungsgang: row.beginnBildungsgang || null,
+    dauerBildungsgang: row.dauerBildungsgang ? parseInt(row.dauerBildungsgang, 10) || null : null,
+    staatsangehoerigkeitID: row.staatsangehoerigkeitID || null,
     idReligion: null,
     idSchuljahresabschnitt,
     idJahrgang: null,

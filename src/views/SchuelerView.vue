@@ -88,11 +88,19 @@
     />
 
     <ConfirmDialog />
+
+    <ColumnMappingDialog
+      v-if="showMappingDialog"
+      :unmappedHeaders="store.unmappedHeaders"
+      :sampleRows="store.rows.slice(0, 3)"
+      @confirm="onMappingConfirm"
+      @skip="showMappingDialog = false"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { AgGridVue } from '@ag-grid-community/vue3'
 import { ClientSideRowModelModule } from '@ag-grid-community/client-side-row-model'
@@ -109,6 +117,7 @@ import { useSchuleStore } from '@/stores/schule'
 import { useDarkMode } from '@/composables/useDarkMode'
 import { type SchuelerImportRow } from '@/models/Schueler'
 import ImportStats from '@/components/ImportStats.vue'
+import ColumnMappingDialog from '@/components/ColumnMappingDialog.vue'
 import { parseSchuelerCsv } from '@/utils/csvParser'
 import { parseSchuelerXlsx } from '@/utils/xlsxParser'
 
@@ -122,6 +131,7 @@ const { isDark } = useDarkMode()
 const uploadResult = ref<{ sent: number; failed: number } | null>(null)
 const parseError = ref('')
 const parsing = ref(false)
+const showMappingDialog = ref(false)
 
 async function onFileSelect(event: { files: File[] }): Promise<void> {
   const file = event.files[0]
@@ -130,10 +140,11 @@ async function onFileSelect(event: { files: File[] }): Promise<void> {
   parseError.value = ''
   try {
     const isXlsx = /\.(xlsx|xls)$/i.test(file.name)
-    const rows = isXlsx ? await parseSchuelerXlsx(file) : await parseSchuelerCsv(file)
+    const { rows, unmappedHeaders } = isXlsx ? await parseSchuelerXlsx(file) : await parseSchuelerCsv(file)
     if (rows.length === 0) throw new Error('Keine Datensätze gefunden')
-    store.setRows(rows)
+    store.setRows(rows, unmappedHeaders)
     store.validateAll()
+    if (unmappedHeaders.length > 0) showMappingDialog.value = true
   } catch (e) {
     parseError.value = e instanceof Error ? e.message : 'Fehler beim Einlesen der Datei'
   } finally {
@@ -155,71 +166,111 @@ const defaultColDef: ColDef = {
   minWidth: 80,
 }
 
-const columnDefs: ColDef<SchuelerImportRow>[] = [
-  // ── Pflichtfelder ──────────────────────────────────────────────────────────
-  {
-    field: 'nachname',
-    headerName: 'Nachname',
-    pinned: 'left',
-    flex: 1.5,
-    minWidth: 120,
-    cellStyle: (p) => p.data?._errors.some(e => e.includes('Nachname')) ? { background: '#fee2e2' } : null,
-  },
-  {
-    field: 'vorname',
-    headerName: 'Vorname',
-    pinned: 'left',
-    flex: 1.5,
-    minWidth: 120,
-    cellStyle: (p) => p.data?._errors.some(e => e.includes('Vorname')) ? { background: '#fee2e2' } : null,
-  },
-  // ── Personaldaten ──────────────────────────────────────────────────────────
-  { field: 'geburtsdatum',           headerName: 'Geburtsdatum',          width: 140, pinned: 'left' },
-  { field: 'alleVornamen',           headerName: 'Alle Vornamen',        width: 150 },
-  { field: 'geburtsname',            headerName: 'Geburtsname',           width: 130 },
-  { field: 'geburtsort',             headerName: 'Geburtsort',            width: 120 },
-  { field: 'geschlecht',             headerName: 'Geschlecht',            width: 110 },
-  { field: 'staatsangehoerigkeitID', headerName: 'Staatsangehörigkeit',   width: 170 },
-  { field: 'religionID',             headerName: 'Konfession',            width: 160 },
-  // ── Adresse ────────────────────────────────────────────────────────────────
-  { field: 'strassenname',           headerName: 'Straße',                width: 180 },
-  { field: 'hausnummer',             headerName: 'Hausnr.',               width: 90 },
-  { field: 'plz',                    headerName: 'PLZ',                   width: 80 },
-  { field: 'ort',                    headerName: 'Ort',                   width: 130 },
-  { field: 'ortsteil',               headerName: 'Ortsteil',              width: 110 },
-  // ── Kontakt ────────────────────────────────────────────────────────────────
-  { field: 'telefon',                headerName: 'Telefon',               width: 140 },
-  { field: 'email',                  headerName: 'E-Mail',                width: 180 },
-  // ── Schulbezogen ──────────────────────────────────────────────────────────
-  { field: 'klasse',                 headerName: 'Klasse',                width: 100 },
-  { field: 'jahrgang',               headerName: 'Jahrgang',              width: 110 },
-  { field: 'schulgliederung',        headerName: 'Schulgliederung',       width: 150 },
-  { field: 'anmeldedatum',           headerName: 'Anmeldedatum',          width: 150 },
-  { field: 'aufnahmedatum',          headerName: 'Aufnahmedatum',         width: 150 },
-  { field: 'beginnBildungsgang',     headerName: 'Beginn Bildungsgang',   width: 170 },
-  // ── Import-Status ─────────────────────────────────────────────────────────
-  {
-    headerName: 'Status',
-    width: 100,
-    editable: false,
-    cellRenderer: (params: { data: SchuelerImportRow }) => {
-      if (params.data._sent) return '<span style="color:#22c55e">✔ Gesendet</span>'
-      if (!params.data._valid) return `<span style="color:#ef4444" title="${params.data._errors.join('; ')}">✖ Fehler</span>`
-      return '<span style="color:#f59e0b">● Bereit</span>'
+const columnDefs = computed<ColDef<SchuelerImportRow>[]>(() => {
+  const has = (field: keyof SchuelerImportRow) =>
+    store.rows.some(r => r[field] !== '')
+
+  return [
+    // ── Pflichtfelder ────────────────────────────────────────────────────────
+    {
+      field: 'nachname',
+      headerName: 'Nachname',
+      pinned: 'left',
+      flex: 1.5,
+      minWidth: 120,
+      cellStyle: (p) => p.data?._errors.some(e => e.includes('Nachname')) ? { background: '#fee2e2' } : null,
     },
-  },
-  {
-    headerName: '',
-    width: 60,
-    editable: false,
-    sortable: false,
-    filter: false,
-    cellRenderer: (params: { data: SchuelerImportRow }) =>
-      params.data._sent
-        ? ''
-        : `<button onclick="window.__deleteSchueler('${params.data._id}')" style="border:none;background:none;cursor:pointer;color:#ef4444;font-size:1rem" title="Zeile löschen">✕</button>`,
-  },
-]
+    {
+      field: 'vorname',
+      headerName: 'Vorname',
+      pinned: 'left',
+      flex: 1.5,
+      minWidth: 120,
+      cellStyle: (p) => p.data?._errors.some(e => e.includes('Vorname')) ? { background: '#fee2e2' } : null,
+    },
+    // ── Personaldaten ────────────────────────────────────────────────────────
+    { field: 'geburtsdatum',              headerName: 'Geburtsdatum',           width: 140, pinned: 'left' },
+    { field: 'alleVornamen',              headerName: 'Alle Vornamen',          width: 150 },
+    { field: 'geburtsname',               headerName: 'Geburtsname',            width: 130 },
+    { field: 'geburtsort',                headerName: 'Geburtsort',             width: 120 },
+    { field: 'geburtsland',               headerName: 'Geburtsland',            width: 120,  hide: !has('geburtsland') },
+    { field: 'geschlecht',                headerName: 'Geschlecht',             width: 110 },
+    { field: 'staatsangehoerigkeitID',    headerName: 'Staatsangehörigkeit',    width: 170 },
+    { field: 'staatsangehoerigkeit2ID',   headerName: 'Staatsangehörigkeit 2',  width: 170,  hide: !has('staatsangehoerigkeit2ID') },
+    // ── Religion ─────────────────────────────────────────────────────────────
+    { field: 'religionID',                headerName: 'Konfession',             width: 160 },
+    { field: 'religionKuerzel',           headerName: 'Konfessionskürzel',      width: 140,  hide: !has('religionKuerzel') },
+    { field: 'druckeKonfessionAufZeugnisse', headerName: 'Konfession/Zeugnis', width: 150,  hide: !has('druckeKonfessionAufZeugnisse') },
+    { field: 'religionanmeldung',         headerName: 'Anmeld. Religion',       width: 150,  hide: !has('religionanmeldung') },
+    { field: 'religionabmeldung',         headerName: 'Abmeld. Religion',       width: 150,  hide: !has('religionabmeldung') },
+    // ── Herkunft / Migration ─────────────────────────────────────────────────
+    { field: 'hatMigrationshintergrund',  headerName: 'Migrationshintergrund',  width: 170,  hide: !has('hatMigrationshintergrund') },
+    { field: 'zuzugsjahr',                headerName: 'Zuzugsjahr',             width: 110,  hide: !has('zuzugsjahr') },
+    { field: 'verkehrspracheFamilie',     headerName: 'Verkehrssprache',        width: 150,  hide: !has('verkehrspracheFamilie') },
+    { field: 'geburtslandVater',          headerName: 'Geburtsland Vater',      width: 150,  hide: !has('geburtslandVater') },
+    { field: 'geburtslandMutter',         headerName: 'Geburtsland Mutter',     width: 150,  hide: !has('geburtslandMutter') },
+    // ── Adresse ──────────────────────────────────────────────────────────────
+    { field: 'strassenname',              headerName: 'Straße',                 width: 180 },
+    { field: 'hausnummer',                headerName: 'Hausnr.',                width: 90 },
+    { field: 'hausnummerZusatz',          headerName: 'Hausnr. Zusatz',         width: 120,  hide: !has('hausnummerZusatz') },
+    { field: 'plz',                       headerName: 'PLZ',                    width: 80 },
+    { field: 'ort',                       headerName: 'Ort',                    width: 130 },
+    { field: 'ortsteil',                  headerName: 'Ortsteil',               width: 110 },
+    // ── Kontakt ──────────────────────────────────────────────────────────────
+    { field: 'telefon',                   headerName: 'Telefon',                width: 140 },
+    { field: 'telefonMobil',              headerName: 'Mobiltelefon',           width: 140,  hide: !has('telefonMobil') },
+    { field: 'email',                     headerName: 'E-Mail',                 width: 180 },
+    { field: 'emailSchule',               headerName: 'E-Mail Schule',          width: 180,  hide: !has('emailSchule') },
+    // ── Schulbezogen ─────────────────────────────────────────────────────────
+    { field: 'klasse',                    headerName: 'Klasse',                 width: 100 },
+    { field: 'jahrgang',                  headerName: 'Jahrgang',               width: 110 },
+    { field: 'schulgliederung',           headerName: 'Schulgliederung',        width: 150 },
+    { field: 'anmeldedatum',              headerName: 'Anmeldedatum',           width: 150 },
+    { field: 'aufnahmedatum',             headerName: 'Aufnahmedatum',          width: 150 },
+    { field: 'beginnBildungsgang',        headerName: 'Beginn Bildungsgang',    width: 170 },
+    { field: 'dauerBildungsgang',         headerName: 'Dauer Bildungsgang',     width: 140,  hide: !has('dauerBildungsgang') },
+    { field: 'externeSchulNr',            headerName: 'Externe Schulnr.',       width: 140,  hide: !has('externeSchulNr') },
+    { field: 'beruf',                     headerName: 'Beruf',                  width: 130,  hide: !has('beruf') },
+    // ── Sonstiges ────────────────────────────────────────────────────────────
+    { field: 'hatMasernimpfnachweis',     headerName: 'Masernimpfnachweis',     width: 160,  hide: !has('hatMasernimpfnachweis') },
+    { field: 'keineAuskunftAnDritte',     headerName: 'Keine Auskunft',         width: 130,  hide: !has('keineAuskunftAnDritte') },
+    { field: 'erhaeltSchuelerBAFOEG',     headerName: 'Schüler-BAföG',          width: 130,  hide: !has('erhaeltSchuelerBAFOEG') },
+    { field: 'erhaeltMeisterBAFOEG',      headerName: 'Meister-BAföG',          width: 130,  hide: !has('erhaeltMeisterBAFOEG') },
+    // ── Import-Status ────────────────────────────────────────────────────────
+    {
+      headerName: 'Status',
+      width: 100,
+      editable: false,
+      cellRenderer: (params: { data: SchuelerImportRow }) => {
+        if (params.data._sent) return '<span style="color:#22c55e">✔ Gesendet</span>'
+        if (!params.data._valid) return `<span style="color:#ef4444" title="${params.data._errors.join('; ')}">✖ Fehler</span>`
+        return '<span style="color:#f59e0b">● Bereit</span>'
+      },
+    },
+    {
+      headerName: '',
+      width: 60,
+      editable: false,
+      sortable: false,
+      filter: false,
+      cellRenderer: (params: { data: SchuelerImportRow }) =>
+        params.data._sent
+          ? ''
+          : `<button onclick="window.__deleteSchueler('${params.data._id}')" style="border:none;background:none;cursor:pointer;color:#ef4444;font-size:1rem" title="Zeile löschen">✕</button>`,
+    },
+    // ── Nicht zugeordnete Spalten (amber) ────────────────────────────────────
+    ...store.unmappedHeaders.map(header => ({
+      headerName: header,
+      headerClass: 'col-unmapped-header',
+      cellClass: 'col-unmapped-cell',
+      editable: false,
+      width: 130,
+      sortable: true,
+      filter: true,
+      valueGetter: (params: { data?: SchuelerImportRow }) => params.data?._rawData?.[header] ?? '',
+    })),
+  ]
+})
 
 const rowClassRules = {
   'row-sent': (params: { data: SchuelerImportRow }) => params.data._sent,
@@ -239,6 +290,11 @@ function onCellChanged(event: CellValueChangedEvent<SchuelerImportRow>): void {
 // Globaler Handler für den Löschen-Button in der Zelle
 ;(window as unknown as Record<string, unknown>).__deleteSchueler = (id: string) => {
   store.deleteRow(id)
+}
+
+function onMappingConfirm(mapping: Record<string, string>): void {
+  showMappingDialog.value = false
+  store.applyColumnMapping(mapping)
 }
 
 async function handleUploadAll(): Promise<void> {
@@ -319,4 +375,21 @@ h2 {
 <style>
 .row-sent { opacity: 0.6; }
 .row-error { background-color: #fff5f5 !important; }
+
+.ag-theme-quartz .col-unmapped-header .ag-header-cell-label,
+.ag-theme-quartz .col-unmapped-header {
+  background-color: #fef3c7 !important;
+  color: #92400e !important;
+}
+.ag-theme-quartz-dark .col-unmapped-header .ag-header-cell-label,
+.ag-theme-quartz-dark .col-unmapped-header {
+  background-color: #78350f !important;
+  color: #fef3c7 !important;
+}
+.col-unmapped-cell {
+  background-color: #fffbeb !important;
+}
+.ag-theme-quartz-dark .col-unmapped-cell {
+  background-color: #1c1100 !important;
+}
 </style>

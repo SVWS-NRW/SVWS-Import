@@ -81,6 +81,14 @@ interface SchuelerLernabschnitt {
   klassenID: number | null
 }
 
+function parseBoolean(raw: string): boolean | null {
+  if (!raw) return null
+  const v = raw.toLowerCase().trim()
+  if (['j', 'ja', 'true', '1', 'yes', 'x'].includes(v)) return true
+  if (['n', 'nein', 'false', '0', 'no'].includes(v)) return false
+  return null
+}
+
 function resolveByKuerzel(map: Map<string, number>, kuerzel: string): number | null {
   if (!kuerzel) return null
   return map.get(kuerzel.trim().toLowerCase()) ?? null
@@ -232,14 +240,44 @@ export async function createSchueler(
     const response = await getApiClient().post('/schueler/create', payload)
     const newId: number = response.data.id
 
-    // ── Stammdaten-Patch (Adresse, Kontakt, Religion) ────────────────────────
+    // ── Stammdaten-Patch (Adresse, Kontakt, Religion, Herkunft) ─────────────
     const stammdatenPatch: Record<string, unknown> = {}
-    if (row.geburtsname)   stammdatenPatch.geburtsname  = row.geburtsname
-    if (row.geburtsort)    stammdatenPatch.geburtsort    = row.geburtsort
-    if (row.strassenname)  stammdatenPatch.strassenname  = row.strassenname
-    if (row.hausnummer)    stammdatenPatch.hausnummer    = row.hausnummer
-    if (row.telefon)       stammdatenPatch.telefon       = row.telefon
-    if (row.email)         stammdatenPatch.emailPrivat   = row.email
+    // Personaldaten
+    if (row.geburtsname)              stammdatenPatch.geburtsname             = row.geburtsname
+    if (row.geburtsort)               stammdatenPatch.geburtsort              = row.geburtsort
+    if (row.geburtsland)              stammdatenPatch.geburtsland             = row.geburtsland
+    if (row.staatsangehoerigkeit2ID)  stammdatenPatch.staatsangehoerigkeit2ID = row.staatsangehoerigkeit2ID
+    const drucke = parseBoolean(row.druckeKonfessionAufZeugnisse)
+    if (drucke !== null)              stammdatenPatch.druckeKonfessionAufZeugnisse = drucke
+    if (row.religionanmeldung)        stammdatenPatch.religionanmeldung       = row.religionanmeldung
+    if (row.religionabmeldung)        stammdatenPatch.religionabmeldung       = row.religionabmeldung
+    // Herkunft / Migration
+    const migration = parseBoolean(row.hatMigrationshintergrund)
+    if (migration !== null)           stammdatenPatch.hatMigrationshintergrund = migration
+    if (row.zuzugsjahr)               stammdatenPatch.zuzugsjahr              = parseInt(row.zuzugsjahr, 10) || null
+    if (row.verkehrspracheFamilie)    stammdatenPatch.verkehrspracheFamilie   = row.verkehrspracheFamilie
+    if (row.geburtslandVater)         stammdatenPatch.geburtslandVater        = row.geburtslandVater
+    if (row.geburtslandMutter)        stammdatenPatch.geburtslandMutter       = row.geburtslandMutter
+    // Adresse
+    if (row.strassenname)             stammdatenPatch.strassenname            = row.strassenname
+    if (row.hausnummer)               stammdatenPatch.hausnummer              = row.hausnummer
+    if (row.hausnummerZusatz)         stammdatenPatch.hausnummerZusatz        = row.hausnummerZusatz
+    // Kontakt
+    if (row.telefon)                  stammdatenPatch.telefon                 = row.telefon
+    if (row.telefonMobil)             stammdatenPatch.telefonMobil            = row.telefonMobil
+    if (row.email)                    stammdatenPatch.emailPrivat             = row.email
+    if (row.emailSchule)              stammdatenPatch.emailSchule             = row.emailSchule
+    // Sonstiges
+    if (row.externeSchulNr)           stammdatenPatch.externeSchulNr          = row.externeSchulNr
+    if (row.beruf)                    stammdatenPatch.beruf                   = row.beruf
+    const masern = parseBoolean(row.hatMasernimpfnachweis)
+    if (masern !== null)              stammdatenPatch.hatMasernimpfnachweis   = masern
+    const keineAuskunft = parseBoolean(row.keineAuskunftAnDritte)
+    if (keineAuskunft !== null)       stammdatenPatch.keineAuskunftAnDritte   = keineAuskunft
+    const bafoeg = parseBoolean(row.erhaeltSchuelerBAFOEG)
+    if (bafoeg !== null)              stammdatenPatch.erhaeltSchuelerBAFOEG   = bafoeg
+    const meisterBafoeg = parseBoolean(row.erhaeltMeisterBAFOEG)
+    if (meisterBafoeg !== null)       stammdatenPatch.erhaeltMeisterBAFOEG    = meisterBafoeg
 
     if (orteKatalog) {
       const wohnortID = resolveWohnortId(orteKatalog, row.plz, row.ort)

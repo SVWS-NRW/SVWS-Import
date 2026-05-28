@@ -3,7 +3,7 @@ import { type SchuelerImportRow } from '@/models/Schueler'
 import { type LehrerImportRow } from '@/models/Lehrer'
 import { type FloskelImportRow } from '@/models/Floskel'
 import { generateId } from './idHelper'
-import { normalisiereDatum } from './csvParser'
+import { normalisiereDatum, SCHUELER_KNOWN_KEYS } from './csvParser'
 
 type CellValue = string | number | boolean | Date | null
 type SheetObject = { sheet: string; data: CellValue[][] }
@@ -41,40 +41,76 @@ function col(row: CellValue[], headerMap: Map<string, number>, ...keys: string[]
   return ''
 }
 
-export async function parseSchuelerXlsx(file: File): Promise<SchuelerImportRow[]> {
-  const rows = extractRows(await readXlsxFile(file) as unknown)
-  if (rows.length < 2) return []
-  const headerMap = buildHeaderMap(rows[0])
-  return rows.slice(1).map(row => ({
-    _id: generateId(),
-    _valid: true,
-    _errors: [],
-    _sent: false,
-    nachname:               col(row, headerMap, 'nachname', 'name', 'familienname', 'last name', 'lastname'),
-    vorname:                col(row, headerMap, 'vorname', 'firstname', 'first name', 'rufname'),
-    alleVornamen:           col(row, headerMap, 'allevornamen', 'vornamen', 'alle vornamen'),
-    geburtsname:            col(row, headerMap, 'geburtsname', 'mädchenname', 'maiden name'),
-    geburtsort:             col(row, headerMap, 'geburtsort', 'birthplace'),
-    geschlecht:             col(row, headerMap, 'geschlecht', 'gender', 'sex'),
-    geburtsdatum:           normalisiereDatum(col(row, headerMap, 'geburtsdatum', 'geburtstag', 'birthdate', 'birthday')),
-    staatsangehoerigkeitID: col(row, headerMap, '1. staatsang.', 'staatsangehoerigkeit', 'staatsangehörigkeit', 'nationalität', 'nationality'),
-    religionID:             col(row, headerMap, 'konfession', 'religion', 'religionszugehörigkeit'),
-    religionKuerzel:        col(row, headerMap, 'statistik krz konfession', 'religionskuerzel', 'konfessionskuerzel'),
-    strassenname:           col(row, headerMap, 'straße', 'strasse', 'strassenname', 'street', 'adresse'),
-    hausnummer:             col(row, headerMap, 'hausnummer', 'hnr', 'hausnr'),
-    plz:                    col(row, headerMap, 'plz', 'postleitzahl', 'postal code', 'zip'),
-    ort:                    col(row, headerMap, 'ort', 'wohnort', 'stadt', 'city'),
-    ortsteil:               col(row, headerMap, 'ortsteil', 'stadtteil'),
-    telefon:                col(row, headerMap, 'telefon', 'tel', 'phone', 'telefonnummer'),
-    email:                  col(row, headerMap, 'email', 'e-mail', 'mail', 'emailadresse'),
-    status:                 col(row, headerMap, 'status'),
-    anmeldedatum:           normalisiereDatum(col(row, headerMap, 'anmeldedatum', 'anmeldung')),
-    aufnahmedatum:          normalisiereDatum(col(row, headerMap, 'aufnahmedatum', 'aufnahme')),
-    beginnBildungsgang:     normalisiereDatum(col(row, headerMap, 'beginnbildungsgang', 'beginn bildungsgang')),
-    klasse:                 col(row, headerMap, 'klasse', 'class', 'klassenbezeichnung'),
-    jahrgang:               col(row, headerMap, 'jahrgang', 'jahrgangsstufe', 'grade', 'jg', 'jgst'),
-    schulgliederung:        col(row, headerMap, 'schulgliederung', 'gliederung', 'bildungsgang'),
-  }))
+export async function parseSchuelerXlsx(file: File): Promise<{ rows: SchuelerImportRow[]; unmappedHeaders: string[] }> {
+  const allRows = extractRows(await readXlsxFile(file) as unknown)
+  if (allRows.length < 2) return { rows: [], unmappedHeaders: [] }
+  const headerRow = allRows[0]
+  const originalHeaders = headerRow.map(normalize)
+  const headerMap = buildHeaderMap(headerRow)
+  const rows: SchuelerImportRow[] = allRows.slice(1).map(row => {
+    const rawData: Record<string, string> = {}
+    originalHeaders.forEach((h, i) => { rawData[h] = normalize(row[i]) })
+    return {
+      _id: generateId(),
+      _valid: true,
+      _errors: [],
+      _sent: false,
+      _rawData: rawData,
+      // Personaldaten
+      nachname:                    col(row, headerMap, 'nachname', 'name', 'familienname', 'last name', 'lastname'),
+      vorname:                     col(row, headerMap, 'vorname', 'firstname', 'first name', 'rufname'),
+      alleVornamen:                col(row, headerMap, 'allevornamen', 'vornamen', 'alle vornamen'),
+      geburtsname:                 col(row, headerMap, 'geburtsname', 'mädchenname', 'maiden name'),
+      geburtsort:                  col(row, headerMap, 'geburtsort', 'birthplace'),
+      geburtsland:                 col(row, headerMap, 'geburtsland', 'birthcountry'),
+      geschlecht:                  col(row, headerMap, 'geschlecht', 'gender', 'sex'),
+      geburtsdatum:                normalisiereDatum(col(row, headerMap, 'geburtsdatum', 'geburtstag', 'birthdate', 'birthday')),
+      staatsangehoerigkeitID:      col(row, headerMap, '1. staatsang.', 'staatsangehoerigkeit', 'staatsangehörigkeit', 'nationalität', 'nationality'),
+      staatsangehoerigkeit2ID:     col(row, headerMap, '2. staatsang.', 'staatsangehoerigkeit2', 'zweitestaatsangehoerigkeit'),
+      religionID:                  col(row, headerMap, 'konfession', 'religion', 'religionszugehörigkeit'),
+      religionKuerzel:             col(row, headerMap, 'statistik krz konfession', 'religionskuerzel', 'konfessionskuerzel'),
+      druckeKonfessionAufZeugnisse: col(row, headerMap, 'drucke konfession auf zeugnisse', 'druckekonfession'),
+      religionanmeldung:           normalisiereDatum(col(row, headerMap, 'religionanmeldung', 'konfessionsanmeldung')),
+      religionabmeldung:           normalisiereDatum(col(row, headerMap, 'religionabmeldung', 'konfessionsabmeldung')),
+      // Herkunft / Migration
+      hatMigrationshintergrund:    col(row, headerMap, 'migrationshintergrund', 'hatmigrationshintergrund'),
+      zuzugsjahr:                  col(row, headerMap, 'zuzugsjahr', 'einwanderungsjahr'),
+      verkehrspracheFamilie:       col(row, headerMap, 'verkehrssprache', 'familiensprache', 'muttersprache'),
+      geburtslandVater:            col(row, headerMap, 'geburtslandvater', 'geburtsland vater'),
+      geburtslandMutter:           col(row, headerMap, 'geburtslandmutter', 'geburtsland mutter'),
+      // Adresse
+      strassenname:                col(row, headerMap, 'straße', 'strasse', 'strassenname', 'street', 'adresse'),
+      hausnummer:                  col(row, headerMap, 'hausnummer', 'hnr', 'hausnr'),
+      hausnummerZusatz:            col(row, headerMap, 'hausnummernzusatz', 'hausnrz', 'adresszusatz'),
+      plz:                         col(row, headerMap, 'plz', 'postleitzahl', 'postal code', 'zip'),
+      ort:                         col(row, headerMap, 'ort', 'wohnort', 'stadt', 'city'),
+      ortsteil:                    col(row, headerMap, 'ortsteil', 'stadtteil'),
+      // Kontakt
+      telefon:                     col(row, headerMap, 'telefon', 'tel', 'phone', 'telefonnummer'),
+      telefonMobil:                col(row, headerMap, 'telefonmobil', 'mobiltelefon', 'handy', 'mobil', 'mobile'),
+      email:                       col(row, headerMap, 'email', 'e-mail', 'mail', 'emailadresse'),
+      emailSchule:                 col(row, headerMap, 'emailschule', 'schulmail', 'school email'),
+      // Schulbezogen
+      status:                      col(row, headerMap, 'status'),
+      externeSchulNr:              col(row, headerMap, 'externeschulnr', 'schulnummer', 'schulnr'),
+      beruf:                       col(row, headerMap, 'beruf', 'profession'),
+      anmeldedatum:                normalisiereDatum(col(row, headerMap, 'anmeldedatum', 'anmeldung')),
+      aufnahmedatum:               normalisiereDatum(col(row, headerMap, 'aufnahmedatum', 'aufnahme')),
+      beginnBildungsgang:          normalisiereDatum(col(row, headerMap, 'beginnbildungsgang', 'beginn bildungsgang')),
+      dauerBildungsgang:           col(row, headerMap, 'dauerbildungsgang', 'dauer bildungsgang'),
+      klasse:                      col(row, headerMap, 'klasse', 'class', 'klassenbezeichnung'),
+      jahrgang:                    col(row, headerMap, 'jahrgang', 'jahrgangsstufe', 'grade', 'jg', 'jgst'),
+      schulgliederung:             col(row, headerMap, 'schulgliederung', 'gliederung', 'bildungsgang'),
+      // Sonstiges
+      hatMasernimpfnachweis:       col(row, headerMap, 'masernimpfnachweis', 'masernimpfung'),
+      keineAuskunftAnDritte:       col(row, headerMap, 'keineauskunft', 'keineauskunftandritte', 'auskunftsperre'),
+      erhaeltSchuelerBAFOEG:       col(row, headerMap, 'schuelerbafoeg', 'bafoeg'),
+      erhaeltMeisterBAFOEG:        col(row, headerMap, 'meisterbafoeg'),
+    }
+  })
+  const normalizeAlias = (k: string) => k.toLowerCase().replace(/[\s_-]/g, '')
+  const unmappedHeaders = originalHeaders.filter(h => h && !SCHUELER_KNOWN_KEYS.has(normalizeAlias(h)))
+  return { rows, unmappedHeaders }
 }
 
 export async function parseFloskelXlsx(file: File): Promise<FloskelImportRow[]> {

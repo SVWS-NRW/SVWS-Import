@@ -1,12 +1,14 @@
 import { defineStore, acceptHMRUpdate } from 'pinia'
 import { ref, computed } from 'vue'
 import { type SchuelerImportRow } from '@/models/Schueler'
+import { normalisiereDatum } from '@/utils/csvParser'
 import { createSchueler, buildKlassenMap, fetchKlassenDetails, buildJahrgaengeMap, fetchJahrgaenge } from '@/services/svwsService'
 import { loadKataloge } from '@/services/katalogService'
 import type { OrtKatalogEintrag } from '@/models/ImportSchema'
 
 export const useSchuelerStore = defineStore('schueler', () => {
   const rows = ref<SchuelerImportRow[]>([])
+  const unmappedHeaders = ref<string[]>([])
   const uploading = ref(false)
   const uploadProgress = ref(0)
   const uploadTotal = ref(0)
@@ -18,8 +20,9 @@ export const useSchuelerStore = defineStore('schueler', () => {
   const sentCount = computed(() => rows.value.filter(r => r._sent).length)
   const errorCount = computed(() => rows.value.filter(r => !r._valid).length)
 
-  function setRows(newRows: SchuelerImportRow[]): void {
+  function setRows(newRows: SchuelerImportRow[], headers: string[] = []): void {
     rows.value = newRows
+    unmappedHeaders.value = headers
   }
 
   function updateRow(id: string, patch: Partial<SchuelerImportRow>): void {
@@ -51,6 +54,26 @@ export const useSchuelerStore = defineStore('schueler', () => {
 
   function clear(): void {
     rows.value = []
+    unmappedHeaders.value = []
+  }
+
+  const DATE_FIELDS = new Set(['geburtsdatum', 'anmeldedatum', 'aufnahmedatum', 'beginnBildungsgang'])
+
+  function applyColumnMapping(mapping: Record<string, string>): void {
+    if (Object.keys(mapping).length === 0) return
+    rows.value = rows.value.map(row => {
+      const patch: Partial<SchuelerImportRow> = {}
+      for (const [csvHeader, targetField] of Object.entries(mapping)) {
+        const raw = row._rawData[csvHeader] ?? ''
+        ;(patch as Record<string, string>)[targetField] = DATE_FIELDS.has(targetField)
+          ? normalisiereDatum(raw)
+          : raw
+      }
+      return { ...row, ...patch }
+    })
+    const mappedSet = new Set(Object.keys(mapping))
+    unmappedHeaders.value = unmappedHeaders.value.filter(h => !mappedSet.has(h))
+    validateAll()
   }
 
   async function uploadAll(): Promise<{ sent: number; failed: number }> {
@@ -104,9 +127,9 @@ export const useSchuelerStore = defineStore('schueler', () => {
   }
 
   return {
-    rows, uploading, uploadProgress, uploadTotal, idSchuljahresabschnitt,
+    rows, unmappedHeaders, uploading, uploadProgress, uploadTotal, idSchuljahresabschnitt,
     totalCount, validCount, sentCount, errorCount,
-    setRows, updateRow, deleteRow, validateAll, clear, uploadAll, stopUpload,
+    setRows, updateRow, deleteRow, validateAll, clear, uploadAll, stopUpload, applyColumnMapping,
   }
 })
 

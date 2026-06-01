@@ -114,6 +114,14 @@ export function resolveReligionId(
   return null
 }
 
+export function resolveNationalitaet(
+  nationalitaeten: Map<string, string> | undefined,
+  raw: string,
+): string {
+  if (!raw || !nationalitaeten) return raw
+  return nationalitaeten.get(raw) ?? raw
+}
+
 export async function loadKataloge(): Promise<ImportKataloge> {
   const kataloge: ImportKataloge = {}
   const results = await Promise.allSettled([

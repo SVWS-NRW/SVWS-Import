@@ -41,6 +41,7 @@ export interface LehrerImportRow {
   titel: string
   geburtsdatum: string
   geschlecht: string
+  staatsangehoerigkeitID: string
   emailDienstlich: string
   telefon: string
 }
@@ -56,7 +57,7 @@ export function lehrerImportToApi(row: LehrerImportRow): LehrerStammdaten {
     vorname: row.vorname,
     geschlecht: parseGeschlecht(row.geschlecht),
     geburtsdatum: row.geburtsdatum || null,
-    staatsangehoerigkeitID: null,
+    staatsangehoerigkeitID: row.staatsangehoerigkeitID || null,
     strassenname: null,
     hausnummer: null,
     hausnummerZusatz: null,

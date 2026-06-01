@@ -150,6 +150,7 @@ export async function parseLehrerXlsx(file: File): Promise<LehrerImportRow[]> {
     titel: col(row, headerMap, 'titel', 'title'),
     geburtsdatum: normalisiereDatum(col(row, headerMap, 'geburtsdatum', 'geburtstag', 'birthdate')),
     geschlecht: col(row, headerMap, 'geschlecht', 'gender'),
+    staatsangehoerigkeitID: col(row, headerMap, '1.staatsang.', 'staatsangehoerigkeit', 'staatsangehörigkeit', 'nationalität', 'nationality', 'staatsang'),
     emailDienstlich: col(row, headerMap, 'emaildienstlich', 'email', 'mail'),
     telefon: col(row, headerMap, 'telefon', 'phone', 'tel'),
   }))

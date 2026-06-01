@@ -33,15 +33,19 @@ export function useColumnMatcher() {
         }
       }
 
-      // 2. Substring containment (min length 3 to avoid noise)
+      // 2. Substring containment — beide Strings müssen sich mindestens zur Hälfte überlappen,
+      //    damit kurze Allgemeinwörter wie "Jahr" nicht auf "Zuzugsjahr" matchen.
       if (!match) {
         for (const field of fields) {
           if (usedFieldKeys.has(field.key)) continue
           if (field.aliases.some(a => {
             const normAlias = norm(a)
-            return normAlias.length >= 3 && (
-              normAlias.includes(normCol) || normCol.includes(normAlias)
-            )
+            if (normAlias.length < 3) return false
+            if (normAlias.includes(normCol) || normCol.includes(normAlias)) {
+              const ratio = Math.min(normCol.length, normAlias.length) / Math.max(normCol.length, normAlias.length)
+              return ratio > 0.5
+            }
+            return false
           })) {
             match = field
             break

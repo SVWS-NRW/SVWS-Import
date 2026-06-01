@@ -30,5 +30,3 @@ Neue Klassenstammdaten über eine Importdatei anlegen.
 - Vorheriges Kapitel: [Import-Assistent nutzen](import-assistent.md)
 - Nächstes Kapitel: [Jahrgänge anlegen](jahrgaenge-anlegen.md)
 - Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)
-Schnellzugriff:
-- [Verbindung herstellen](verbindung-herstellen.md)

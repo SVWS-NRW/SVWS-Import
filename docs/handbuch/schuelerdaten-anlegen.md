@@ -36,5 +36,3 @@ Neue Schülerinnen und Schüler mit einer Importdatei in SVWS anlegen.
 - Vorheriges Kapitel: [Verbindung zum SVWS-Server herstellen](verbindung-herstellen.md)
 - Nächstes Kapitel: [Lehrerdaten anlegen](lehrerdaten-anlegen.md)
 - Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)
-Schnellzugriff:
-- [Verbindung herstellen](verbindung-herstellen.md)

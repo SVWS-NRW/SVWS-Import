@@ -24,5 +24,3 @@ Nutzen Sie die Anzeige als Basis für Filter, Löschung oder Import.
 - Vorheriges Kapitel: [Neue Schuljahresabschnitte anlegen](schuljahresabschnitte-anlegen.md)
 - Nächstes Kapitel: [Floskeln filtern](floskeln-filtern.md)
 - Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)
-Schnellzugriff:
-- [Verbindung herstellen](verbindung-herstellen.md)

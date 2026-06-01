@@ -83,20 +83,30 @@ export const useSchuelerStore = defineStore('schueler', () => {
 
     let orteKatalog: Map<string, OrtKatalogEintrag> | undefined
     let religionenKatalog: Map<string, import('@/models/ImportSchema').ReligionKatalogEintrag> | undefined
+    let nationalitaetenKatalog: Map<string, string> | undefined
     let klassenMap: Map<string, number> | undefined
     let jahrgaengeMap: Map<string, number> | undefined
+
+    // Kataloge separat laden: schlägt nicht fehl, wenn Klassen/Jahrgänge nicht verfügbar
     try {
-      const [kataloge, klassen, jahrgaenge] = await Promise.all([
-        loadKataloge(),
+      const kataloge = await loadKataloge()
+      orteKatalog            = kataloge.orte
+      religionenKatalog      = kataloge.religionen
+      nationalitaetenKatalog = kataloge.nationalitaeten
+    } catch {
+      // Kataloge nicht verfügbar — Code-Lookups werden übersprungen
+    }
+
+    // Klassen und Jahrgänge separat laden (unabhängig von den Katalogen)
+    try {
+      const [klassen, jahrgaenge] = await Promise.all([
         fetchKlassenDetails(idSchuljahresabschnitt.value),
         fetchJahrgaenge(),
       ])
-      orteKatalog       = kataloge.orte
-      religionenKatalog = kataloge.religionen
-      klassenMap        = buildKlassenMap(klassen)
-      jahrgaengeMap     = buildJahrgaengeMap(jahrgaenge)
+      klassenMap    = buildKlassenMap(klassen)
+      jahrgaengeMap = buildJahrgaengeMap(jahrgaenge)
     } catch {
-      // Kataloge nicht verfügbar — Lookups werden übersprungen
+      // Klassen/Jahrgänge nicht verfügbar — Zuordnungen werden übersprungen
     }
 
     const updated = [...rows.value]
@@ -107,7 +117,7 @@ export const useSchuelerStore = defineStore('schueler', () => {
       if (uploadCancelled.value) break
       const row = updated[i]
       if (!row._valid || row._sent) continue
-      const result = await createSchueler(row, idSchuljahresabschnitt.value, orteKatalog, religionenKatalog, klassenMap, jahrgaengeMap)
+      const result = await createSchueler(row, idSchuljahresabschnitt.value, orteKatalog, religionenKatalog, klassenMap, jahrgaengeMap, nationalitaetenKatalog)
       if (result.success) {
         updated[i] = { ...row, _sent: true, _errors: [] }
         sent++

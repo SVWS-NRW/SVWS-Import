@@ -1,10 +1,6 @@
 import type { ImportModule, MappedRow, ImportContext } from '@/models/ImportSchema'
-
-function resolveNationalitaet(raw: string, context: ImportContext): string {
-  if (!raw) return ''
-  return context.kataloge?.nationalitaeten?.get(raw) ?? raw
-}
 import type { SchuelerNeu, Geschlecht, SchuelerStatus } from '@/models/Schueler'
+import { resolveNationalitaet } from '@/services/katalogService'
 import { normalisiereDatum } from '@/utils/csvParser'
 
 const dateValidate = (v: string): string | null => {
@@ -108,6 +104,59 @@ export const schuelerStammdatenSchema: ImportModule = {
       required: false,
       type: 'string',
       aliases: ['religion', 'religionszugehörigkeit', 'konfession', 'religionsunterricht'],
+    },
+    // ── Herkunft / Migration ─────────────────────────────────────────────────
+    {
+      key: 'zuzugsjahr',
+      label: 'Zuzugsjahr',
+      category: 'Herkunft / Migration',
+      required: false,
+      type: 'string',
+      aliases: ['zuzugsjahr', 'einwanderungsjahr', 'zuzug'],
+    },
+    {
+      key: 'geburtsland',
+      label: 'Geburtsland',
+      category: 'Herkunft / Migration',
+      required: false,
+      type: 'string',
+      aliases: ['geburtsland', 'birthcountry', 'geburtsland schüler'],
+      hint: 'Numerischer Schlüssel (z.B. 000) oder ISO-3-Kürzel (z.B. DEU)',
+    },
+    {
+      key: 'geburtslandVater',
+      label: 'Geburtsland Vater',
+      category: 'Herkunft / Migration',
+      required: false,
+      type: 'string',
+      aliases: ['geburtslandvater', 'geburtsland vater'],
+      hint: 'Numerischer Schlüssel (z.B. 000) oder ISO-3-Kürzel (z.B. DEU)',
+    },
+    {
+      key: 'geburtslandMutter',
+      label: 'Geburtsland Mutter',
+      category: 'Herkunft / Migration',
+      required: false,
+      type: 'string',
+      aliases: ['geburtslandmutter', 'geburtsland mutter'],
+      hint: 'Numerischer Schlüssel (z.B. 000) oder ISO-3-Kürzel (z.B. DEU)',
+    },
+    {
+      key: 'verkehrspracheFamilie',
+      label: 'Verkehrssprache Familie',
+      category: 'Herkunft / Migration',
+      required: false,
+      type: 'string',
+      aliases: ['verkehrssprache', 'familiensprache', 'muttersprache', 'verkehrssprachefamilie', 'verkehrssprache familie'],
+    },
+    {
+      key: 'hatMigrationshintergrund',
+      label: 'Migrationshintergrund',
+      category: 'Herkunft / Migration',
+      required: false,
+      type: 'string',
+      aliases: ['migrationshintergrund', 'hatmigrationshintergrund'],
+      hint: 'Wird automatisch true wenn Herkunftsfelder gesetzt sind',
     },
     // ── Adresse ──────────────────────────────────────────────────────────────
     {
@@ -264,7 +313,7 @@ export const schuelerStammdatenSchema: ImportModule = {
       aufnahmedatum: normalisiereDatum(str('aufnahmedatum')) || null,
       beginnBildungsgang: normalisiereDatum(str('beginnBildungsgang')) || null,
       dauerBildungsgang: null,
-      staatsangehoerigkeitID: resolveNationalitaet(str('staatsangehoerigkeitID'), context) || null,
+      staatsangehoerigkeitID: resolveNationalitaet(context.kataloge?.nationalitaeten, str('staatsangehoerigkeitID')) || null,
       idReligion: null,
       idSchuljahresabschnitt: context.idSchuljahresabschnitt ?? null,
       idJahrgang: null,

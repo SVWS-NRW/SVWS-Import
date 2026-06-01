@@ -12,7 +12,7 @@ import { klasseImportToApi } from '@/models/Klassen'
 import { jahrgangImportToApi } from '@/models/Jahrgaenge'
 import { fachImportToApi } from '@/models/Faecher'
 import type { ImportModule, MappedRow, ImportContext, EntityType, OrtKatalogEintrag } from '@/models/ImportSchema'
-import { resolveWohnortId, resolveReligionId } from './katalogService'
+import { resolveWohnortId, resolveReligionId, resolveNationalitaet } from './katalogService'
 import type { Floskelgruppe, Floskel, FloskelApiPayload } from '@/models/Floskel'
 
 export type { Floskelgruppe, Floskel }
@@ -177,6 +177,21 @@ async function patchSchuelerAfterCreate(
   if (str('telefon'))      stammdatenPatch.telefon      = str('telefon')
   if (str('email'))        stammdatenPatch.emailPrivat  = str('email')
 
+  // Herkunft / Migration
+  if (str('zuzugsjahr'))         stammdatenPatch.zuzugsjahr         = parseInt(str('zuzugsjahr'), 10) || null
+  if (str('verkehrspracheFamilie')) stammdatenPatch.verkehrspracheFamilie = str('verkehrspracheFamilie')
+  if (str('geburtsland'))        stammdatenPatch.geburtsland        = resolveNationalitaet(context.kataloge?.nationalitaeten, str('geburtsland'))
+  if (str('geburtslandVater'))   stammdatenPatch.geburtslandVater   = resolveNationalitaet(context.kataloge?.nationalitaeten, str('geburtslandVater'))
+  if (str('geburtslandMutter'))  stammdatenPatch.geburtslandMutter  = resolveNationalitaet(context.kataloge?.nationalitaeten, str('geburtslandMutter'))
+
+  const hasMigrationData = !!(str('zuzugsjahr') || str('geburtsland') || str('verkehrspracheFamilie') || str('geburtslandVater') || str('geburtslandMutter'))
+  if (hasMigrationData) {
+    stammdatenPatch.hatMigrationshintergrund = true
+  } else {
+    const migration = parseBoolean(str('hatMigrationshintergrund'))
+    if (migration !== null) stammdatenPatch.hatMigrationshintergrund = migration
+  }
+
   if (context.kataloge?.orte) {
     const wohnortID = resolveWohnortId(context.kataloge.orte, str('plz'), str('ort'))
     if (wohnortID !== null) {
@@ -234,9 +249,13 @@ export async function createSchueler(
   religionenKatalog?: Map<string, import('@/models/ImportSchema').ReligionKatalogEintrag>,
   klassenMap?: Map<string, number>,
   jahrgaengeMap?: Map<string, number>,
+  nationalitaetenKatalog?: Map<string, string>,
 ): Promise<UploadResult> {
   try {
     const payload: SchuelerNeu = schuelerImportToApi(row, idSchuljahresabschnitt)
+    if (payload.staatsangehoerigkeitID) {
+      payload.staatsangehoerigkeitID = resolveNationalitaet(nationalitaetenKatalog, payload.staatsangehoerigkeitID) || null
+    }
     const response = await getApiClient().post('/schueler/create', payload)
     const newId: number = response.data.id
 
@@ -245,19 +264,25 @@ export async function createSchueler(
     // Personaldaten
     if (row.geburtsname)              stammdatenPatch.geburtsname             = row.geburtsname
     if (row.geburtsort)               stammdatenPatch.geburtsort              = row.geburtsort
-    if (row.geburtsland)              stammdatenPatch.geburtsland             = row.geburtsland
-    if (row.staatsangehoerigkeit2ID)  stammdatenPatch.staatsangehoerigkeit2ID = row.staatsangehoerigkeit2ID
+    if (row.geburtsland)              stammdatenPatch.geburtsland             = resolveNationalitaet(nationalitaetenKatalog, row.geburtsland)
+    if (row.staatsangehoerigkeit2ID)  stammdatenPatch.staatsangehoerigkeit2ID = resolveNationalitaet(nationalitaetenKatalog, row.staatsangehoerigkeit2ID)
     const drucke = parseBoolean(row.druckeKonfessionAufZeugnisse)
     if (drucke !== null)              stammdatenPatch.druckeKonfessionAufZeugnisse = drucke
     if (row.religionanmeldung)        stammdatenPatch.religionanmeldung       = row.religionanmeldung
     if (row.religionabmeldung)        stammdatenPatch.religionabmeldung       = row.religionabmeldung
     // Herkunft / Migration
-    const migration = parseBoolean(row.hatMigrationshintergrund)
-    if (migration !== null)           stammdatenPatch.hatMigrationshintergrund = migration
     if (row.zuzugsjahr)               stammdatenPatch.zuzugsjahr              = parseInt(row.zuzugsjahr, 10) || null
     if (row.verkehrspracheFamilie)    stammdatenPatch.verkehrspracheFamilie   = row.verkehrspracheFamilie
-    if (row.geburtslandVater)         stammdatenPatch.geburtslandVater        = row.geburtslandVater
-    if (row.geburtslandMutter)        stammdatenPatch.geburtslandMutter       = row.geburtslandMutter
+    if (row.geburtslandVater)         stammdatenPatch.geburtslandVater        = resolveNationalitaet(nationalitaetenKatalog, row.geburtslandVater)
+    if (row.geburtslandMutter)        stammdatenPatch.geburtslandMutter       = resolveNationalitaet(nationalitaetenKatalog, row.geburtslandMutter)
+    // hatMigrationshintergrund: true wenn Herkunftsfelder gesetzt, sonst expliziten Wert nehmen
+    const hasMigrationData = !!(row.zuzugsjahr || row.geburtsland || row.verkehrspracheFamilie || row.geburtslandVater || row.geburtslandMutter)
+    if (hasMigrationData) {
+      stammdatenPatch.hatMigrationshintergrund = true
+    } else {
+      const migration = parseBoolean(row.hatMigrationshintergrund)
+      if (migration !== null) stammdatenPatch.hatMigrationshintergrund = migration
+    }
     // Adresse
     if (row.strassenname)             stammdatenPatch.strassenname            = row.strassenname
     if (row.hausnummer)               stammdatenPatch.hausnummer              = row.hausnummer
@@ -327,9 +352,15 @@ export async function createSchueler(
   }
 }
 
-export async function createLehrer(row: LehrerImportRow): Promise<UploadResult> {
+export async function createLehrer(
+  row: LehrerImportRow,
+  nationalitaetenKatalog?: Map<string, string>,
+): Promise<UploadResult> {
   try {
     const payload: LehrerStammdaten = lehrerImportToApi(row)
+    if (payload.staatsangehoerigkeitID) {
+      payload.staatsangehoerigkeitID = resolveNationalitaet(nationalitaetenKatalog, payload.staatsangehoerigkeitID) || null
+    }
     const response = await getApiClient().post('/lehrer/create', payload)
     return { success: true, id: response.data.id }
   } catch (error: unknown) {

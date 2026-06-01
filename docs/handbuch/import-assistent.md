@@ -31,5 +31,3 @@ Sie führen einen geführten Import in klaren Schritten durch.
 - Vorheriges Kapitel: [Lehrerdaten anlegen](lehrerdaten-anlegen.md)
 - Nächstes Kapitel: [Klassen anlegen](klassen-anlegen.md)
 - Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)
-Schnellzugriff:
-- [Verbindung herstellen](verbindung-herstellen.md)

@@ -28,5 +28,3 @@ Floskeln gezielt nach Suchkriterien eingrenzen.
 - Vorheriges Kapitel: [Floskeln anzeigen](floskeln-anzeigen.md)
 - Nächstes Kapitel: [Floskeln löschen](floskeln-loeschen.md)
 - Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)
-Schnellzugriff:
-- [Floskeln anzeigen](floskeln-anzeigen.md)

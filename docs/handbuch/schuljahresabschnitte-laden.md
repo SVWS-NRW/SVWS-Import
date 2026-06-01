@@ -26,5 +26,3 @@ Sie erhalten eine aktuelle Übersicht über bereits vorhandene Schuljahresabschn
 - Vorheriges Kapitel: [Fächer anlegen](faecher-anlegen.md)
 - Nächstes Kapitel: [Neue Schuljahresabschnitte anlegen](schuljahresabschnitte-anlegen.md)
 - Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)
-Schnellzugriff:
-- [Verbindung herstellen](verbindung-herstellen.md)

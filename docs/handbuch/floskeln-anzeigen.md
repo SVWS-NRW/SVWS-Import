@@ -1,11 +1,6 @@
 # <img src="../assets/svws-import-logo.svg" alt="SVWS-Import Logo" width="42" style="vertical-align: middle;" /> Floskeln anzeigen
 
 
-
-
-
-[Zurück zum Inhaltsverzeichnis](../index.md) | [Verbindung herstellen](verbindung-herstellen.md)
-
 ## Ziel
 
 Vorhandene Floskeln in der Übersicht anzeigen und sichten.
@@ -29,3 +24,5 @@ Nutzen Sie die Anzeige als Basis für Filter, Löschung oder Import.
 - Vorheriges Kapitel: [Neue Schuljahresabschnitte anlegen](schuljahresabschnitte-anlegen.md)
 - Nächstes Kapitel: [Floskeln filtern](floskeln-filtern.md)
 - Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)
+Schnellzugriff:
+- [Verbindung herstellen](verbindung-herstellen.md)

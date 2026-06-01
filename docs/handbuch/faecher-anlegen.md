@@ -1,11 +1,6 @@
 # <img src="../assets/svws-import-logo.svg" alt="SVWS-Import Logo" width="42" style="vertical-align: middle;" /> Fächer anlegen
 
 
-
-
-
-[Zurück zum Inhaltsverzeichnis](../index.md) | [Verbindung herstellen](verbindung-herstellen.md)
-
 ## Ziel
 
 Neue Fächer über eine Importdatei in SVWS anlegen.
@@ -35,3 +30,5 @@ Neue Fächer über eine Importdatei in SVWS anlegen.
 - Vorheriges Kapitel: [Jahrgänge anlegen](jahrgaenge-anlegen.md)
 - Nächstes Kapitel: [Bestehende Schuljahresabschnitte laden](schuljahresabschnitte-laden.md)
 - Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)
+Schnellzugriff:
+- [Verbindung herstellen](verbindung-herstellen.md)

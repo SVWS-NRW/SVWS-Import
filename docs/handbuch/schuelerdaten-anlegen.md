@@ -1,11 +1,6 @@
 # <img src="../assets/svws-import-logo.svg" alt="SVWS-Import Logo" width="42" style="vertical-align: middle;" /> Schülerdaten anlegen
 
 
-
-
-
-[Zurück zum Inhaltsverzeichnis](../index.md) | [Verbindung herstellen](verbindung-herstellen.md)
-
 ## Ziel
 
 Neue Schülerinnen und Schüler mit einer Importdatei in SVWS anlegen.
@@ -41,3 +36,5 @@ Neue Schülerinnen und Schüler mit einer Importdatei in SVWS anlegen.
 - Vorheriges Kapitel: [Verbindung zum SVWS-Server herstellen](verbindung-herstellen.md)
 - Nächstes Kapitel: [Lehrerdaten anlegen](lehrerdaten-anlegen.md)
 - Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)
+Schnellzugriff:
+- [Verbindung herstellen](verbindung-herstellen.md)

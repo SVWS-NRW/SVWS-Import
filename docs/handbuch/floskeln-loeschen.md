@@ -1,11 +1,6 @@
 # <img src="../assets/svws-import-logo.svg" alt="SVWS-Import Logo" width="42" style="vertical-align: middle;" /> Floskeln löschen
 
 
-
-
-
-[Zurück zum Inhaltsverzeichnis](../index.md) | [Floskeln anzeigen](floskeln-anzeigen.md)
-
 ## Ziel
 
 Nicht mehr benötigte Floskeln sicher entfernen.
@@ -32,3 +27,5 @@ Löschen Sie nur Einträge, die fachlich nicht mehr benötigt werden.
 - Vorheriges Kapitel: [Floskeln filtern](floskeln-filtern.md)
 - Nächstes Kapitel: [Floskeln importieren](floskeln-importieren.md)
 - Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)
+Schnellzugriff:
+- [Floskeln anzeigen](floskeln-anzeigen.md)

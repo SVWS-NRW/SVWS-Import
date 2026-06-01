@@ -1,11 +1,6 @@
 # <img src="../assets/svws-import-logo.svg" alt="SVWS-Import Logo" width="42" style="vertical-align: middle;" /> Jahrgänge anlegen
 
 
-
-
-
-[Zurück zum Inhaltsverzeichnis](../index.md) | [Verbindung herstellen](verbindung-herstellen.md)
-
 ## Ziel
 
 Jahrgangsstufen aus einer Datei in SVWS anlegen.
@@ -33,3 +28,5 @@ Importieren Sie Jahrgänge möglichst vor den Klassen, damit Abhängigkeiten sau
 - Vorheriges Kapitel: [Klassen anlegen](klassen-anlegen.md)
 - Nächstes Kapitel: [Fächer anlegen](faecher-anlegen.md)
 - Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)
+Schnellzugriff:
+- [Verbindung herstellen](verbindung-herstellen.md)

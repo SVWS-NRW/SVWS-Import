@@ -1,11 +1,6 @@
 # <img src="../assets/svws-import-logo.svg" alt="SVWS-Import Logo" width="42" style="vertical-align: middle;" /> Import-Assistent nutzen (Schritt für Schritt)
 
 
-
-
-
-[Zurück zum Inhaltsverzeichnis](../index.md) | [Verbindung herstellen](verbindung-herstellen.md)
-
 ## Ziel
 
 Sie führen einen geführten Import in klaren Schritten durch.
@@ -36,3 +31,5 @@ Sie führen einen geführten Import in klaren Schritten durch.
 - Vorheriges Kapitel: [Lehrerdaten anlegen](lehrerdaten-anlegen.md)
 - Nächstes Kapitel: [Klassen anlegen](klassen-anlegen.md)
 - Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)
+Schnellzugriff:
+- [Verbindung herstellen](verbindung-herstellen.md)

@@ -1,4 +1,8 @@
-# Anwenderhandbuch: SVWS-Import
+# <img src="assets/svws-import-logo.svg" alt="SVWS-Import Logo" width="42" style="vertical-align: middle;" /> Anwenderhandbuch: SVWS-Import
+
+
+
+
 
 Dieses Handbuch richtet sich ausschließlich an Endanwenderinnen und Endanwender in der Schule.
 Die Struktur orientiert sich an den Kacheln der Import-Startseite.
@@ -9,39 +13,17 @@ Die Struktur orientiert sich an den Kacheln der Import-Startseite.
 2. Passende Funktion in der Übersicht unten aufrufen
 3. Schrittfolge in der verlinkten Anleitung abarbeiten
 
-## Inhaltsverzeichnis nach Kacheln
+## Inhaltsverzeichnis
 
-### Kachel: Schülerdaten
-
+- [Verbindung zum SVWS-Server herstellen](handbuch/verbindung-herstellen.md)
 - [Schülerdaten anlegen](handbuch/schuelerdaten-anlegen.md)
-
-### Kachel: Lehrerdaten
-
 - [Lehrerdaten anlegen](handbuch/lehrerdaten-anlegen.md)
-
-### Kachel: Import-Assistent
-
 - [Import-Assistent nutzen (Schritt für Schritt)](handbuch/import-assistent.md)
-
-### Kachel: Klassen
-
 - [Klassen anlegen](handbuch/klassen-anlegen.md)
-
-### Kachel: Jahrgänge
-
 - [Jahrgänge anlegen](handbuch/jahrgaenge-anlegen.md)
-
-### Kachel: Fächer
-
 - [Fächer anlegen](handbuch/faecher-anlegen.md)
-
-### Kachel: Schuljahresabschnitte anlegen
-
 - [Bestehende Schuljahresabschnitte laden](handbuch/schuljahresabschnitte-laden.md)
 - [Neue Schuljahresabschnitte anlegen](handbuch/schuljahresabschnitte-anlegen.md)
-
-### Kachel: Floskeln verwalten
-
 - [Floskeln anzeigen](handbuch/floskeln-anzeigen.md)
 - [Floskeln filtern](handbuch/floskeln-filtern.md)
 - [Floskeln löschen](handbuch/floskeln-loeschen.md)

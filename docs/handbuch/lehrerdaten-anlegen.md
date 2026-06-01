@@ -1,6 +1,5 @@
-# Lehrerdaten anlegen
+# <img src="../assets/svws-import-logo.svg" alt="SVWS-Import Logo" width="42" style="vertical-align: middle;" /> Lehrerdaten anlegen
 
-[Zurück zum Inhaltsverzeichnis](../index.md) | [Verbindung herstellen](verbindung-herstellen.md)
 
 ## Ziel
 
@@ -37,3 +36,5 @@ Neue Lehrkräfte über eine Importdatei in SVWS anlegen.
 - Vorheriges Kapitel: [Schülerdaten anlegen](schuelerdaten-anlegen.md)
 - Nächstes Kapitel: [Import-Assistent nutzen](import-assistent.md)
 - Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)
+Schnellzugriff:
+- [Verbindung herstellen](verbindung-herstellen.md)

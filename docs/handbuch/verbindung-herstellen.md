@@ -1,6 +1,5 @@
-# Verbindung zum SVWS-Server herstellen
+# <img src="../assets/svws-import-logo.svg" alt="SVWS-Import Logo" width="42" style="vertical-align: middle;" /> Verbindung zum SVWS-Server herstellen
 
-[Zurück zum Inhaltsverzeichnis](../index.md)
 
 ## Ziel
 

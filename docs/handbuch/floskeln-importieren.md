@@ -1,6 +1,5 @@
-# Floskeln importieren
+# <img src="../assets/svws-import-logo.svg" alt="SVWS-Import Logo" width="42" style="vertical-align: middle;" /> Floskeln importieren
 
-[Zurück zum Inhaltsverzeichnis](../index.md) | [Verbindung herstellen](verbindung-herstellen.md)
 
 ## Ziel
 
@@ -37,3 +36,5 @@ Floskeln aus einer Datei in den Bestand übernehmen.
 - Vorheriges Kapitel: [Floskeln löschen](floskeln-loeschen.md)
 - Nächstes Kapitel: Ende
 - Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)
+Schnellzugriff:
+- [Verbindung herstellen](verbindung-herstellen.md)

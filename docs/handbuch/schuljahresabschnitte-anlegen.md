@@ -1,6 +1,5 @@
-# Neue Schuljahresabschnitte anlegen
+# <img src="../assets/svws-import-logo.svg" alt="SVWS-Import Logo" width="42" style="vertical-align: middle;" /> Neue Schuljahresabschnitte anlegen
 
-[Zurück zum Inhaltsverzeichnis](../index.md) | [Verbindung herstellen](verbindung-herstellen.md)
 
 ## Ziel
 
@@ -30,3 +29,5 @@ Neue Schuljahresabschnitte in SVWS anlegen.
 - Vorheriges Kapitel: [Bestehende Schuljahresabschnitte laden](schuljahresabschnitte-laden.md)
 - Nächstes Kapitel: [Floskeln anzeigen](floskeln-anzeigen.md)
 - Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)
+Schnellzugriff:
+- [Verbindung herstellen](verbindung-herstellen.md)

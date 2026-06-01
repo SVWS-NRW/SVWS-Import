@@ -1,6 +1,5 @@
-# Floskeln filtern
+# <img src="../assets/svws-import-logo.svg" alt="SVWS-Import Logo" width="42" style="vertical-align: middle;" /> Floskeln filtern
 
-[Zurück zum Inhaltsverzeichnis](../index.md) | [Floskeln anzeigen](floskeln-anzeigen.md)
 
 ## Ziel
 
@@ -29,3 +28,5 @@ Floskeln gezielt nach Suchkriterien eingrenzen.
 - Vorheriges Kapitel: [Floskeln anzeigen](floskeln-anzeigen.md)
 - Nächstes Kapitel: [Floskeln löschen](floskeln-loeschen.md)
 - Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)
+Schnellzugriff:
+- [Floskeln anzeigen](floskeln-anzeigen.md)

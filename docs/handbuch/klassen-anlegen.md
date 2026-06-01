@@ -1,6 +1,5 @@
-# Klassen anlegen
+# <img src="../assets/svws-import-logo.svg" alt="SVWS-Import Logo" width="42" style="vertical-align: middle;" /> Klassen anlegen
 
-[Zurück zum Inhaltsverzeichnis](../index.md) | [Verbindung herstellen](verbindung-herstellen.md)
 
 ## Ziel
 
@@ -31,3 +30,5 @@ Neue Klassenstammdaten über eine Importdatei anlegen.
 - Vorheriges Kapitel: [Import-Assistent nutzen](import-assistent.md)
 - Nächstes Kapitel: [Jahrgänge anlegen](jahrgaenge-anlegen.md)
 - Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)
+Schnellzugriff:
+- [Verbindung herstellen](verbindung-herstellen.md)

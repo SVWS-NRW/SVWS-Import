@@ -28,5 +28,3 @@ Importieren Sie Jahrgänge möglichst vor den Klassen, damit Abhängigkeiten sau
 - Vorheriges Kapitel: [Klassen anlegen](klassen-anlegen.md)
 - Nächstes Kapitel: [Fächer anlegen](faecher-anlegen.md)
 - Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)
-Schnellzugriff:
-- [Verbindung herstellen](verbindung-herstellen.md)

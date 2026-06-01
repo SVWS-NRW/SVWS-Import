@@ -30,5 +30,3 @@ Neue Fächer über eine Importdatei in SVWS anlegen.
 - Vorheriges Kapitel: [Jahrgänge anlegen](jahrgaenge-anlegen.md)
 - Nächstes Kapitel: [Bestehende Schuljahresabschnitte laden](schuljahresabschnitte-laden.md)
 - Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)
-Schnellzugriff:
-- [Verbindung herstellen](verbindung-herstellen.md)

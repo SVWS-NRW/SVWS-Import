@@ -27,5 +27,3 @@ Löschen Sie nur Einträge, die fachlich nicht mehr benötigt werden.
 - Vorheriges Kapitel: [Floskeln filtern](floskeln-filtern.md)
 - Nächstes Kapitel: [Floskeln importieren](floskeln-importieren.md)
 - Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)
-Schnellzugriff:
-- [Floskeln anzeigen](floskeln-anzeigen.md)

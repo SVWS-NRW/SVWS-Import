@@ -1,33 +1,33 @@
-# Faecher anlegen
+# Fächer anlegen
 
-[Zurueck zum Inhaltsverzeichnis](../index.md) | [Verbindung herstellen](verbindung-herstellen.md)
+[Zurück zum Inhaltsverzeichnis](../index.md) | [Verbindung herstellen](verbindung-herstellen.md)
 
 ## Ziel
 
-Neue Faecher ueber Importdatei in SVWS anlegen.
+Neue Fächer über eine Importdatei in SVWS anlegen.
 
 ## Schritte
 
-1. Oeffnen Sie die Kachel Faecher.
+1. Öffnen Sie die Kachel Fächer.
 2. Laden Sie die Datei.
-3. Pruefen Sie Spaltenzuordnung und Pflichtfelder.
+3. Prüfen Sie Spaltenzuordnung und Pflichtfelder.
 4. Korrigieren Sie Fehlerhinweise.
 5. Starten Sie den Import.
 
 ## Nachkontrolle
 
-- Fachkuerzel eindeutig
+- Fachkürzel eindeutig
 - Fachbezeichnungen korrekt geschrieben
 - Keine ungewollten Dubletten
 
 ## Screenshot-Platzhalter
 
-- [SCREENSHOT: Kachel Faecher]
-- [SCREENSHOT: Faecher-Mapping]
-- [SCREENSHOT: Faecher-Importergebnis]
+- [SCREENSHOT: Kachel Fächer]
+- [SCREENSHOT: Fächer-Mapping]
+- [SCREENSHOT: Fächer-Importergebnis]
 
 ## Kapitelnavigation
 
-- Vorheriges Kapitel: [Jahrgaenge anlegen](jahrgaenge-anlegen.md)
-- Naechstes Kapitel: [Bestehende Schuljahresabschnitte laden](schuljahresabschnitte-laden.md)
+- Vorheriges Kapitel: [Jahrgänge anlegen](jahrgaenge-anlegen.md)
+- Nächstes Kapitel: [Bestehende Schuljahresabschnitte laden](schuljahresabschnitte-laden.md)
 - Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)

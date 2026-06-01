@@ -1,21 +1,21 @@
 # Bestehende Schuljahresabschnitte laden
 
-[Zurueck zum Inhaltsverzeichnis](../index.md) | [Verbindung herstellen](verbindung-herstellen.md)
+[Zurück zum Inhaltsverzeichnis](../index.md) | [Verbindung herstellen](verbindung-herstellen.md)
 
 ## Ziel
 
-Bereits vorhandene Schuljahresabschnitte aus SVWS laden und pruefen.
+Bereits vorhandene Schuljahresabschnitte aus SVWS laden und prüfen.
 
 ## Schritte
 
-1. Oeffnen Sie die Kachel Schuljahresabschnitte anlegen.
+1. Öffnen Sie die Kachel Schuljahresabschnitte anlegen.
 2. Laden Sie die vorhandenen Abschnitte.
-3. Pruefen Sie, ob alle erwarteten Abschnitte sichtbar sind.
-4. Notieren Sie fehlende oder fehlerhafte Eintraege.
+3. Prüfen Sie, ob alle erwarteten Abschnitte sichtbar sind.
+4. Notieren Sie fehlende oder fehlerhafte Einträge.
 
 ## Ergebnis
 
-Sie erhalten eine aktuelle Uebersicht ueber bereits vorhandene Schuljahresabschnitte.
+Sie erhalten eine aktuelle Übersicht über bereits vorhandene Schuljahresabschnitte.
 
 ## Screenshot-Platzhalter
 
@@ -24,6 +24,6 @@ Sie erhalten eine aktuelle Uebersicht ueber bereits vorhandene Schuljahresabschn
 
 ## Kapitelnavigation
 
-- Vorheriges Kapitel: [Faecher anlegen](faecher-anlegen.md)
-- Naechstes Kapitel: [Neue Schuljahresabschnitte anlegen](schuljahresabschnitte-anlegen.md)
+- Vorheriges Kapitel: [Fächer anlegen](faecher-anlegen.md)
+- Nächstes Kapitel: [Neue Schuljahresabschnitte anlegen](schuljahresabschnitte-anlegen.md)
 - Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)

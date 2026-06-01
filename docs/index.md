@@ -1,19 +1,19 @@
 # Anwenderhandbuch: SVWS-Import
 
-Dieses Handbuch richtet sich ausschliesslich an Endanwenderinnen und Endanwender in der Schule.
+Dieses Handbuch richtet sich ausschließlich an Endanwenderinnen und Endanwender in der Schule.
 Die Struktur orientiert sich an den Kacheln der Import-Startseite.
 
 ## Schnellstart
 
 1. [Verbindung zum SVWS-Server herstellen](handbuch/verbindung-herstellen.md)
-2. Passende Funktion in der Uebersicht unten aufrufen
+2. Passende Funktion in der Übersicht unten aufrufen
 3. Schrittfolge in der verlinkten Anleitung abarbeiten
 
 ## Inhaltsverzeichnis nach Kacheln
 
-### Kachel: Schuelerdaten
+### Kachel: Schülerdaten
 
-- [Schuelerdaten anlegen](handbuch/schuelerdaten-anlegen.md)
+- [Schülerdaten anlegen](handbuch/schuelerdaten-anlegen.md)
 
 ### Kachel: Lehrerdaten
 
@@ -21,19 +21,19 @@ Die Struktur orientiert sich an den Kacheln der Import-Startseite.
 
 ### Kachel: Import-Assistent
 
-- [Import-Assistent nutzen (Schritt fuer Schritt)](handbuch/import-assistent.md)
+- [Import-Assistent nutzen (Schritt für Schritt)](handbuch/import-assistent.md)
 
 ### Kachel: Klassen
 
 - [Klassen anlegen](handbuch/klassen-anlegen.md)
 
-### Kachel: Jahrgaenge
+### Kachel: Jahrgänge
 
-- [Jahrgaenge anlegen](handbuch/jahrgaenge-anlegen.md)
+- [Jahrgänge anlegen](handbuch/jahrgaenge-anlegen.md)
 
-### Kachel: Faecher
+### Kachel: Fächer
 
-- [Faecher anlegen](handbuch/faecher-anlegen.md)
+- [Fächer anlegen](handbuch/faecher-anlegen.md)
 
 ### Kachel: Schuljahresabschnitte anlegen
 
@@ -44,15 +44,15 @@ Die Struktur orientiert sich an den Kacheln der Import-Startseite.
 
 - [Floskeln anzeigen](handbuch/floskeln-anzeigen.md)
 - [Floskeln filtern](handbuch/floskeln-filtern.md)
-- [Floskeln loeschen](handbuch/floskeln-loeschen.md)
+- [Floskeln löschen](handbuch/floskeln-loeschen.md)
 - [Floskeln importieren](handbuch/floskeln-importieren.md)
 
 ## Allgemeine Hinweise
 
-- Nutzen Sie fuer den Erstimport nach Moeglichkeit eine kleine Testdatei.
+- Nutzen Sie für den Erstimport nach Möglichkeit eine kleine Testdatei.
 - Bei CSV-Dateien sollte UTF-8 als Zeichensatz verwendet werden.
-- Nach jedem Import sollte das Ergebnis geprueft werden (vollstaendig, teilweise, fehlgeschlagen).
+- Nach jedem Import sollte das Ergebnis geprüft werden (vollständig, teilweise, fehlgeschlagen).
 
 ## Entwicklerdokumentation
 
-Technische Informationen fuer Entwicklung und Betrieb bleiben im README und sind nicht Teil dieses Anwenderhandbuchs.
+Technische Informationen für Entwicklung und Betrieb bleiben im README und sind nicht Teil dieses Anwenderhandbuchs.

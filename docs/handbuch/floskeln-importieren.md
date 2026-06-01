@@ -1,31 +1,31 @@
 # Floskeln importieren
 
-[Zurueck zum Inhaltsverzeichnis](../index.md) | [Verbindung herstellen](verbindung-herstellen.md)
+[Zurück zum Inhaltsverzeichnis](../index.md) | [Verbindung herstellen](verbindung-herstellen.md)
 
 ## Ziel
 
-Floskeln aus einer Datei in den Bestand uebernehmen.
+Floskeln aus einer Datei in den Bestand übernehmen.
 
 ## Vorbereitung
 
 - Datei im passenden Format bereitstellen
-- Spaltenbezeichnungen pruefen
-- Dubletten vorab moeglichst bereinigen
+- Spaltenbezeichnungen prüfen
+- Dubletten vorab möglichst bereinigen
 
 ## Schritte
 
-1. Oeffnen Sie die Kachel Floskeln verwalten.
-2. Waehlen Sie die Importfunktion.
+1. Öffnen Sie die Kachel Floskeln verwalten.
+2. Wählen Sie die Importfunktion.
 3. Laden Sie die Datei.
-4. Pruefen Sie Vorschau und Zuordnung.
+4. Prüfen Sie Vorschau und Zuordnung.
 5. Starten Sie den Import.
 6. Kontrollieren Sie das Ergebnis.
 
 ## Nachkontrolle
 
 - Sind alle erwarteten Floskeln vorhanden?
-- Gab es abgelehnte Datensaetze?
-- Muessen Korrekturen erneut importiert werden?
+- Gab es abgelehnte Datensätze?
+- Müssen Korrekturen erneut importiert werden?
 
 ## Screenshot-Platzhalter
 
@@ -34,6 +34,6 @@ Floskeln aus einer Datei in den Bestand uebernehmen.
 
 ## Kapitelnavigation
 
-- Vorheriges Kapitel: [Floskeln loeschen](floskeln-loeschen.md)
-- Naechstes Kapitel: Ende
+- Vorheriges Kapitel: [Floskeln löschen](floskeln-loeschen.md)
+- Nächstes Kapitel: Ende
 - Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)

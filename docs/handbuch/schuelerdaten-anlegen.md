@@ -1,39 +1,39 @@
-# Schuelerdaten anlegen
+# Schülerdaten anlegen
 
-[Zurueck zum Inhaltsverzeichnis](../index.md) | [Verbindung herstellen](verbindung-herstellen.md)
+[Zurück zum Inhaltsverzeichnis](../index.md) | [Verbindung herstellen](verbindung-herstellen.md)
 
 ## Ziel
 
-Neue Schuelerinnen und Schueler mit einer Importdatei in SVWS anlegen.
+Neue Schülerinnen und Schüler mit einer Importdatei in SVWS anlegen.
 
 ## Vorbereitung
 
 - Datei im Format CSV oder XLSX
 - Spalten sind sinnvoll benannt
-- Pflichtangaben sind vollstaendig
+- Pflichtangaben sind vollständig
 
 ## Schritte
 
-1. Oeffnen Sie die Kachel Schuelerdaten.
+1. Öffnen Sie die Kachel Schülerdaten.
 2. Laden Sie die Datei hoch.
-3. Pruefen Sie die Vorschau.
+3. Prüfen Sie die Vorschau.
 4. Ordnen Sie Quellspalten den Zielfeldern zu.
 5. Beheben Sie angezeigte Validierungsfehler.
 6. Starten Sie den Import.
 
 ## Nach dem Import
 
-- Anzahl erfolgreich importierter Datensaetze pruefen.
-- Abgelehnte Datensaetze anhand der Fehlermeldungen korrigieren.
+- Anzahl erfolgreich importierter Datensätze prüfen.
+- Abgelehnte Datensätze anhand der Fehlermeldungen korrigieren.
 
 ## Screenshot-Platzhalter
 
-- [SCREENSHOT: Kachel Schuelerdaten]
-- [SCREENSHOT: Schueler-Mapping]
-- [SCREENSHOT: Schueler-Importergebnis]
+- [SCREENSHOT: Kachel Schülerdaten]
+- [SCREENSHOT: Schüler-Mapping]
+- [SCREENSHOT: Schüler-Importergebnis]
 
 ## Kapitelnavigation
 
 - Vorheriges Kapitel: [Verbindung zum SVWS-Server herstellen](verbindung-herstellen.md)
-- Naechstes Kapitel: [Lehrerdaten anlegen](lehrerdaten-anlegen.md)
+- Nächstes Kapitel: [Lehrerdaten anlegen](lehrerdaten-anlegen.md)
 - Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)

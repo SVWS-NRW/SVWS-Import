@@ -1,4 +1,8 @@
-# Floskeln filtern
+# <img src="../assets/svws-import-logo.svg" alt="SVWS-Import Logo" width="42" style="vertical-align: middle;" /> Floskeln filtern
+
+
+
+
 
 [Zurück zum Inhaltsverzeichnis](../index.md) | [Floskeln anzeigen](floskeln-anzeigen.md)
 

@@ -1,4 +1,8 @@
-# Floskeln löschen
+# <img src="../assets/svws-import-logo.svg" alt="SVWS-Import Logo" width="42" style="vertical-align: middle;" /> Floskeln löschen
+
+
+
+
 
 [Zurück zum Inhaltsverzeichnis](../index.md) | [Floskeln anzeigen](floskeln-anzeigen.md)
 

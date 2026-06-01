@@ -1,0 +1,22 @@
+<svg width="132" height="132" viewBox="0 0 132 132" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="18" y1="14" x2="114" y2="118" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#00A86B"/>
+      <stop offset="1" stop-color="#0EA5E9"/>
+    </linearGradient>
+    <linearGradient id="flow" x1="28" y1="36" x2="104" y2="98" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#E6F7FF" stop-opacity="0.9"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="10" y="10" width="112" height="112" rx="24" fill="url(#bg)"/>
+
+  <path d="M36 44C36 39.5817 39.5817 36 44 36H68C72.4183 36 76 39.5817 76 44V58C76 62.4183 72.4183 66 68 66H44C39.5817 66 36 62.4183 36 58V44Z" fill="url(#flow)"/>
+
+  <path d="M56 54H92" stroke="white" stroke-width="8" stroke-linecap="round"/>
+  <path d="M84 44L96 54L84 64" stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <rect x="32" y="78" width="68" height="8" rx="4" fill="white" fill-opacity="0.9"/>
+  <rect x="32" y="92" width="52" height="8" rx="4" fill="white" fill-opacity="0.75"/>
+</svg>

@@ -1,4 +1,8 @@
-# Import-Assistent nutzen (Schritt für Schritt)
+# <img src="../assets/svws-import-logo.svg" alt="SVWS-Import Logo" width="42" style="vertical-align: middle;" /> Import-Assistent nutzen (Schritt für Schritt)
+
+
+
+
 
 [Zurück zum Inhaltsverzeichnis](../index.md) | [Verbindung herstellen](verbindung-herstellen.md)
 

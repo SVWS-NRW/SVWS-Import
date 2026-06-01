@@ -1,4 +1,8 @@
-# Schülerdaten anlegen
+# <img src="../assets/svws-import-logo.svg" alt="SVWS-Import Logo" width="42" style="vertical-align: middle;" /> Schülerdaten anlegen
+
+
+
+
 
 [Zurück zum Inhaltsverzeichnis](../index.md) | [Verbindung herstellen](verbindung-herstellen.md)
 

@@ -1,4 +1,8 @@
-# Floskeln anzeigen
+# <img src="../assets/svws-import-logo.svg" alt="SVWS-Import Logo" width="42" style="vertical-align: middle;" /> Floskeln anzeigen
+
+
+
+
 
 [Zurück zum Inhaltsverzeichnis](../index.md) | [Verbindung herstellen](verbindung-herstellen.md)
 

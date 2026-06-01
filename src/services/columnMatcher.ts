@@ -56,7 +56,10 @@ function scoreField(sourceNorm: string, field: FieldDefinition): number {
       continue
     }
     if (sourceNorm.includes(aliasNorm) || aliasNorm.includes(sourceNorm)) {
-      best = Math.max(best, 60)
+      // Nur werten wenn der kürzere String mindestens halb so lang wie der längere ist,
+      // sonst matchen generische Kurzwörter wie "Jahr" fälschlich auf "Zuzugsjahr" etc.
+      const ratio = Math.min(sourceNorm.length, aliasNorm.length) / Math.max(sourceNorm.length, aliasNorm.length)
+      if (ratio > 0.5) best = Math.max(best, 60)
       continue
     }
 

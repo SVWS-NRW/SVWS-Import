@@ -190,6 +190,7 @@ export async function parseLehrerCsv(file: File): Promise<LehrerImportRow[]> {
             titel: get(m, 'titel', 'title'),
             geburtsdatum: normalisiereDatum(get(m, 'geburtsdatum', 'geburtstag', 'birthdate')),
             geschlecht: get(m, 'geschlecht', 'gender'),
+            staatsangehoerigkeitID: get(m, '1.staatsang.', 'staatsangehoerigkeit', 'staatsangehörigkeit', 'nationalität', 'nationality', 'staatsang'),
             emailDienstlich: get(m, 'emaildienstlich', 'email', 'mail', 'e-mail'),
             telefon: get(m, 'telefon', 'phone', 'tel'),
           }

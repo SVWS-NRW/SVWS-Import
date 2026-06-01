@@ -137,6 +137,7 @@ const columnDefs: ColDef<LehrerImportRow>[] = [
   { field: 'titel', headerName: 'Titel', width: 90 },
   { field: 'geschlecht', headerName: 'Geschlecht', width: 110 },
   { field: 'geburtsdatum', headerName: 'Geburtsdatum', width: 140 },
+  { field: 'staatsangehoerigkeitID', headerName: 'Staatsangehörigkeit', width: 170 },
   { field: 'emailDienstlich', headerName: 'E-Mail', flex: 2,
     cellStyle: (p) => p.data?._errors.some(e => e.includes('E-Mail')) ? { background: isDark.value ? '#7f1d1d' : '#fee2e2' } : null },
   { field: 'telefon', headerName: 'Telefon', width: 140 },

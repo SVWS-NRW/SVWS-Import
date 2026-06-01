@@ -2,6 +2,7 @@ import { defineStore, acceptHMRUpdate } from 'pinia'
 import { ref, computed } from 'vue'
 import { type LehrerImportRow } from '@/models/Lehrer'
 import { createLehrer } from '@/services/svwsService'
+import { loadKataloge } from '@/services/katalogService'
 
 export const useLehrerStore = defineStore('lehrer', () => {
   const rows = ref<LehrerImportRow[]>([])
@@ -58,6 +59,15 @@ export const useLehrerStore = defineStore('lehrer', () => {
     uploading.value = true
     let sent = 0
     let failed = 0
+
+    let nationalitaetenKatalog: Map<string, string> | undefined
+    try {
+      const kataloge = await loadKataloge()
+      nationalitaetenKatalog = kataloge.nationalitaeten
+    } catch {
+      // Katalog nicht verfügbar — Code-Lookup wird übersprungen
+    }
+
     const updated = [...rows.value]
     uploadTotal.value = updated.filter(r => r._valid && !r._sent).length
     uploadProgress.value = 0
@@ -66,7 +76,7 @@ export const useLehrerStore = defineStore('lehrer', () => {
       if (uploadCancelled.value) break
       const row = updated[i]
       if (!row._valid || row._sent) continue
-      const result = await createLehrer(row)
+      const result = await createLehrer(row, nationalitaetenKatalog)
       if (result.success) {
         updated[i] = { ...row, _sent: true, _errors: [] }
         sent++

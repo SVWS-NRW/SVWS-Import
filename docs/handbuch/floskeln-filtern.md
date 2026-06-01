@@ -1,6 +1,6 @@
 # Floskeln filtern
 
-[Zurueck zum Inhaltsverzeichnis](../index.md) | [Floskeln anzeigen](floskeln-anzeigen.md)
+[Zurück zum Inhaltsverzeichnis](../index.md) | [Floskeln anzeigen](floskeln-anzeigen.md)
 
 ## Ziel
 
@@ -8,16 +8,16 @@ Floskeln gezielt nach Suchkriterien eingrenzen.
 
 ## Schritte
 
-1. Oeffnen Sie die Floskeln-Liste.
+1. Öffnen Sie die Floskeln-Liste.
 2. Tragen Sie Suchbegriff oder Filterkriterium ein.
-3. Pruefen Sie die gefilterte Treffermenge.
-4. Setzen Sie den Filter bei Bedarf zurueck.
+3. Prüfen Sie die gefilterte Treffermenge.
+4. Setzen Sie den Filter bei Bedarf zurück.
 
 ## Typische Anwendungen
 
 - Floskel schnell wiederfinden
-- Dubletten pruefen
-- Loeschkandidaten vorbereiten
+- Dubletten prüfen
+- Löschkandidaten vorbereiten
 
 ## Screenshot-Platzhalter
 
@@ -27,5 +27,5 @@ Floskeln gezielt nach Suchkriterien eingrenzen.
 ## Kapitelnavigation
 
 - Vorheriges Kapitel: [Floskeln anzeigen](floskeln-anzeigen.md)
-- Naechstes Kapitel: [Floskeln loeschen](floskeln-loeschen.md)
+- Nächstes Kapitel: [Floskeln löschen](floskeln-loeschen.md)
 - Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)

@@ -1,30 +1,30 @@
 # Lehrerdaten anlegen
 
-[Zurueck zum Inhaltsverzeichnis](../index.md) | [Verbindung herstellen](verbindung-herstellen.md)
+[Zurück zum Inhaltsverzeichnis](../index.md) | [Verbindung herstellen](verbindung-herstellen.md)
 
 ## Ziel
 
-Neue Lehrkraefte ueber eine Importdatei in SVWS anlegen.
+Neue Lehrkräfte über eine Importdatei in SVWS anlegen.
 
 ## Vorbereitung
 
 - Datei im Format CSV oder XLSX
 - Klare Spaltenbezeichnungen
-- Pflichtfelder vollstaendig
+- Pflichtfelder vollständig
 
 ## Schritte
 
-1. Oeffnen Sie die Kachel Lehrerdaten.
+1. Öffnen Sie die Kachel Lehrerdaten.
 2. Laden Sie die Importdatei.
-3. Pruefen Sie die Datenvorschau.
-4. Fuehren Sie das Spalten-Mapping durch.
+3. Prüfen Sie die Datenvorschau.
+4. Führen Sie das Spalten-Mapping durch.
 5. Korrigieren Sie Validierungsfehler.
 6. Senden Sie den Import an den Server.
 
 ## Nach dem Import
 
 - Erfolgs- und Fehleranzahl dokumentieren.
-- Fehlerhafte Datensaetze korrigieren und erneut importieren.
+- Fehlerhafte Datensätze korrigieren und erneut importieren.
 
 ## Screenshot-Platzhalter
 
@@ -34,6 +34,6 @@ Neue Lehrkraefte ueber eine Importdatei in SVWS anlegen.
 
 ## Kapitelnavigation
 
-- Vorheriges Kapitel: [Schuelerdaten anlegen](schuelerdaten-anlegen.md)
-- Naechstes Kapitel: [Import-Assistent nutzen](import-assistent.md)
+- Vorheriges Kapitel: [Schülerdaten anlegen](schuelerdaten-anlegen.md)
+- Nächstes Kapitel: [Import-Assistent nutzen](import-assistent.md)
 - Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)

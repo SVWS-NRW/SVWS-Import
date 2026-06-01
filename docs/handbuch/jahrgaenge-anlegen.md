@@ -1,6 +1,6 @@
-# Jahrgaenge anlegen
+# Jahrgänge anlegen
 
-[Zurueck zum Inhaltsverzeichnis](../index.md) | [Verbindung herstellen](verbindung-herstellen.md)
+[Zurück zum Inhaltsverzeichnis](../index.md) | [Verbindung herstellen](verbindung-herstellen.md)
 
 ## Ziel
 
@@ -8,24 +8,24 @@ Jahrgangsstufen aus einer Datei in SVWS anlegen.
 
 ## Schritte
 
-1. Oeffnen Sie die Kachel Jahrgaenge.
+1. Öffnen Sie die Kachel Jahrgänge.
 2. Laden Sie die Importdatei (CSV/XLSX).
 3. Kontrollieren Sie Vorschau und Mapping.
 4. Beheben Sie Validierungsfehler.
-5. Fuehren Sie den Import aus.
+5. Führen Sie den Import aus.
 
 ## Hinweis
 
-Importieren Sie Jahrgaenge moeglichst vor den Klassen, damit Abhaengigkeiten sauber sind.
+Importieren Sie Jahrgänge möglichst vor den Klassen, damit Abhängigkeiten sauber sind.
 
 ## Screenshot-Platzhalter
 
-- [SCREENSHOT: Kachel Jahrgaenge]
-- [SCREENSHOT: Jahrgaenge-Mapping]
-- [SCREENSHOT: Jahrgaenge-Importergebnis]
+- [SCREENSHOT: Kachel Jahrgänge]
+- [SCREENSHOT: Jahrgänge-Mapping]
+- [SCREENSHOT: Jahrgänge-Importergebnis]
 
 ## Kapitelnavigation
 
 - Vorheriges Kapitel: [Klassen anlegen](klassen-anlegen.md)
-- Naechstes Kapitel: [Faecher anlegen](faecher-anlegen.md)
+- Nächstes Kapitel: [Fächer anlegen](faecher-anlegen.md)
 - Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)

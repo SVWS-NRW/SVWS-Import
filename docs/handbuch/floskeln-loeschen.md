@@ -1,30 +1,30 @@
-# Floskeln loeschen
+# Floskeln löschen
 
-[Zurueck zum Inhaltsverzeichnis](../index.md) | [Floskeln anzeigen](floskeln-anzeigen.md)
+[Zurück zum Inhaltsverzeichnis](../index.md) | [Floskeln anzeigen](floskeln-anzeigen.md)
 
 ## Ziel
 
-Nicht mehr benoetigte Floskeln sicher entfernen.
+Nicht mehr benötigte Floskeln sicher entfernen.
 
 ## Schritte
 
-1. Oeffnen Sie die Floskeln-Liste.
-2. Suchen oder filtern Sie den zu loeschenden Eintrag.
-3. Starten Sie die Loeschaktion.
-4. Bestaetigen Sie die Rueckfrage.
-5. Pruefen Sie, ob der Eintrag entfernt wurde.
+1. Öffnen Sie die Floskeln-Liste.
+2. Suchen oder filtern Sie den zu löschenden Eintrag.
+3. Starten Sie die Löschaktion.
+4. Bestätigen Sie die Rückfrage.
+5. Prüfen Sie, ob der Eintrag entfernt wurde.
 
 ## Sicherheitshinweis
 
-Loeschen Sie nur Eintraege, die fachlich nicht mehr benoetigt werden.
+Löschen Sie nur Einträge, die fachlich nicht mehr benötigt werden.
 
 ## Screenshot-Platzhalter
 
-- [SCREENSHOT: Loeschaktion an Floskel]
-- [SCREENSHOT: Bestaetigungsdialog Loeschen]
+- [SCREENSHOT: Löschaktion an Floskel]
+- [SCREENSHOT: Bestätigungsdialog Löschen]
 
 ## Kapitelnavigation
 
 - Vorheriges Kapitel: [Floskeln filtern](floskeln-filtern.md)
-- Naechstes Kapitel: [Floskeln importieren](floskeln-importieren.md)
+- Nächstes Kapitel: [Floskeln importieren](floskeln-importieren.md)
 - Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)

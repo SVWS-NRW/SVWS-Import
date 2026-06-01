@@ -1,27 +1,27 @@
 # Floskeln anzeigen
 
-[Zurueck zum Inhaltsverzeichnis](../index.md) | [Verbindung herstellen](verbindung-herstellen.md)
+[Zurück zum Inhaltsverzeichnis](../index.md) | [Verbindung herstellen](verbindung-herstellen.md)
 
 ## Ziel
 
-Vorhandene Floskeln in der Uebersicht anzeigen und sichten.
+Vorhandene Floskeln in der Übersicht anzeigen und sichten.
 
 ## Schritte
 
-1. Oeffnen Sie die Kachel Floskeln verwalten.
+1. Öffnen Sie die Kachel Floskeln verwalten.
 2. Rufen Sie die Liste der Floskeln auf.
-3. Pruefen Sie die angezeigten Eintraege.
+3. Prüfen Sie die angezeigten Einträge.
 
 ## Hinweis
 
-Nutzen Sie die Anzeige als Basis fuer Filter, Loeschung oder Import.
+Nutzen Sie die Anzeige als Basis für Filter, Löschung oder Import.
 
 ## Screenshot-Platzhalter
 
-- [SCREENSHOT: Floskeln Uebersicht]
+- [SCREENSHOT: Floskeln Übersicht]
 
 ## Kapitelnavigation
 
 - Vorheriges Kapitel: [Neue Schuljahresabschnitte anlegen](schuljahresabschnitte-anlegen.md)
-- Naechstes Kapitel: [Floskeln filtern](floskeln-filtern.md)
+- Nächstes Kapitel: [Floskeln filtern](floskeln-filtern.md)
 - Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)

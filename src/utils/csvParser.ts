@@ -1,0 +1,352 @@
+import Papa from 'papaparse'
+import { type SchuelerImportRow } from '@/models/Schueler'
+import { type LehrerImportRow } from '@/models/Lehrer'
+import { type KlasseImportRow } from '@/models/Klassen'
+import { type JahrgangImportRow } from '@/models/Jahrgaenge'
+import { type FachImportRow } from '@/models/Faecher'
+import { type FloskelImportRow } from '@/models/Floskel'
+import { generateId } from './idHelper'
+
+// Normalisiert Spaltennamen: Leerzeichen/Groß-Klein entfernen
+function normalizeKey(key: string): string {
+  return key.toLowerCase().replace(/[\s_-]/g, '')
+}
+
+// Alle bekannten (normalisierten) Alias-Spaltennamen für Schüler-Imports
+export const SCHUELER_KNOWN_KEYS = new Set([
+  // nachname
+  'nachname', 'name', 'familienname', 'lastname',
+  // vorname
+  'vorname', 'firstname', 'rufname',
+  // alleVornamen
+  'allevornamen', 'vornamen',
+  // geburtsname
+  'geburtsname', 'mädchenname', 'maidenname',
+  // geburtsort / geburtsland
+  'geburtsort', 'birthplace',
+  'geburtsland', 'birthcountry',
+  // geschlecht
+  'geschlecht', 'gender', 'sex',
+  // geburtsdatum
+  'geburtsdatum', 'geburtstag', 'birthdate', 'birthday', 'geb.datum', 'geb',
+  // staatsangehörigkeit
+  '1.staatsang.', '1staatsang.', 'staatsangehoerigkeit', 'staatsangehörigkeit', 'nationalität', 'nationality', 'staatsang',
+  '2.staatsang.', '2staatsang.', 'staatsangehoerigkeit2', 'zweitestaatsangehoerigkeit',
+  // religion
+  'konfession', 'religion', 'religionszugehörigkeit', 'religionszugehoerigkeit',
+  'statistikkrzkonfession', 'statistikkrizkonfession', 'religionskuerzel', 'konfessionskuerzel',
+  'druckekonfession', 'konfessionaufzeugnisse', 'druckekonfessionaufzeugnisse',
+  'religionanmeldung', 'konfessionsanmeldung',
+  'religionabmeldung', 'konfessionsabmeldung',
+  // migration / herkunft
+  'migrationshintergrund', 'hatmigrationshintergrund',
+  'zuzugsjahr', 'einwanderungsjahr',
+  'verkehrssprache', 'familiensprache', 'muttersprache', 'verkehrssprachefamilie',
+  'geburtslandvater',
+  'geburtslandmutter',
+  // adresse
+  'straße', 'strasse', 'strassenname', 'street', 'adresse', 'wohnstraße', 'strae',
+  'hausnummer', 'hnr', 'hausnr',
+  'hausnummernzusatz', 'hausnrz', 'adresszusatz',
+  'plz', 'postleitzahl', 'postalcode', 'zip',
+  'ort', 'wohnort', 'stadt', 'city',
+  'ortsteil', 'stadtteil',
+  // kontakt
+  'telefon', 'tel', 'phone', 'telefonnummer',
+  'telefonmobil', 'mobiltelefon', 'handy', 'mobil', 'mobile',
+  'email', 'mail', 'emailadresse',
+  'emailschule', 'schulmail',
+  // schulbezogen
+  'status',
+  'externeschulnr', 'schulnummer', 'schulnr',
+  'beruf', 'profession',
+  'anmeldedatum', 'anmeldung',
+  'aufnahmedatum', 'aufnahme', 'einschulung',
+  'beginnbildungsgang',
+  'dauerbildungsgang',
+  'klasse', 'class', 'klassenbezeichnung', 'lerngruppe',
+  'jahrgang', 'jahrgangsstufe', 'stufe', 'grade', 'jg', 'jgst',
+  'schulgliederung', 'gliederung', 'bildungsgang', 'track',
+  // sonstiges
+  'masernimpfnachweis', 'masernimpfung', 'hatmasernimpfnachweis',
+  'keineauskunft', 'keineauskunftandritte', 'auskunftsperre',
+  'schuelerbafoeg', 'bafoeg', 'erhaeltschuelerbafoeg',
+  'meisterbafoeg', 'erhaeltmeisterbafoeg',
+])
+
+function buildLookup(record: Record<string, string>): Map<string, string> {
+  const map = new Map<string, string>()
+  for (const [k, v] of Object.entries(record)) {
+    map.set(normalizeKey(k), v ?? '')
+  }
+  return map
+}
+
+function get(map: Map<string, string>, ...keys: string[]): string {
+  for (const k of keys) {
+    const v = map.get(normalizeKey(k))
+    if (v !== undefined) return v
+  }
+  return ''
+}
+
+export async function parseSchuelerCsv(file: File): Promise<{ rows: SchuelerImportRow[]; unmappedHeaders: string[] }> {
+  return new Promise((resolve, reject) => {
+    Papa.parse<Record<string, string>>(file, {
+      header: true,
+      skipEmptyLines: true,
+      delimiter: /\.dat$/i.test(file.name) ? '|' : '',
+      complete(results) {
+        const rows: SchuelerImportRow[] = results.data.map(record => {
+          const m = buildLookup(record)
+          const row: SchuelerImportRow = {
+            _id: generateId(),
+            _valid: true,
+            _errors: [],
+            _sent: false,
+            _rawData: record,
+            // Personaldaten
+            nachname:                    get(m, 'nachname', 'name', 'familienname', 'last name', 'lastname'),
+            vorname:                     get(m, 'vorname', 'firstname', 'first name', 'rufname'),
+            alleVornamen:                get(m, 'allevornamen', 'vornamen', 'alle vornamen'),
+            geburtsname:                 get(m, 'geburtsname', 'mädchenname', 'maiden name'),
+            geburtsort:                  get(m, 'geburtsort', 'birthplace'),
+            geburtsland:                 get(m, 'geburtsland', 'birthcountry'),
+            geschlecht:                  get(m, 'geschlecht', 'gender', 'sex'),
+            geburtsdatum:                normalisiereDatum(get(m, 'geburtsdatum', 'geburtstag', 'birthdate', 'birthday', 'geb.datum', 'geb')),
+            staatsangehoerigkeitID:      get(m, '1.staatsang.', 'staatsangehoerigkeit', 'staatsangehörigkeit', 'nationalität', 'nationality', 'staatsang'),
+            staatsangehoerigkeit2ID:     get(m, '2.staatsang.', 'staatsangehoerigkeit2', 'zweitestaatsangehoerigkeit'),
+            religionID:                  get(m, 'konfession', 'religion', 'religionszugehörigkeit', 'religionszugehoerigkeit'),
+            religionKuerzel:             get(m, 'statistikkrzkonfession', 'statistikkrizkonfession', 'religionskuerzel', 'konfessionskuerzel'),
+            druckeKonfessionAufZeugnisse: get(m, 'druckekonfession', 'konfessionaufzeugnisse', 'drucke konfession auf zeugnisse'),
+            religionanmeldung:           normalisiereDatum(get(m, 'religionanmeldung', 'konfessionsanmeldung')),
+            religionabmeldung:           normalisiereDatum(get(m, 'religionabmeldung', 'konfessionsabmeldung')),
+            // Herkunft / Migration
+            hatMigrationshintergrund:    get(m, 'migrationshintergrund', 'hatmigrationshintergrund'),
+            zuzugsjahr:                  get(m, 'zuzugsjahr', 'einwanderungsjahr'),
+            verkehrspracheFamilie:       get(m, 'verkehrssprache', 'familiensprache', 'muttersprache', 'verkehrssprache familie'),
+            geburtslandVater:            get(m, 'geburtslandvater', 'geburtsland vater'),
+            geburtslandMutter:           get(m, 'geburtslandmutter', 'geburtsland mutter'),
+            // Adresse
+            strassenname:                get(m, 'straße', 'strasse', 'strassenname', 'street', 'adresse', 'wohnstraße', 'strae'),
+            hausnummer:                  get(m, 'hausnummer', 'hnr', 'hausnr'),
+            hausnummerZusatz:            get(m, 'hausnummernzusatz', 'hausnrz', 'adresszusatz'),
+            plz:                         get(m, 'plz', 'postleitzahl', 'postal code', 'zip'),
+            ort:                         get(m, 'ort', 'wohnort', 'stadt', 'city'),
+            ortsteil:                    get(m, 'ortsteil', 'stadtteil'),
+            // Kontakt
+            telefon:                     get(m, 'telefon', 'tel', 'phone', 'telefonnummer'),
+            telefonMobil:                get(m, 'telefonmobil', 'mobiltelefon', 'handy', 'mobil', 'mobile'),
+            email:                       get(m, 'email', 'e-mail', 'mail', 'emailadresse'),
+            emailSchule:                 get(m, 'emailschule', 'schulmail', 'school email'),
+            // Schulbezogen
+            status:                      get(m, 'status'),
+            externeSchulNr:              get(m, 'externeschulnr', 'schulnummer', 'schulnr'),
+            beruf:                       get(m, 'beruf', 'profession'),
+            anmeldedatum:                normalisiereDatum(get(m, 'anmeldedatum', 'anmeldung')),
+            aufnahmedatum:               normalisiereDatum(get(m, 'aufnahmedatum', 'aufnahme', 'einschulung')),
+            beginnBildungsgang:          normalisiereDatum(get(m, 'beginnbildungsgang', 'beginn bildungsgang')),
+            dauerBildungsgang:           get(m, 'dauerbildungsgang', 'dauer bildungsgang'),
+            klasse:                      get(m, 'klasse', 'class', 'klassenbezeichnung', 'lerngruppe'),
+            jahrgang:                    get(m, 'jahrgang', 'jahrgangsstufe', 'stufe', 'grade', 'jg', 'jgst'),
+            schulgliederung:             get(m, 'schulgliederung', 'gliederung', 'bildungsgang', 'track'),
+            // Sonstiges
+            hatMasernimpfnachweis:       get(m, 'masernimpfnachweis', 'masernimpfung', 'hatmasernimpfnachweis'),
+            keineAuskunftAnDritte:       get(m, 'keineauskunft', 'keineauskunftandritte', 'auskunftsperre'),
+            erhaeltSchuelerBAFOEG:       get(m, 'schuelerbafoeg', 'bafoeg', 'erhaeltschuelerbafoeg'),
+            erhaeltMeisterBAFOEG:        get(m, 'meisterbafoeg', 'erhaeltmeisterbafoeg'),
+          }
+          return row
+        })
+        const allHeaders = (results.meta.fields ?? [])
+        const unmappedHeaders = allHeaders.filter(h => !SCHUELER_KNOWN_KEYS.has(normalizeKey(h)))
+        resolve({ rows, unmappedHeaders })
+      },
+      error(err) {
+        reject(new Error(`CSV-Fehler: ${err.message}`))
+      },
+    })
+  })
+}
+
+export async function parseLehrerCsv(file: File): Promise<LehrerImportRow[]> {
+  return new Promise((resolve, reject) => {
+    Papa.parse<Record<string, string>>(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete(results) {
+        const rows: LehrerImportRow[] = results.data.map(record => {
+          const m = buildLookup(record)
+          const row: LehrerImportRow = {
+            _id: generateId(),
+            _valid: true,
+            _errors: [],
+            _sent: false,
+            kuerzel: get(m, 'kuerzel', 'abbreviation', 'kürzel', 'internkrz', 'kurzzeichen', 'kz'),
+            nachname: get(m, 'nachname', 'name', 'familienname'),
+            vorname: get(m, 'vorname', 'firstname'),
+            personalTyp: get(m, 'personaltyp', 'typ', 'type') || 'LEHRKRAFT',
+            anrede: get(m, 'anrede', 'salutation'),
+            titel: get(m, 'titel', 'title'),
+            geburtsdatum: normalisiereDatum(get(m, 'geburtsdatum', 'geburtstag', 'birthdate')),
+            geschlecht: get(m, 'geschlecht', 'gender'),
+            emailDienstlich: get(m, 'emaildienstlich', 'email', 'mail', 'e-mail'),
+            telefon: get(m, 'telefon', 'phone', 'tel'),
+          }
+          return row
+        })
+        resolve(rows)
+      },
+      error(err) {
+        reject(new Error(`CSV-Fehler: ${err.message}`))
+      },
+    })
+  })
+}
+
+export async function parseKlassenCsv(file: File): Promise<KlasseImportRow[]> {
+  return new Promise((resolve, reject) => {
+    Papa.parse<Record<string, string>>(file, {
+      header: true,
+      skipEmptyLines: true,
+      delimiter: /\.dat$/i.test(file.name) ? '|' : '',
+      complete(results) {
+        const rows: KlasseImportRow[] = results.data.map(record => {
+          const m = buildLookup(record)
+          const row: KlasseImportRow = {
+            _id: generateId(),
+            _valid: true,
+            _errors: [],
+            _sent: false,
+            kuerzel:          get(m, 'internbez', 'kuerzel', 'kürzel', 'bezeichnung'),
+            kuerzelStatistik: get(m, 'statistikbez', 'kuerzelstatistik', 'statistikbezeichnung'),
+            beschreibung:     get(m, 'sonstigebez', 'beschreibung', 'sonstigebezeichnung'),
+            jahrgang:         get(m, 'jahrgang', 'jahrgangsstufe', 'jg'),
+            idJahrgang:       null,
+            folgeklasse:      get(m, 'folgeklasse'),
+            klassenlehrer:    get(m, 'klassenlehrer', 'klassenlehrkraft', 'kl'),
+            idKlassenlehrer:  null,
+            orgForm:          get(m, 'orgform', 'organisationsform'),
+            klassenart:       get(m, 'klassenart'),
+            gliederung:       get(m, 'gliederung'),
+            fachklasse:       get(m, 'fachklasse'),
+            jahr:             get(m, 'jahr', 'schuljahr'),
+            abschnitt:        get(m, 'abschnitt'),
+          }
+          return row
+        })
+        resolve(rows)
+      },
+      error(err) {
+        reject(new Error(`CSV-Fehler: ${err.message}`))
+      },
+    })
+  })
+}
+
+export async function parseJahrgaengeCsv(file: File): Promise<JahrgangImportRow[]> {
+  return new Promise((resolve, reject) => {
+    Papa.parse<Record<string, string>>(file, {
+      header: true,
+      skipEmptyLines: true,
+      delimiter: /\.dat$/i.test(file.name) ? '|' : '',
+      complete(results) {
+        const rows: JahrgangImportRow[] = results.data.map(record => {
+          const m = buildLookup(record)
+          return {
+            _id: generateId(),
+            _valid: true,
+            _errors: [],
+            _sent: false,
+            kuerzel:          get(m, 'internkrz', 'kuerzel', 'kürzel', 'jahrgang', 'jg'),
+            kuerzelStatistik: get(m, 'statistikkrz', 'kuerzelstatistik', 'statistikkuerzel'),
+            gliederung:       get(m, 'gliederung'),
+          }
+        })
+        resolve(rows)
+      },
+      error(err) {
+        reject(new Error(`CSV-Fehler: ${err.message}`))
+      },
+    })
+  })
+}
+
+export async function parseFaecherCsv(file: File): Promise<FachImportRow[]> {
+  return new Promise((resolve, reject) => {
+    Papa.parse<Record<string, string>>(file, {
+      header: true,
+      skipEmptyLines: true,
+      delimiter: /\.dat$/i.test(file.name) ? '|' : '',
+      complete(results) {
+        const rows: FachImportRow[] = results.data.map(record => {
+          const m = buildLookup(record)
+          const row: FachImportRow = {
+            _id: generateId(),
+            _valid: true,
+            _errors: [],
+            _sent: false,
+            kuerzel:          get(m, 'internkrz', 'kuerzel', 'kürzel', 'fach'),
+            kuerzelStatistik: get(m, 'statistikkrz', 'kuerzelstatistik', 'statistikkuerzel'),
+            bezeichnung:      get(m, 'bezeichnung', 'beschreibung', 'fachbezeichnung', 'name'),
+          }
+          for (const [key, value] of Object.entries(record)) {
+            row[key] = value ?? ''
+          }
+          return row
+        })
+        resolve(rows)
+      },
+      error(err) {
+        reject(new Error(`CSV-Fehler: ${err.message}`))
+      },
+    })
+  })
+}
+
+export async function parseFloskelCsv(file: File): Promise<FloskelImportRow[]> {
+  return new Promise((resolve, reject) => {
+    Papa.parse<Record<string, string>>(file, {
+      header: true,
+      skipEmptyLines: true,
+      delimiter: /\.dat$/i.test(file.name) ? '|' : '',
+      complete(results) {
+        const rows: FloskelImportRow[] = results.data.map(record => {
+          const m = buildLookup(record)
+          return {
+            _id: generateId(),
+            _valid: true,
+            _errors: [],
+            _sent: false,
+            kuerzel:         get(m, 'kürzel', 'kuerzel', 'kz'),
+            text:            get(m, 'floskeltext', 'text', 'inhalt', 'beschreibung'),
+            floskelgruppe:   get(m, 'gruppe', 'floskelgruppe', 'fg'),
+            idFloskelgruppe: get(m, 'idfloskelgruppe', 'gruppeid', 'floskelgruppeid'),
+            fach:            get(m, 'fach'),
+            jahrgang:        get(m, 'jahrgang', 'jg', 'jahrgangsstufe', 'stufe'),
+            niveau:          get(m, 'niveau', 'niveaustufe'),
+            sortierung:      get(m, 'sortierung', 'sort'),
+          }
+        })
+        resolve(rows)
+      },
+      error(err) {
+        reject(new Error(`CSV-Fehler: ${err.message}`))
+      },
+    })
+  })
+}
+
+// Versucht gängige Datumsformate nach YYYY-MM-DD zu konvertieren
+export function normalisiereDatum(raw: string): string {
+  if (!raw) return ''
+  // bereits ISO-Format
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw
+  // DD.MM.YYYY
+  const dmy = raw.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/)
+  if (dmy) return `${dmy[3]}-${dmy[2].padStart(2, '0')}-${dmy[1].padStart(2, '0')}`
+  // MM/DD/YYYY
+  const mdy = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+  if (mdy) return `${mdy[3]}-${mdy[1].padStart(2, '0')}-${mdy[2].padStart(2, '0')}`
+  return raw
+}

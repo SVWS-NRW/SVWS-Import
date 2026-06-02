@@ -7,6 +7,9 @@ export const useFaecherStore = defineStore('faecher', () => {
   const rows = ref<FachImportRow[]>([])
   const existingFaecher = ref<FachDetails[]>([])
   const uploading = ref(false)
+  const uploadProgress = ref(0)
+  const uploadTotal = ref(0)
+  const uploadCancelled = ref(false)
   const loadingExisting = ref(false)
 
   const totalCount = computed(() => rows.value.length)
@@ -64,7 +67,11 @@ export const useFaecherStore = defineStore('faecher', () => {
     let sent = 0
     let failed = 0
     const updated = [...rows.value]
+    uploadTotal.value = updated.filter(r => r._valid && !r._sent).length
+    uploadProgress.value = 0
+    uploadCancelled.value = false
     for (let i = 0; i < updated.length; i++) {
+      if (uploadCancelled.value) break
       const row = updated[i]
       if (!row._valid || row._sent) continue
       const result = await createFach(row)
@@ -75,16 +82,23 @@ export const useFaecherStore = defineStore('faecher', () => {
         updated[i] = { ...row, _errors: [result.error ?? 'Unbekannter Fehler'] }
         failed++
       }
+      uploadProgress.value++
     }
     rows.value = updated
     uploading.value = false
     return { sent, failed }
   }
 
+  function stopUpload(): void {
+    uploadCancelled.value = true
+  }
+
   return {
     rows,
     existingFaecher,
     uploading,
+    uploadProgress,
+    uploadTotal,
     loadingExisting,
     totalCount,
     validCount,
@@ -97,5 +111,6 @@ export const useFaecherStore = defineStore('faecher', () => {
     clear,
     loadExisting,
     uploadAll,
+    stopUpload,
   }
 })

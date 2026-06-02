@@ -307,20 +307,20 @@
 
         <div class="import-actions">
           <Button
-            label="Importieren"
+            :label="importing ? importProgress : 'Importieren'"
             icon="pi pi-file-import"
             size="small"
             :loading="importing"
+            :disabled="importing"
             @click="handleImport"
           />
-          <span v-if="importing" class="import-progress">{{ importProgress }}</span>
           <Button
-            label="Abbrechen"
-            icon="pi pi-times"
-            severity="secondary"
+            :label="importing ? 'Stoppen' : 'Abbrechen'"
+            :icon="importing ? 'pi pi-stop' : 'pi pi-times'"
+            :severity="importing ? 'warn' : 'secondary'"
             size="small"
             text
-            @click="resetImport"
+            @click="importing ? stopImport() : resetImport()"
           />
         </div>
       </template>
@@ -471,6 +471,7 @@ const fileUploadRef = ref()
 const importFile = ref<File | null>(null)
 const importRows = ref<FloskelImportRow[]>([])
 const importProgress = ref('')
+const importCancelled = ref(false)
 
 // ── Unbekannte Floskelgruppen Modal ──────────────────────────────────────────
 interface UnknownGruppe {
@@ -821,7 +822,12 @@ function resetImport(): void {
   importRows.value = []
   importError.value = ''
   importProgress.value = ''
+  importCancelled.value = false
   fileUploadRef.value?.clear?.()
+}
+
+function stopImport(): void {
+  importCancelled.value = true
 }
 
 /**
@@ -884,18 +890,22 @@ function buildApiPayload(row: FloskelImportRow): FloskelApiPayload | null {
 
 async function handleImport(): Promise<void> {
   importing.value = true
+  importCancelled.value = false
   let sent = 0
   let failed = 0
+  const total = importRows.value.length
+  importProgress.value = `0 / ${total}`
   for (let i = 0; i < importRows.value.length; i++) {
-    importProgress.value = `${i + 1} / ${importRows.value.length}`
+    if (importCancelled.value) break
     const payload = buildApiPayload(importRows.value[i])
     if (!payload) {
       failed++
-      continue
+    } else {
+      const result = await createFloskel(payload)
+      if (result.success) sent++
+      else failed++
     }
-    const result = await createFloskel(payload)
-    if (result.success) sent++
-    else failed++
+    importProgress.value = `${i + 1} / ${total}`
   }
   importing.value = false
   importProgress.value = ''

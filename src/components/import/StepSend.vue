@@ -91,14 +91,25 @@
     <!-- ── Aktionen ───────────────────────────────────────────────────── -->
     <div class="send-actions">
       <template v-if="!isDone">
-        <Button
-          :label="`${readyCount} Datensätze an SVWS senden`"
-          icon="pi pi-upload"
-          :disabled="readyCount === 0 || uploading || !canSend"
-          :loading="uploading"
-          size="small"
-          @click="sendAll"
-        />
+        <div class="send-row">
+          <Button
+            :label="uploading ? `${sessionSentCount} / ${toSendCount}` : `${readyCount} Datensätze an SVWS senden`"
+            icon="pi pi-upload"
+            :disabled="readyCount === 0 || uploading || !canSend"
+            :loading="uploading"
+            size="small"
+            @click="sendAll"
+          />
+          <Button
+            v-if="uploading"
+            label="Stoppen"
+            icon="pi pi-stop"
+            severity="warn"
+            size="small"
+            text
+            @click="stopSend"
+          />
+        </div>
         <small v-if="!canSend && module.entityType === 'schueler'" class="action-hint error">
           Bitte Schuljahresabschnitt-ID angeben.
         </small>
@@ -203,6 +214,7 @@ const canSend = computed(() => {
 // ── Sendelogik ─────────────────────────────────────────────────────────────
 
 const uploading        = ref(false)
+const sendCancelled    = ref(false)
 const hasSendStarted   = ref(false)
 const toSendCount      = ref(0)
 const sessionSentCount = ref(0)
@@ -227,16 +239,22 @@ const progressPercent = computed(() =>
 
 const isDone = computed(() => hasSendStarted.value && !uploading.value)
 
+function stopSend(): void {
+  sendCancelled.value = true
+}
+
 async function sendAll() {
   const pending = wizardStore.mappedRows.filter(r => r._valid && !r._sent)
   if (pending.length === 0) return
 
   hasSendStarted.value   = true
   uploading.value        = true
+  sendCancelled.value    = false
   toSendCount.value      = pending.length
   sessionSentCount.value = 0
 
   for (const row of pending) {
+    if (sendCancelled.value) break
     const result = await sendMappedRow(props.module, row, wizardStore.context)
     wizardStore.markSent(row._id, result.success ? undefined : result.error)
     sessionSentCount.value++
@@ -250,6 +268,7 @@ async function retryFailed() {
   if (pending.length === 0) return
 
   uploading.value        = true
+  sendCancelled.value    = false
   toSendCount.value      = pending.length
   sessionSentCount.value = 0
 
@@ -259,6 +278,7 @@ async function retryFailed() {
   }
 
   for (const row of pending) {
+    if (sendCancelled.value) break
     const result = await sendMappedRow(props.module, row, wizardStore.context)
     wizardStore.markSent(row._id, result.success ? undefined : result.error)
     sessionSentCount.value++
@@ -423,6 +443,12 @@ function rowLabel(row: MappedRow): string {
   flex-direction: column;
   align-items: flex-start;
   gap: 0.5rem;
+}
+
+.send-row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
 }
 
 .action-hint {

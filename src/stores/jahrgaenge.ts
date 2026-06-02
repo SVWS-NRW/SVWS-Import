@@ -7,6 +7,9 @@ export const useJahrgaengeStore = defineStore('jahrgaenge', () => {
   const rows = ref<JahrgangImportRow[]>([])
   const existingJahrgaenge = ref<JahrgangDetails[]>([])
   const uploading = ref(false)
+  const uploadProgress = ref(0)
+  const uploadTotal = ref(0)
+  const uploadCancelled = ref(false)
   const loadingExisting = ref(false)
 
   const totalCount = computed(() => rows.value.length)
@@ -63,7 +66,11 @@ export const useJahrgaengeStore = defineStore('jahrgaenge', () => {
     let sent = 0
     let failed = 0
     const updated = [...rows.value]
+    uploadTotal.value = updated.filter(r => r._valid && !r._sent).length
+    uploadProgress.value = 0
+    uploadCancelled.value = false
     for (let i = 0; i < updated.length; i++) {
+      if (uploadCancelled.value) break
       const row = updated[i]
       if (!row._valid || row._sent) continue
       const result = await createJahrgang(row)
@@ -74,15 +81,20 @@ export const useJahrgaengeStore = defineStore('jahrgaenge', () => {
         updated[i] = { ...row, _errors: [result.error ?? 'Unbekannter Fehler'] }
         failed++
       }
+      uploadProgress.value++
     }
     rows.value = updated
     uploading.value = false
     return { sent, failed }
   }
 
+  function stopUpload(): void {
+    uploadCancelled.value = true
+  }
+
   return {
-    rows, existingJahrgaenge, uploading, loadingExisting,
+    rows, existingJahrgaenge, uploading, uploadProgress, uploadTotal, loadingExisting,
     totalCount, validCount, sentCount, errorCount,
-    setRows, updateRow, deleteRow, validateAll, clear, loadExisting, uploadAll,
+    setRows, updateRow, deleteRow, validateAll, clear, loadExisting, uploadAll, stopUpload,
   }
 })

@@ -31,7 +31,7 @@
           @select="onFileSelect"
         />
         <Button
-          label="Alles senden"
+          :label="store.uploading ? `${store.uploadProgress} / ${store.uploadTotal}` : 'Alles senden'"
           icon="pi pi-upload"
           size="small"
           :disabled="store.validCount === 0 || store.uploading"
@@ -39,12 +39,12 @@
           @click="handleUploadAll"
         />
         <Button
-          label="Leeren"
-          icon="pi pi-trash"
-          severity="danger"
-          size="small"
+          :label="store.uploading ? 'Stoppen' : 'Leeren'"
+          :icon="store.uploading ? 'pi pi-stop' : 'pi pi-trash'"
+          :severity="store.uploading ? 'warn' : 'danger'"
           text
-          @click="confirmClear"
+          size="small"
+          @click="store.uploading ? store.stopUpload() : confirmClear()"
         />
         <Button
           v-tooltip.top="'Fächer aus Datenbank laden'"

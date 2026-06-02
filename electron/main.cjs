@@ -1,6 +1,6 @@
 'use strict'
 
-const { app, BrowserWindow, session } = require('electron')
+const { app, BrowserWindow, session, Menu } = require('electron')
 const path = require('path')
 
 
@@ -31,6 +31,20 @@ function createWindow() {
 
   session.defaultSession.webRequest.onHeadersReceived(fixCorsHeaders)
 
+  win.webContents.on('before-input-event', (event, input) => {
+    if (!input.control || input.type !== 'keyDown') return
+    if (input.key === '+') {
+      event.preventDefault()
+      win.webContents.setZoomLevel(win.webContents.getZoomLevel() + 1)
+    } else if (input.key === '-') {
+      event.preventDefault()
+      win.webContents.setZoomLevel(win.webContents.getZoomLevel() - 1)
+    } else if (input.key === '0') {
+      event.preventDefault()
+      win.webContents.setZoomLevel(0)
+    }
+  })
+
   win.loadFile(path.join(__dirname, '../dist/index.html'))
 }
 
@@ -41,6 +55,42 @@ app.on('certificate-error', (event, _webContents, _url, _error, _certificate, ca
 })
 
 app.whenReady().then(() => {
+  const menu = Menu.buildFromTemplate([
+    {
+      label: 'Datei',
+      submenu: [
+        {
+          label: 'Beenden',
+          accelerator: 'CmdOrCtrl+Q',
+          click: () => app.quit(),
+        },
+      ],
+    },
+    {
+      label: 'Ansicht',
+      submenu: [
+        { role: 'reload' },
+        { role: 'forceReload' },
+        { type: 'separator' },
+        {
+          label: 'Vergrößern (Strg++)',
+          click: (_, win) => win?.webContents.setZoomLevel(win.webContents.getZoomLevel() + 1),
+        },
+        {
+          label: 'Verkleinern (Strg+-)',
+          click: (_, win) => win?.webContents.setZoomLevel(win.webContents.getZoomLevel() - 1),
+        },
+        {
+          label: 'Normale Größe (Strg+0)',
+          click: (_, win) => win?.webContents.setZoomLevel(0),
+        },
+        { type: 'separator' },
+        { role: 'togglefullscreen' },
+      ],
+    },
+  ])
+  Menu.setApplicationMenu(menu)
+
   createWindow()
 
   app.on('activate', () => {

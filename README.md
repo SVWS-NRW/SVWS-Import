@@ -59,6 +59,49 @@ Die App läuft dann im Vite-Dev-Server (Standard: `http://localhost:5173`).
 - `npm run dev` startet den Entwicklungsserver
 - `npm run build` führt Typecheck (`vue-tsc`) und Production-Build aus
 - `npm run preview` startet eine lokale Vorschau des Build-Ergebnisses
+- `npm run electron:dev` startet die App als Electron-Desktop-App im Entwicklungsmodus (nur Linux)
+- `npm run electron:build` baut die Electron-App für die aktuelle Plattform (Linux → AppImage)
+- `npm run electron:build:win` baut den Windows-Installer (`.exe` via NSIS) – erfordert `wine` auf Linux
+- `npm run release` baut Linux (AppImage) und Windows (NSIS-Installer) in einem Durchgang – erfordert `wine` auf Linux
+
+## Electron Desktop-App
+
+Neben dem Betrieb als Web-App im Browser kann SVWS-Import auch als eigenständige Desktop-Anwendung ausgeliefert werden. Grundlage ist [Electron](https://www.electronjs.org/), das die Vue-SPA in einem Chromium-basierten Fenster ausführt – ohne dass ein separater Webserver oder Browser benötigt wird.
+
+### Vorteile gegenüber dem reinen Browser-Betrieb
+
+- Keine CORS-Probleme beim Zugriff auf den SVWS-Server (Electron umgeht Browser-Sicherheitsrestriktionen nicht, aber der Kontext ist kontrollierter)
+- Einfache Verteilung als Installer ohne Serverinfrastruktur
+- Vertrautes Desktop-Fenster für Endanwender
+
+### Voraussetzungen für den Build
+
+| Zielplattform | Build auf Linux | Zusatzanforderung |
+|---|---|---|
+| Linux (AppImage) | ✓ nativ | – |
+| Windows (NSIS `.exe`) | ✓ Cross-Build | `wine` muss installiert sein |
+| macOS (DMG) | ✗ | nur auf macOS möglich |
+
+Auf Ubuntu/Debian kann `wine` wie folgt installiert werden:
+
+```bash
+sudo apt install wine
+```
+
+### Builds ausführen
+
+```bash
+# Nur Linux
+npm run electron:build
+
+# Nur Windows
+npm run electron:build:win
+
+# Linux + Windows in einem Durchgang
+npm run release
+```
+
+Die fertigen Pakete landen im Verzeichnis `release/`.
 
 ## Build und Auslieferung
 

@@ -9,7 +9,9 @@
     "build": "vue-tsc && vite build",
     "preview": "vite preview",
     "electron:dev": "npm run build && GSETTINGS_SCHEMA_DIR=$HOME/.local/share/electron-schemas electron . --no-sandbox --ozone-platform=x11",
-    "electron:build": "npm run build && electron-builder"
+    "electron:build": "npm run build && electron-builder",
+    "electron:build:win": "npm run build && electron-builder --win nsis",
+    "release": "npm run build && electron-builder --linux AppImage --win nsis"
   },
   "build": {
     "appId": "de.skinwalker.svws-import",

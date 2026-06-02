@@ -6,7 +6,7 @@ export interface SchuelerNeu {
   nachname: string
   vorname: string
   alleVornamen: string
-  geschlecht: Geschlecht | null
+  geschlecht: Geschlecht
   geburtsdatum: string | null       // ISO 8601: YYYY-MM-DD
   status: SchuelerStatus | null
   anmeldedatum: string | null
@@ -108,5 +108,5 @@ function parseGeschlecht(raw: string): Geschlecht | null {
     'd': 5, 'divers': 5, '5': 5,
     'x': 6, 'ohne': 6, '6': 6,
   }
-  return map[raw.toLowerCase().trim()] ?? null
+  return map[raw.toLowerCase().trim()] ?? 6
 }

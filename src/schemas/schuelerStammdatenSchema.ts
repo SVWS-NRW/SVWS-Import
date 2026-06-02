@@ -306,7 +306,7 @@ export const schuelerStammdatenSchema: ImportModule = {
       nachname: str('nachname'),
       vorname: str('vorname'),
       alleVornamen: str('alleVornamen') || str('vorname'),
-      geschlecht: geschlechtMap[rawGeschlecht] ?? null,
+      geschlecht: geschlechtMap[rawGeschlecht] ?? 6,
       geburtsdatum: normalisiereDatum(str('geburtsdatum')) || null,
       status: statusMap[rawStatus] ?? 2,
       anmeldedatum: normalisiereDatum(str('anmeldedatum')) || null,

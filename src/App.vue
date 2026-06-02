@@ -27,6 +27,7 @@
           :icon="isDark ? 'pi pi-sun' : 'pi pi-moon'"
           severity="secondary"
           text
+          size="small"
           :aria-label="isDark ? 'Hell-Modus aktivieren' : 'Dunkel-Modus aktivieren'"
           @click="toggleDark"
         />
@@ -35,6 +36,7 @@
           icon="pi pi-power-off"
           severity="secondary"
           text
+          size="small"
           @click="handleDisconnect"
         />
       </div>
@@ -108,6 +110,17 @@ html, body {
 #app {
   height: 100%;
 }
+
+.p-tooltip .p-tooltip-text {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.4rem;
+}
+
+.p-fileupload-label,
+.p-fileupload-basic-content span:not(.p-button-label):not(.p-button-icon) {
+  font-size: 0.72rem !important;
+  color: var(--p-text-muted-color);
+}
 </style>
 
 <style scoped>
@@ -120,9 +133,9 @@ html, body {
 .app-nav {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
-  padding: 0 1.75rem;
-  height: 64px;
+  gap: 1rem;
+  padding: 0 1.25rem;
+  height: 48px;
   background: var(--p-surface-card);
   border-bottom: 1px solid var(--p-surface-border);
   flex-shrink: 0;
@@ -130,25 +143,25 @@ html, body {
 
 .nav-brand {
   font-weight: 700;
-  font-size: 1.2rem;
+  font-size: 1rem;
   color: var(--p-primary-color);
   white-space: nowrap;
 }
 
 .nav-links {
   display: flex;
-  gap: 0.35rem;
+  gap: 0.2rem;
 }
 
 .nav-link {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
+  gap: 0.4rem;
+  padding: 0.3rem 0.75rem;
   border-radius: 6px;
   text-decoration: none;
   color: var(--p-text-color);
-  font-size: 1rem;
+  font-size: 0.875rem;
   transition: background 0.15s;
 }
 
@@ -162,15 +175,15 @@ html, body {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 .conn-info {
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   color: var(--p-text-muted-color);
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.35rem;
 }
 
 .app-main {

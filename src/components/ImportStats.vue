@@ -31,27 +31,30 @@ defineProps<{
 <style scoped>
 .import-stats {
   display: flex;
-  gap: 1.5rem;
+  flex-direction: column;
+  gap: 0.1rem;
 }
 
 .stat {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.1rem;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.25rem;
 }
 
 .stat-value {
-  font-size: 1.5rem;
+  font-size: 0.75rem;
   font-weight: 700;
   line-height: 1;
+  min-width: 1.5ch;
+  text-align: right;
 }
 
 .stat-label {
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   color: var(--p-text-muted-color);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.03em;
 }
 
 .valid .stat-value { color: var(--p-green-500); }

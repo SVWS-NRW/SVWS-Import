@@ -6,15 +6,18 @@
           icon="pi pi-arrow-left"
           text
           rounded
+          size="small"
           @click="router.push({ name: 'import' })"
           aria-label="Zurück"
         />
         <h2>Floskeln verwalten</h2>
       </div>
       <Button
-        label="Neu laden"
+        v-tooltip.top="'Daten neu laden'"
         icon="pi pi-refresh"
         severity="secondary"
+        size="small"
+        text
         :loading="loading"
         @click="loadData"
       />
@@ -115,13 +118,14 @@
           <Tag v-if="!loadingFloskeln" :value="String(filteredFloskeln.length)" severity="secondary" />
         </h3>
         <div class="filter-bar">
-          <InputText v-model="filterText" placeholder="Text suchen…" class="filter-search" />
+          <InputText v-model="filterText" placeholder="Text suchen…" size="small" class="filter-search" />
           <Select
             v-model="filterJahrgang"
             :options="jahrgangOptions"
             optionLabel="label"
             optionValue="value"
             placeholder="Jahrgang"
+            size="small"
             showClear
             class="filter-select"
           />
@@ -131,6 +135,7 @@
             optionLabel="label"
             optionValue="value"
             placeholder="Gruppe"
+            size="small"
             showClear
             class="filter-select"
           />
@@ -140,6 +145,7 @@
             optionLabel="label"
             optionValue="value"
             placeholder="Fach"
+            size="small"
             showClear
             class="filter-select"
           />
@@ -149,6 +155,7 @@
             optionLabel="label"
             optionValue="value"
             placeholder="Niveau"
+            size="small"
             showClear
             class="filter-select"
           />
@@ -257,10 +264,10 @@
           :multiple="false"
           accept=".csv,.xlsx,.xls"
           chooseLabel="Datei auswählen"
+          chooseIcon="pi pi-folder-open"
           :maxFileSize="10000000"
           @select="onFileSelect"
         />
-        <span v-if="importFile" class="filename">{{ importFile.name }}</span>
         <Button
           v-if="importFile"
           icon="pi pi-times"
@@ -302,6 +309,7 @@
           <Button
             label="Importieren"
             icon="pi pi-file-import"
+            size="small"
             :loading="importing"
             @click="handleImport"
           />
@@ -310,6 +318,7 @@
             label="Abbrechen"
             icon="pi pi-times"
             severity="secondary"
+            size="small"
             text
             @click="resetImport"
           />
@@ -398,7 +407,10 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import TooltipDirective from 'primevue/tooltip'
 import Button from 'primevue/button'
+
+const vTooltip = TooltipDirective
 import Message from 'primevue/message'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
@@ -905,57 +917,59 @@ onMounted(() => {
 .floskel-view {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  padding: 1rem 1.5rem;
+  gap: 0.5rem;
+  padding: 0.375rem 1rem;
 }
 
 .view-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.5rem;
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.25rem;
 }
 
 h2 {
   margin: 0;
-  font-size: 1.4rem;
+  font-size: 0.9rem;
+  font-weight: 600;
 }
 
 .panel {
   border: 1px solid var(--p-surface-border);
-  border-radius: 12px;
+  border-radius: 8px;
   background: var(--p-surface-card);
-  padding: 1rem 1.25rem;
+  padding: 0.5rem 0.75rem;
   display: flex;
   flex-direction: column;
-  gap: 0.9rem;
+  gap: 0.4rem;
 }
 
 .panel h3 {
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.8rem;
+  font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.35rem;
 }
 
 .panel-hint {
-  margin: -0.4rem 0 0;
+  margin: 0;
   color: var(--p-text-muted-color);
-  font-size: 0.88rem;
+  font-size: 0.72rem;
 }
 
 .section-head {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 0.4rem;
 }
 
 .section-head h3 {
@@ -965,17 +979,17 @@ h2 {
 .filter-bar {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.35rem;
   flex-wrap: wrap;
   margin-left: auto;
 }
 
 .filter-search {
-  width: 180px;
+  width: 130px;
 }
 
 .filter-select {
-  width: 140px;
+  width: 110px;
 }
 
 /* Floskelgruppen */
@@ -1045,17 +1059,18 @@ h2 {
 .selection-bar {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem 0.75rem;
+  gap: 0.5rem;
+  padding: 0.25rem 0.5rem;
   background: var(--p-surface-ground);
   border: 1px solid var(--p-primary-color);
-  border-radius: 8px;
-  font-size: 0.9rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
   color: var(--p-text-color);
 }
 
 .selection-icon {
   color: var(--p-primary-color);
+  font-size: 0.75rem;
 }
 
 /* Table empty state */
@@ -1063,13 +1078,14 @@ h2 {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
-  padding: 2rem;
+  gap: 0.35rem;
+  padding: 1rem;
   color: var(--p-text-muted-color);
+  font-size: 0.75rem;
 }
 
 .table-empty-icon {
-  font-size: 2rem;
+  font-size: 1.25rem;
   opacity: 0.4;
 }
 
@@ -1086,39 +1102,141 @@ h2 {
 .upload-row {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
 }
 
-.filename {
-  font-size: 0.9rem;
-  color: var(--p-text-muted-color);
-}
 
 .import-summary {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.35rem;
 }
 
 .import-summary-hint {
   color: var(--p-text-muted-color);
-  font-size: 0.9rem;
+  font-size: 0.72rem;
 }
 
 .import-actions {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
+}
+
+:deep(.import-actions .p-button) {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+}
+
+:deep(.import-actions .p-button .p-button-icon) {
+  font-size: 0.75rem;
 }
 
 .import-progress {
   color: var(--p-text-muted-color);
-  font-size: 0.9rem;
+  font-size: 0.72rem;
 }
 
 .muted {
   color: var(--p-text-muted-color);
+}
+
+:deep(.p-datatable thead th),
+:deep(.p-datatable tbody td) {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.5rem;
+}
+
+:deep(.p-datatable .p-checkbox) {
+  width: 14px;
+  height: 14px;
+}
+
+:deep(.p-datatable .p-checkbox .p-checkbox-box) {
+  width: 14px;
+  height: 14px;
+}
+
+:deep(.p-datatable .p-checkbox .p-checkbox-icon) {
+  font-size: 0.6rem;
+  width: 0.6rem;
+  height: 0.6rem;
+}
+
+:deep(.p-datatable .p-tag) {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.3rem;
+}
+
+:deep(.p-paginator) {
+  font-size: 0.72rem;
+  padding: 0.15rem 0.25rem;
+}
+
+:deep(.p-paginator .p-paginator-page),
+:deep(.p-paginator .p-paginator-next),
+:deep(.p-paginator .p-paginator-prev),
+:deep(.p-paginator .p-paginator-first),
+:deep(.p-paginator .p-paginator-last) {
+  min-width: 1.5rem;
+  height: 1.5rem;
+  font-size: 0.72rem;
+  padding: 0;
+}
+
+:deep(.p-paginator .p-paginator-page .p-icon),
+:deep(.p-paginator .p-paginator-nav-button .p-icon) {
+  width: 0.7rem;
+  height: 0.7rem;
+}
+
+:deep(.p-paginator .p-select) {
+  font-size: 0.72rem;
+}
+
+:deep(.p-paginator .p-select .p-select-label) {
+  font-size: 0.72rem;
+  padding: 0.15rem 0.25rem;
+}
+
+:deep(.p-paginator .p-select .p-select-dropdown) {
+  width: 1.25rem;
+}
+
+:deep(.p-fileupload-basic .p-button) {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+}
+
+:deep(.p-fileupload-label),
+:deep(.p-fileupload-basic-content span:not(.p-button-label):not(.p-button-icon)) {
+  font-size: 0.72rem !important;
+  color: var(--p-text-muted-color);
+}
+
+:deep(.filter-bar .p-select),
+:deep(.filter-bar .p-inputtext) {
+  font-size: 0.72rem;
+}
+
+:deep(.filter-bar .p-select .p-select-label),
+:deep(.filter-bar .p-select .p-inputtext) {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.25rem;
+}
+
+:deep(.filter-bar .p-select .p-select-dropdown) {
+  width: 1.25rem;
+}
+
+:deep(.filter-bar .p-select .p-select-dropdown .p-icon) {
+  width: 0.6rem;
+  height: 0.6rem;
+}
+
+:deep(.filter-bar .p-inputtext) {
+  padding: 0.2rem 0.35rem;
 }
 
 .gruppen-delete-msg p {
@@ -1157,15 +1275,16 @@ h2 {
 }
 
 .aktion-btn {
-  padding: 0.25rem 0.6rem;
+  padding: 0.15rem 0.35rem;
   border: 1px solid var(--p-surface-border);
-  border-radius: 6px;
+  border-radius: 4px;
   background: var(--p-surface-card);
   color: var(--p-text-color);
-  font-size: 0.82rem;
+  font-size: 0.7rem;
   cursor: pointer;
   font-family: inherit;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap;
 }
 
 .aktion-btn--active {
@@ -1178,5 +1297,56 @@ h2 {
   background: var(--p-orange-500, #f97316);
   border-color: var(--p-orange-500, #f97316);
   color: #fff;
+}
+</style>
+
+<style>
+.p-dialog .p-dialog-header {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+.p-dialog .p-dialog-content {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+}
+
+.p-dialog .p-dialog-content p {
+  font-size: 0.75rem;
+  margin: 0 0 0.4rem;
+}
+
+.p-dialog .p-dialog-footer {
+  padding: 0.4rem 0.75rem;
+}
+
+.p-dialog .p-dialog-footer .p-button {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+}
+
+.p-dialog table thead th,
+.p-dialog table tbody td {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.5rem;
+}
+
+.p-dialog .p-inputtext {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.35rem;
+}
+
+.p-dialog .p-select .p-select-label {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.25rem;
+}
+
+.p-dialog .p-select .p-select-dropdown {
+  width: 1.25rem;
+}
+
+.p-dialog .p-select .p-select-dropdown .p-icon {
+  width: 0.6rem;
+  height: 0.6rem;
 }
 </style>

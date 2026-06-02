@@ -4,6 +4,7 @@
       <div class="header-left">
         <Button
           icon="pi pi-arrow-left"
+          size="small"
           text
           rounded
           @click="router.push({ name: 'import' })"
@@ -30,15 +31,9 @@
           @select="onFileSelect"
         />
         <Button
-          label="DB laden"
-          icon="pi pi-refresh"
-          severity="secondary"
-          :loading="store.loadingExisting"
-          @click="handleLoadExisting"
-        />
-        <Button
           label="Alles senden"
           icon="pi pi-upload"
+          size="small"
           :disabled="store.validCount === 0 || store.uploading"
           :loading="store.uploading"
           @click="handleUploadAll"
@@ -47,8 +42,18 @@
           label="Leeren"
           icon="pi pi-trash"
           severity="danger"
+          size="small"
           text
           @click="confirmClear"
+        />
+        <Button
+          v-tooltip.top="'Fächer aus Datenbank laden'"
+          icon="pi pi-refresh"
+          severity="secondary"
+          size="small"
+          text
+          :loading="store.loadingExisting"
+          @click="handleLoadExisting"
         />
       </div>
     </div>
@@ -284,14 +289,14 @@ function confirmClear(): void {
   display: flex;
   flex-direction: column;
   height: 100%;
-  gap: 1rem;
-  padding: 1rem 1.5rem;
+  gap: 0.375rem;
+  padding: 0.375rem 1rem;
 }
 
 .table-header {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 0.75rem;
   flex-wrap: wrap;
 }
 
@@ -303,13 +308,13 @@ function confirmClear(): void {
 
 h2 {
   margin: 0;
-  font-size: 1.4rem;
+  font-size: 0.9rem;
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.375rem;
   margin-left: auto;
 }
 
@@ -332,6 +337,26 @@ h2 {
 
 .existing-table {
   height: 220px;
+}
+
+:deep(.header-actions .p-button),
+:deep(.p-fileupload-basic .p-button) {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+:deep(.header-actions .p-button .p-button-icon),
+:deep(.p-fileupload-basic .p-button .p-button-icon) {
+  font-size: 0.75rem;
+}
+
+:deep(.p-fileupload-label),
+:deep(.p-fileupload-basic-content > span:not([class*="p-button"])) {
+  font-size: 0.72rem;
+  color: var(--p-text-muted-color);
+}
+:deep(.p-fileupload-basic .p-button .p-button-icon) {
+  font-size: 0.75rem;
 }
 
 .data-table {

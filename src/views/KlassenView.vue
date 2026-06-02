@@ -2,34 +2,32 @@
   <div class="table-view">
     <div class="table-header">
       <div class="header-left">
-        <div class="header-title-row">
-          <Button
-            icon="pi pi-arrow-left"
-            text
-            rounded
-            @click="router.push({ name: 'import' })"
-            aria-label="Zurück"
-          />
-          <h2>Klassendaten</h2>
-        </div>
-        <div class="abschnitt-field">
-          <label>Schuljahresabschnitt</label>
-          <Select
-            v-if="schuleStore.loaded"
-            v-model="store.idSchuljahresabschnitt"
-            :options="schuleStore.abschnitteOptions"
-            optionLabel="label"
-            optionValue="id"
-            placeholder="Abschnitt wählen"
-            style="width: 220px"
-          />
-          <InputNumber
-            v-else
-            v-model="store.idSchuljahresabschnitt"
-            :min="1"
-            style="width: 130px"
-          />
-        </div>
+        <Button
+          icon="pi pi-arrow-left"
+          size="small"
+          text
+          rounded
+          @click="router.push({ name: 'import' })"
+          aria-label="Zurück"
+        />
+        <h2>Klassendaten</h2>
+        <Select
+          v-if="schuleStore.loaded"
+          v-model="store.idSchuljahresabschnitt"
+          :options="schuleStore.abschnitteOptions"
+          optionLabel="label"
+          optionValue="id"
+          placeholder="Abschnitt wählen"
+          size="small"
+          style="width: 160px"
+        />
+        <InputNumber
+          v-else
+          v-model="store.idSchuljahresabschnitt"
+          :min="1"
+          size="small"
+          style="width: 100px"
+        />
       </div>
       <ImportStats
         :total="store.totalCount"
@@ -50,15 +48,9 @@
           @select="onFileSelect"
         />
         <Button
-          label="DB laden"
-          icon="pi pi-refresh"
-          severity="secondary"
-          :loading="store.loadingExisting"
-          @click="handleLoadExisting"
-        />
-        <Button
           :label="store.uploading ? `${store.uploadProgress} / ${store.uploadTotal}` : 'Alles senden'"
           icon="pi pi-upload"
+          size="small"
           :disabled="store.validCount === 0 || store.uploading"
           :loading="store.uploading"
           @click="handleUploadAll"
@@ -67,8 +59,18 @@
           :label="store.uploading ? 'Stoppen' : 'Leeren'"
           :icon="store.uploading ? 'pi pi-stop' : 'pi pi-trash'"
           :severity="store.uploading ? 'warn' : 'danger'"
+          size="small"
           text
           @click="store.uploading ? store.stopUpload() : confirmClear()"
+        />
+        <Button
+          v-tooltip.top="'Klassen aus Datenbank laden'"
+          icon="pi pi-refresh"
+          severity="secondary"
+          size="small"
+          text
+          :loading="store.loadingExisting"
+          @click="handleLoadExisting"
         />
       </div>
     </div>
@@ -366,49 +368,50 @@ function confirmClear(): void {
   display: flex;
   flex-direction: column;
   height: 100%;
-  gap: 1rem;
-  padding: 1rem 1.5rem;
+  gap: 0.375rem;
+  padding: 0.375rem 1rem;
 }
 
 .table-header {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 0.75rem;
   flex-wrap: wrap;
 }
 
 .header-left {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.25rem;
-}
-
-.header-title-row {
-  display: flex;
+  flex-direction: row;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.25rem;
 }
 
 h2 {
   margin: 0;
-  font-size: 1.4rem;
+  font-size: 0.9rem;
+  white-space: nowrap;
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.375rem;
   margin-left: auto;
 }
 
-.abschnitt-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--p-text-muted-color);
+:deep(.header-left .p-select) {
+  font-size: 0.72rem;
+}
+:deep(.header-left .p-select .p-select-label) {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.25rem;
+}
+:deep(.header-left .p-select .p-select-dropdown) {
+  width: 1.25rem;
+}
+:deep(.header-left .p-select .p-select-dropdown .p-icon) {
+  width: 0.65rem;
+  height: 0.65rem;
 }
 
 .section {
@@ -446,6 +449,26 @@ h2 {
 
 .existing-table {
   height: 220px;
+}
+
+:deep(.header-actions .p-button),
+:deep(.p-fileupload-basic .p-button) {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+:deep(.header-actions .p-button .p-button-icon),
+:deep(.p-fileupload-basic .p-button .p-button-icon) {
+  font-size: 0.75rem;
+}
+
+:deep(.p-fileupload-label),
+:deep(.p-fileupload-basic-content > span:not([class*="p-button"])) {
+  font-size: 0.72rem;
+  color: var(--p-text-muted-color);
+}
+:deep(.p-fileupload-basic .p-button .p-button-icon) {
+  font-size: 0.75rem;
 }
 
 .data-table {

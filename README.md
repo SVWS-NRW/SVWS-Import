@@ -41,7 +41,7 @@ Der Wizard ist implementiert und in aktiver Weiterentwicklung. ADR 0015 ist noch
 
 ## Voraussetzungen
 
-- Node.js 20+ (empfohlen)
+- Node.js 22+ (erforderlich für Electron-Build; ältere Versionen funktionieren nur für den Web-Build)
 - npm 10+ (empfohlen)
 - Zugriff auf einen erreichbaren SVWS-Server mit gültigen Zugangsdaten
 
@@ -143,20 +143,19 @@ Wichtige Build-Eigenschaften:
 
 ```text
 src/
-	components/      Wiederverwendbare UI-Bausteine
-	components/import/
-									 Wizard-spezifische Schritt-Komponenten
-	views/           Seiten (Routing-Ziele)
-	stores/          Pinia-Stores (Auth, Wizard, Legacy-Entitäten)
-	services/        API-Kommunikation, Kataloge, Mapping-Logik
-	schemas/         ImportModule-Definitionen (modularer Ansatz)
-	models/          Typdefinitionen und Entitätsmodelle
-	utils/           Parser und Hilfsfunktionen
-	router/          Vue-Router-Konfiguration
+  components/        Wiederverwendbare UI-Bausteine
+  components/import/ Wizard-spezifische Schritt-Komponenten
+  views/             Seiten (Routing-Ziele)
+  stores/            Pinia-Stores (Auth, Wizard, Legacy-Entitäten)
+  services/          API-Kommunikation, Kataloge, Mapping-Logik
+  schemas/           ImportModule-Definitionen (modularer Ansatz)
+  models/            Typdefinitionen und Entitätsmodelle
+  utils/             Parser und Hilfsfunktionen
+  router/            Vue-Router-Konfiguration
 
-docs/adr/          Architecture Decision Records
-examples/          Beispielimporte und lokale Testdaten
-memory/            Projektskizze/Arbeitsnotizen zur Struktur
+docs/adr/            Architecture Decision Records
+examples/            Beispielimporte und lokale Testdaten
+electron/            Electron-Main-Process (Desktop-Verteilung)
 ```
 
 ## Importkonzepte im Code

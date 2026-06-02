@@ -40,13 +40,11 @@
             :key="mod.id"
             class="module-card"
             :class="{ active: wizardStore.selectedModule?.id === mod.id }"
+            :title="mod.description"
             @click="wizardStore.setModule(mod)"
           >
             <i :class="[mod.icon, 'module-icon']" />
-            <div>
-              <strong>{{ mod.label }}</strong>
-              <small>{{ mod.description }}</small>
-            </div>
+            <strong>{{ mod.label }}</strong>
           </div>
         </div>
 
@@ -57,13 +55,10 @@
             :multiple="false"
             accept=".csv,.xlsx,.xls,.dat"
             chooseLabel="Datei auswählen"
+            chooseIcon="pi pi-folder-open"
             :maxFileSize="10000000"
             @select="onFileSelect"
           />
-          <span v-if="selectedFile" class="filename">
-            <i class="pi pi-file" />
-            {{ selectedFile.name }}
-          </span>
         </div>
 
         <Message v-if="parseError" severity="error" :closable="true" @close="parseError = ''">
@@ -147,6 +142,7 @@
         icon="pi pi-arrow-left"
         severity="secondary"
         outlined
+        size="small"
         @click="goBack"
       />
       <span class="footer-spacer" />
@@ -155,6 +151,7 @@
         label="Weiter"
         icon="pi pi-arrow-right"
         iconPos="right"
+        size="small"
         :disabled="!canGoNext"
         :loading="parsing"
         @click="goNext"
@@ -258,7 +255,7 @@ function goBack(): void {
 .wizard-steps {
   display: flex;
   align-items: center;
-  padding: 1rem 2rem;
+  padding: 0.4rem 1.25rem;
   background: var(--p-surface-card);
   border-bottom: 1px solid var(--p-surface-border);
   flex-shrink: 0;
@@ -267,7 +264,7 @@ function goBack(): void {
 .wizard-step {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.35rem;
   cursor: default;
   white-space: nowrap;
 }
@@ -277,14 +274,14 @@ function goBack(): void {
 }
 
 .step-dot {
-  width: 28px;
-  height: 28px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   border: 2px solid var(--p-surface-border);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   font-weight: 600;
   color: var(--p-text-muted-color);
   background: var(--p-surface-card);
@@ -305,7 +302,7 @@ function goBack(): void {
 }
 
 .step-label {
-  font-size: 0.82rem;
+  font-size: 0.72rem;
   color: var(--p-text-muted-color);
   transition: color 0.2s;
 }
@@ -323,8 +320,8 @@ function goBack(): void {
   flex: 1;
   height: 2px;
   background: var(--p-surface-border);
-  margin: 0 0.5rem;
-  min-width: 1.5rem;
+  margin: 0 0.35rem;
+  min-width: 1rem;
   transition: background 0.2s;
 }
 
@@ -339,29 +336,29 @@ function goBack(): void {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  padding: 1.5rem 2rem;
+  gap: 0.625rem;
+  padding: 0.75rem 1.25rem;
   overflow-y: auto;
   overflow-x: hidden;
 }
 
-/* Im Grid-Schritt darf der Container nicht scrollen — AG Grid übernimmt das selbst */
 .wizard-content.is-grid-step {
   overflow: hidden;
-  padding: 1rem 1.5rem;
+  padding: 0.5rem 1rem;
   gap: 0;
 }
 
 .content-title {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
   flex-shrink: 0;
 }
 
 .content-header {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
   flex-shrink: 0;
 }
@@ -369,20 +366,20 @@ function goBack(): void {
 .preview-meta {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.35rem;
   flex-wrap: wrap;
 }
 
 .preview-note {
   color: var(--p-text-muted-color);
-  font-size: 0.8rem;
+  font-size: 0.72rem;
 }
 
 .file-badge {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
-  font-size: 0.82rem;
+  gap: 0.25rem;
+  font-size: 0.72rem;
   color: var(--p-text-muted-color);
 }
 
@@ -399,15 +396,18 @@ function goBack(): void {
 
 .module-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
 }
 
 .module-card {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.85rem;
-  padding: 0.9rem 1.1rem;
+  justify-content: center;
+  text-align: center;
+  gap: 0.25rem;
+  padding: 0.625rem 0.5rem;
   border: 2px solid var(--p-surface-border);
   border-radius: 8px;
   cursor: pointer;
@@ -429,19 +429,14 @@ function goBack(): void {
 }
 
 .module-icon {
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   color: var(--p-primary-color);
-  flex-shrink: 0;
 }
 
 .module-card strong {
   display: block;
-  font-size: 0.95rem;
-}
-
-.module-card small {
-  color: var(--p-text-muted-color);
   font-size: 0.8rem;
+  line-height: 1.2;
 }
 
 /* Datei-Upload */
@@ -449,15 +444,7 @@ function goBack(): void {
 .upload-row {
   display: flex;
   align-items: center;
-  gap: 1rem;
-}
-
-.filename {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.875rem;
-  color: var(--p-text-muted-color);
+  gap: 0.5rem;
 }
 
 /* ── Footer ──────────────────────────────────────────────────────────────── */
@@ -465,10 +452,40 @@ function goBack(): void {
 .wizard-footer {
   display: flex;
   align-items: center;
-  padding: 0.875rem 2rem;
+  padding: 0.4rem 1.25rem;
   border-top: 1px solid var(--p-surface-border);
   background: var(--p-surface-card);
   flex-shrink: 0;
+}
+
+:deep(.p-datatable thead th),
+:deep(.p-datatable tbody td) {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.5rem;
+}
+
+:deep(.p-fileupload-basic .p-button) {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+}
+
+:deep(.p-fileupload-label) {
+  font-size: 0.72rem;
+  color: var(--p-text-muted-color);
+}
+
+:deep(.p-tag) {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.3rem;
+}
+
+.wizard-footer :deep(.p-button) {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.5rem;
+}
+
+.wizard-footer :deep(.p-button .p-button-icon) {
+  font-size: 0.72rem;
 }
 
 .footer-spacer {

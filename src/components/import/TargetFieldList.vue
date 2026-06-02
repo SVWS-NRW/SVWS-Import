@@ -96,7 +96,7 @@ function fieldClass(field: FieldDefinition) {
   border: 1px solid var(--p-surface-border);
   border-radius: 8px;
   overflow: hidden;
-  font-size: 0.82rem;
+  font-size: 0.65rem;
 }
 
 /* ── Header ─────────────────────────────────────────────────────────────── */
@@ -105,19 +105,19 @@ function fieldClass(field: FieldDefinition) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.65rem 1rem;
+  padding: 0.3rem 0.5rem;
   background: var(--p-surface-section);
   border-bottom: 1px solid var(--p-surface-border);
 }
 
 .target-title {
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 0.68rem;
 }
 
 .target-meta {
   color: var(--p-text-muted-color);
-  font-size: 0.78rem;
+  font-size: 0.62rem;
 }
 
 /* ── Category ────────────────────────────────────────────────────────────── */
@@ -131,8 +131,8 @@ function fieldClass(field: FieldDefinition) {
 }
 
 .category-label {
-  padding: 0.3rem 1rem;
-  font-size: 0.7rem;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.58rem;
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -146,10 +146,10 @@ function fieldClass(field: FieldDefinition) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.38rem 1rem;
+  padding: 0.15rem 0.5rem;
   border-left: 3px solid transparent;
-  gap: 0.5rem;
-  min-height: 2rem;
+  gap: 0.35rem;
+  min-height: 0;
   transition: border-color 0.15s, background 0.15s;
 }
 
@@ -199,19 +199,19 @@ function fieldClass(field: FieldDefinition) {
 }
 
 .source-badge {
-  font-size: 0.72rem;
-  padding: 0.1rem 0.4rem;
+  font-size: 0.6rem;
+  padding: 0.05rem 0.3rem;
   border-radius: 4px;
   background: var(--p-surface-ground);
   border: 1px solid var(--p-surface-border);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 120px;
+  max-width: 100px;
 }
 
 .state-icon {
-  font-size: 0.72rem;
+  font-size: 0.6rem;
   flex-shrink: 0;
 }
 

@@ -62,6 +62,7 @@
           type="submit"
           label="Verbinden"
           icon="pi pi-plug"
+          size="small"
           :loading="auth.connecting"
           :disabled="!isFormValid"
           class="w-full connect-btn"
@@ -123,50 +124,75 @@ async function handleConnect(): Promise<void> {
 
 .connect-card {
   background: var(--p-surface-card);
-  border-radius: 12px;
-  padding: 2.5rem;
+  border-radius: 10px;
+  padding: 1.5rem;
   width: 100%;
-  max-width: 420px;
+  max-width: 320px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
 }
 
 .connect-header {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 }
 
 .connect-header h1 {
-  margin: 0 0 0.5rem;
-  font-size: 1.75rem;
+  margin: 0 0 0.25rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: var(--p-primary-color);
 }
 
 .connect-header p {
   margin: 0;
+  font-size: 0.75rem;
   color: var(--p-text-muted-color);
 }
 
 .connect-form {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 0.625rem;
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.2rem;
 }
 
 .field label {
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--p-text-color);
 }
 
 .connect-btn {
-  margin-top: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+:deep(.p-inputtext),
+:deep(.p-password-input) {
+  font-size: 0.78rem;
+  padding: 0.3rem 0.5rem;
+}
+
+:deep(.p-password) {
+  width: 100%;
+}
+
+:deep(.p-password input) {
+  width: 100%;
+}
+
+:deep(.p-password .p-password-toggle-mask-icon) {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+:deep(.p-button) {
+  font-size: 0.78rem;
+  padding: 0.3rem 0.75rem;
 }
 
 .w-full {

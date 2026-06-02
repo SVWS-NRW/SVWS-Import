@@ -4,6 +4,7 @@ node_modules/
 # Build-Ausgabe
 dist/
 dist-ssr/
+release/
 
 # Umgebungsvariablen (enthalten ggf. Zugangsdaten)
 .env

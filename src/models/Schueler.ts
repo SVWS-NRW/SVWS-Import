@@ -1,6 +1,6 @@
 export type Geschlecht = 3 | 4 | 5 | 6  // 3=männlich, 4=weiblich, 5=divers, 6=ohne Angabe
 
-export type SchuelerStatus = 2 | 6 | 8  // 2=aktiv, 6=beurlaubt, 8=extern
+export type SchuelerStatus = 0 | 1 | 2 | 3 | 6 | 8 | 9 | 10  // 0=Neuaufnahme, 1=Warteliste, 2=Aktiv, 3=Beurlaubt, 6=Extern, 8=Abschluss, 9=Abgang, 10=Ehemalige
 
 export interface SchuelerNeu {
   nachname: string
@@ -80,6 +80,30 @@ export interface SchuelerImportRow {
   erhaeltMeisterBAFOEG: string
 }
 
+function parseStatus(raw: string): SchuelerStatus {
+  const map: Record<string, SchuelerStatus> = {
+    '0': 0, 'neuaufnahme': 0,
+    '1': 1, 'warteliste': 1,
+    '2': 2, 'aktiv': 2,
+    '3': 3, 'beurlaubt': 3,
+    '6': 6, 'extern': 6,
+    '8': 8, 'abschluss': 8,
+    '9': 9, 'abgang': 9,
+    '10': 10, 'ehemalige': 10,
+  }
+  return map[raw.toLowerCase().trim()] ?? 2
+}
+
+function parseGeschlecht(raw: string): Geschlecht {
+  const map: Record<string, Geschlecht> = {
+    'm': 3, 'männlich': 3, 'maennlich': 3, 'male': 3, '3': 3,
+    'w': 4, 'weiblich': 4, 'female': 4, '4': 4,
+    'd': 5, 'divers': 5, '5': 5,
+    'x': 6, 'ohne': 6, '6': 6,
+  }
+  return map[raw.toLowerCase().trim()] ?? 6
+}
+
 export function schuelerImportToApi(row: SchuelerImportRow, idSchuljahresabschnitt: number): SchuelerNeu {
   return {
     nachname: row.nachname,
@@ -87,7 +111,7 @@ export function schuelerImportToApi(row: SchuelerImportRow, idSchuljahresabschni
     alleVornamen: row.alleVornamen || row.vorname,
     geschlecht: parseGeschlecht(row.geschlecht),
     geburtsdatum: row.geburtsdatum || null,
-    status: 2,
+    status: parseStatus(row.status),
     anmeldedatum: row.anmeldedatum || null,
     aufnahmedatum: row.aufnahmedatum || null,
     beginnBildungsgang: row.beginnBildungsgang || null,
@@ -99,14 +123,4 @@ export function schuelerImportToApi(row: SchuelerImportRow, idSchuljahresabschni
     idKlasse: null,
     idGrundschuleEinschulungsart: null,
   }
-}
-
-function parseGeschlecht(raw: string): Geschlecht | null {
-  const map: Record<string, Geschlecht> = {
-    'm': 3, 'männlich': 3, 'maennlich': 3, 'male': 3, '3': 3,
-    'w': 4, 'weiblich': 4, 'female': 4, '4': 4,
-    'd': 5, 'divers': 5, '5': 5,
-    'x': 6, 'ohne': 6, '6': 6,
-  }
-  return map[raw.toLowerCase().trim()] ?? 6
 }

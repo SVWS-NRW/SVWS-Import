@@ -227,9 +227,14 @@ export const schuelerStammdatenSchema: ImportModule = {
       aliases: ['status', 'schuelerstatus', 'aktiv'],
       hint: 'Standard: aktiv',
       enumOptions: [
-        { value: '2', label: 'aktiv',      aliases: ['aktiv', '2', 'active'] },
-        { value: '6', label: 'beurlaubt',  aliases: ['beurlaubt', '6', 'auszeit'] },
-        { value: '8', label: 'extern',     aliases: ['extern', '8', 'external'] },
+        { value: '0',  label: 'Neuaufnahme', aliases: ['neuaufnahme', '0', 'neu', 'new'] },
+        { value: '1',  label: 'Warteliste',  aliases: ['warteliste', '1', 'waitlist'] },
+        { value: '2',  label: 'Aktiv',       aliases: ['aktiv', '2', 'active'] },
+        { value: '3',  label: 'Beurlaubt',   aliases: ['beurlaubt', '3', 'auszeit'] },
+        { value: '6',  label: 'Extern',      aliases: ['extern', '6', 'external'] },
+        { value: '8',  label: 'Abschluss',   aliases: ['abschluss', '8'] },
+        { value: '9',  label: 'Abgang',      aliases: ['abgang', '9', 'abgänger'] },
+        { value: '10', label: 'Ehemalige',   aliases: ['ehemalige', '10', 'alumni'] },
       ],
     },
     {
@@ -296,7 +301,14 @@ export const schuelerStammdatenSchema: ImportModule = {
       '6': 6, 'x': 6, 'ohne': 6,
     }
     const statusMap: Record<string, SchuelerStatus> = {
-      '2': 2, 'aktiv': 2, '6': 6, 'beurlaubt': 6, '8': 8, 'extern': 8,
+      '0': 0, 'neuaufnahme': 0, 'neu': 0,
+      '1': 1, 'warteliste': 1,
+      '2': 2, 'aktiv': 2, 'active': 2,
+      '3': 3, 'beurlaubt': 3,
+      '6': 6, 'extern': 6,
+      '8': 8, 'abschluss': 8,
+      '9': 9, 'abgang': 9,
+      '10': 10, 'ehemalige': 10,
     }
 
     const rawGeschlecht = str('geschlecht').toLowerCase()

@@ -3,6 +3,7 @@
     <div class="connect-card">
       <div class="connect-header">
         <h1>SVWS-Import</h1>
+        <span class="version">v{{ version }}</span>
         <p>Verbindung zum SVWS-Server herstellen</p>
       </div>
 
@@ -74,6 +75,7 @@
 
 <script setup lang="ts">
 import { reactive, computed } from 'vue'
+import { version } from '../../package.json'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useSchuleStore } from '@/stores/schule'
@@ -141,6 +143,13 @@ async function handleConnect(): Promise<void> {
   font-size: 1.1rem;
   font-weight: 700;
   color: var(--p-primary-color);
+}
+
+.connect-header .version {
+  display: block;
+  font-size: 0.65rem;
+  color: var(--p-text-muted-color);
+  margin-bottom: 0.25rem;
 }
 
 .connect-header p {

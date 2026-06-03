@@ -227,7 +227,7 @@ export const schuelerStammdatenSchema: ImportModule = {
       aliases: ['status', 'schuelerstatus', 'aktiv'],
       hint: 'Standard: aktiv',
       enumOptions: [
-        { value: '0',  label: 'Neuaufnahme', aliases: ['neuaufnahme', '0', 'neu', 'new'] },
+        { value: '0',  label: 'Aufnahme', aliases: ['aufnahme', 'neuaufnahme', '0', 'neu', 'new'] },
         { value: '1',  label: 'Warteliste',  aliases: ['warteliste', '1', 'waitlist'] },
         { value: '2',  label: 'Aktiv',       aliases: ['aktiv', '2', 'active'] },
         { value: '3',  label: 'Beurlaubt',   aliases: ['beurlaubt', '3', 'auszeit'] },
@@ -301,7 +301,7 @@ export const schuelerStammdatenSchema: ImportModule = {
       '6': 6, 'x': 6, 'ohne': 6,
     }
     const statusMap: Record<string, SchuelerStatus> = {
-      '0': 0, 'neuaufnahme': 0, 'neu': 0,
+      '0': 0, 'aufnahme': 0, 'neuaufnahme': 0, 'neu': 0,
       '1': 1, 'warteliste': 1,
       '2': 2, 'aktiv': 2, 'active': 2,
       '3': 3, 'beurlaubt': 3,

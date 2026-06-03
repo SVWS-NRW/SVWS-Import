@@ -231,6 +231,20 @@ const columnDefs = computed<ColDef<SchuelerImportRow>[]>(() => {
     { field: 'dauerBildungsgang',         headerName: 'Dauer Bildungsgang',     width: 140,  hide: !has('dauerBildungsgang') },
     { field: 'externeSchulNr',            headerName: 'Externe Schulnr.',       width: 140,  hide: !has('externeSchulNr') },
     { field: 'beruf',                     headerName: 'Beruf',                  width: 130,  hide: !has('beruf') },
+    {
+      field: 'status',
+      headerName: 'Schülerstatus',
+      width: 140,
+      hide: !has('status'),
+      valueFormatter: (p: { value: string }) => {
+        const labels: Record<string, string> = {
+          '0': 'Aufnahme', '1': 'Warteliste', '2': 'Aktiv',
+          '3': 'Beurlaubt', '6': 'Extern', '8': 'Abschluss',
+          '9': 'Abgang', '10': 'Ehemalige',
+        }
+        return labels[p.value] ?? p.value
+      },
+    },
     // ── Sonstiges ────────────────────────────────────────────────────────────
     { field: 'hatMasernimpfnachweis',     headerName: 'Masernimpfnachweis',     width: 160,  hide: !has('hatMasernimpfnachweis') },
     { field: 'keineAuskunftAnDritte',     headerName: 'Keine Auskunft',         width: 130,  hide: !has('keineAuskunftAnDritte') },
@@ -238,7 +252,7 @@ const columnDefs = computed<ColDef<SchuelerImportRow>[]>(() => {
     { field: 'erhaeltMeisterBAFOEG',      headerName: 'Meister-BAföG',          width: 130,  hide: !has('erhaeltMeisterBAFOEG') },
     // ── Import-Status ────────────────────────────────────────────────────────
     {
-      headerName: 'Status',
+      headerName: 'Importstatus',
       width: 100,
       editable: false,
       cellRenderer: (params: { data: SchuelerImportRow }) => {

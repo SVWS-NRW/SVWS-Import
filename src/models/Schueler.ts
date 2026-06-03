@@ -1,6 +1,6 @@
 export type Geschlecht = 3 | 4 | 5 | 6  // 3=männlich, 4=weiblich, 5=divers, 6=ohne Angabe
 
-export type SchuelerStatus = 0 | 1 | 2 | 3 | 6 | 8 | 9 | 10  // 0=Neuaufnahme, 1=Warteliste, 2=Aktiv, 3=Beurlaubt, 6=Extern, 8=Abschluss, 9=Abgang, 10=Ehemalige
+export type SchuelerStatus = 0 | 1 | 2 | 3 | 6 | 8 | 9 | 10  // 0=Aufnahme, 1=Warteliste, 2=Aktiv, 3=Beurlaubt, 6=Extern, 8=Abschluss, 9=Abgang, 10=Ehemalige
 
 export interface SchuelerNeu {
   nachname: string
@@ -82,7 +82,7 @@ export interface SchuelerImportRow {
 
 function parseStatus(raw: string): SchuelerStatus {
   const map: Record<string, SchuelerStatus> = {
-    '0': 0, 'neuaufnahme': 0,
+    '0': 0, 'aufnahme': 0, 'neuaufnahme': 0,
     '1': 1, 'warteliste': 1,
     '2': 2, 'aktiv': 2,
     '3': 3, 'beurlaubt': 3,

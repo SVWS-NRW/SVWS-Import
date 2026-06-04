@@ -166,16 +166,23 @@ export const useBetriebeStore = defineStore('betriebe', () => {
   async function uploadAnsprechpartner(
     selectedIds?: Set<string>,
     fallbackBetriebId?: number,
-  ): Promise<{ sent: number; failed: number; unresolved: number; fallback: number }> {
+    forceIds?: Set<string>,
+    skipIds?: Set<string>,
+  ): Promise<{ sent: number; failed: number; unresolved: number; fallback: number; skipped: number }> {
     uploading.value = true
     let sent = 0
     let failed = 0
     let unresolved = 0
     let fallback = 0
+    let skipped = 0
     const useSelection = selectedIds !== undefined && selectedIds.size > 0
     const betriebMap = buildBetriebNameMap()
     const updated = [...ansprechpartnerRows.value]
-    uploadTotal.value = updated.filter(r => r._valid && !r._sent && (!useSelection || selectedIds!.has(r._id))).length
+    uploadTotal.value = updated.filter(r =>
+      r._valid && !r._sent &&
+      (!useSelection || selectedIds!.has(r._id)) &&
+      !skipIds?.has(r._id),
+    ).length
     uploadProgress.value = 0
     uploadCancelled.value = false
 
@@ -185,16 +192,27 @@ export const useBetriebeStore = defineStore('betriebe', () => {
       if (!row._valid || row._sent) continue
       if (useSelection && !selectedIds!.has(row._id)) continue
 
-      let idBetrieb = betriebMap.get(row.betriebName.trim().toLowerCase())
-      if (!idBetrieb) {
-        if (fallbackBetriebId) {
-          idBetrieb = fallbackBetriebId
-          fallback++
-        } else {
-          updated[i] = { ...row, _errors: [`Betrieb "${row.betriebName}" nicht gefunden`], _valid: false }
-          unresolved++
-          uploadProgress.value++
-          continue
+      if (skipIds?.has(row._id)) {
+        skipped++
+        continue
+      }
+
+      let idBetrieb: number | undefined
+      if (forceIds?.has(row._id) && fallbackBetriebId) {
+        idBetrieb = fallbackBetriebId
+        fallback++
+      } else {
+        idBetrieb = betriebMap.get(row.betriebName.trim().toLowerCase())
+        if (!idBetrieb) {
+          if (fallbackBetriebId) {
+            idBetrieb = fallbackBetriebId
+            fallback++
+          } else {
+            updated[i] = { ...row, _errors: [`Betrieb "${row.betriebName}" nicht gefunden`], _valid: false }
+            unresolved++
+            uploadProgress.value++
+            continue
+          }
         }
       }
 
@@ -210,7 +228,7 @@ export const useBetriebeStore = defineStore('betriebe', () => {
     }
     ansprechpartnerRows.value = updated
     uploading.value = false
-    return { sent, failed, unresolved, fallback }
+    return { sent, failed, unresolved, fallback, skipped }
   }
 
   function stopUpload(): void {

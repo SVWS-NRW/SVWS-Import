@@ -186,8 +186,9 @@
             <Message v-if="apUploadResult" :severity="apUploadResult.failed > 0 || apUploadResult.unresolved > 0 ? 'warn' : 'success'" :closable="true" @close="apUploadResult = null">
               {{ apUploadResult.sent }} Ansprechpartner übertragen
               <span v-if="apUploadResult.fallback > 0">, {{ apUploadResult.fallback }} dem ausgewählten Betrieb zugeordnet</span>
+              <span v-if="apUploadResult.skipped > 0">, {{ apUploadResult.skipped }} übersprungen</span>
               <span v-if="apUploadResult.failed > 0">, {{ apUploadResult.failed }} fehlgeschlagen</span>
-              <span v-if="apUploadResult.unresolved > 0">, {{ apUploadResult.unresolved }} Betrieb nicht gefunden (kein Betrieb ausgewählt)</span>
+              <span v-if="apUploadResult.unresolved > 0">, {{ apUploadResult.unresolved }} Betrieb nicht gefunden</span>
             </Message>
 
             <div class="section">
@@ -281,7 +282,7 @@ const betriebeSelectedCount = ref(0)
 // Ansprechpartner
 const apParseError = ref('')
 const apParsing = ref(false)
-const apUploadResult = ref<{ sent: number; failed: number; unresolved: number; fallback: number } | null>(null)
+const apUploadResult = ref<{ sent: number; failed: number; unresolved: number; fallback: number; skipped: number } | null>(null)
 const apGridApi = ref<GridApi | null>(null)
 const apSelectedCount = ref(0)
 
@@ -374,11 +375,50 @@ async function handleUploadAnsprechpartner(): Promise<void> {
   apUploadResult.value = null
   const selected = apGridApi.value?.getSelectedRows() ?? []
   const selectedIds = selected.length > 0 ? new Set(selected.map((r: { _id: string }) => r._id)) : undefined
-  const fallbackId = selectedExistingBetrieb.value?.id
-  apUploadResult.value = await store.uploadAnsprechpartner(selectedIds, fallbackId)
-  if ((apUploadResult.value?.sent ?? 0) > 0) {
-    await handleLoadExisting()
+  const fallbackBetrieb = selectedExistingBetrieb.value
+  const fallbackId = fallbackBetrieb?.id
+
+  if (!fallbackBetrieb) {
+    apUploadResult.value = await store.uploadAnsprechpartner(selectedIds)
+    if ((apUploadResult.value?.sent ?? 0) > 0) await handleLoadExisting()
+    return
   }
+
+  const selectedName = fallbackBetrieb.name?.trim().toLowerCase() ?? ''
+  const conflictIds = new Set<string>()
+  const conflictBetriebe = new Set<string>()
+  for (const row of store.ansprechpartnerRows) {
+    if (row._sent) continue
+    if (selectedIds && !selectedIds.has(row._id)) continue
+    const rowName = row.betriebName.trim().toLowerCase()
+    if (rowName && rowName !== selectedName) {
+      conflictIds.add(row._id)
+      conflictBetriebe.add(row.betriebName.trim())
+    }
+  }
+
+  if (conflictIds.size === 0) {
+    apUploadResult.value = await store.uploadAnsprechpartner(selectedIds, fallbackId)
+    if ((apUploadResult.value?.sent ?? 0) > 0) await handleLoadExisting()
+    return
+  }
+
+  const betriebList = Array.from(conflictBetriebe).join(', ')
+  confirm.require({
+    message: `${conflictIds.size} Ansprechpartner ${conflictIds.size === 1 ? 'hat' : 'haben'} einen anderen Betrieb als den ausgewählten: ${betriebList}`,
+    header: 'Betrieb-Konflikt',
+    icon: 'pi pi-exclamation-triangle',
+    acceptLabel: 'Trotzdem importieren',
+    rejectLabel: 'Überspringen',
+    accept: async () => {
+      apUploadResult.value = await store.uploadAnsprechpartner(selectedIds, fallbackId, conflictIds)
+      if ((apUploadResult.value?.sent ?? 0) > 0) await handleLoadExisting()
+    },
+    reject: async () => {
+      apUploadResult.value = await store.uploadAnsprechpartner(selectedIds, fallbackId, undefined, conflictIds)
+      if ((apUploadResult.value?.sent ?? 0) > 0) await handleLoadExisting()
+    },
+  })
 }
 
 // ── Sonstiges ─────────────────────────────────────────────────────────────────

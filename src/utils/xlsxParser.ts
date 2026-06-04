@@ -142,7 +142,7 @@ export async function parseLehrerXlsx(file: File): Promise<LehrerImportRow[]> {
     _valid: true,
     _errors: [],
     _sent: false,
-    kuerzel: col(row, headerMap, 'kuerzel', 'kürzel', 'abbreviation'),
+    kuerzel: col(row, headerMap, 'kuerzel', 'kürzel', 'abbreviation', 'internkrz'),
     nachname: col(row, headerMap, 'nachname', 'name', 'familienname'),
     vorname: col(row, headerMap, 'vorname', 'firstname'),
     personalTyp: col(row, headerMap, 'personaltyp', 'typ', 'type') || 'LEHRKRAFT',
@@ -151,7 +151,11 @@ export async function parseLehrerXlsx(file: File): Promise<LehrerImportRow[]> {
     geburtsdatum: normalisiereDatum(col(row, headerMap, 'geburtsdatum', 'geburtstag', 'birthdate')),
     geschlecht: col(row, headerMap, 'geschlecht', 'gender'),
     staatsangehoerigkeitID: col(row, headerMap, '1.staatsang.', 'staatsangehoerigkeit', 'staatsangehörigkeit', 'nationalität', 'nationality', 'staatsang'),
-    emailDienstlich: col(row, headerMap, 'emaildienstlich', 'email', 'mail'),
-    telefon: col(row, headerMap, 'telefon', 'phone', 'tel'),
+    emailDienstlich: col(row, headerMap, 'dienstl.email', 'emaildienstlich', 'dienstemail'),
+    telefon: col(row, headerMap, 'tel.festnetz', 'telefon', 'phone', 'tel', 'festnetz'),
+    strassenname: col(row, headerMap, 'straße', 'strasse', 'strassenname', 'street', 'adresse'),
+    hausnummer: col(row, headerMap, 'hausnummer', 'hnr', 'hausnr'),
+    plz: col(row, headerMap, 'plz', 'postleitzahl', 'zip'),
+    ort: col(row, headerMap, 'ort', 'wohnort', 'stadt', 'city'),
   }))
 }

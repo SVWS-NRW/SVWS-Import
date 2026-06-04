@@ -356,11 +356,15 @@ export async function createSchueler(
 export async function createLehrer(
   row: LehrerImportRow,
   nationalitaetenKatalog?: Map<string, string>,
+  orteKatalog?: Map<string, OrtKatalogEintrag>,
 ): Promise<UploadResult> {
   try {
     const payload: LehrerStammdaten = lehrerImportToApi(row)
     if (payload.staatsangehoerigkeitID) {
       payload.staatsangehoerigkeitID = resolveNationalitaet(nationalitaetenKatalog, payload.staatsangehoerigkeitID) || null
+    }
+    if (orteKatalog) {
+      payload.wohnortID = resolveWohnortId(orteKatalog, row.plz, row.ort)
     }
     const response = await getApiClient().post('/lehrer/create', payload)
     return { success: true, id: response.data.id }

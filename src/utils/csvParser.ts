@@ -91,6 +91,20 @@ function get(map: Map<string, string>, ...keys: string[]): string {
   return ''
 }
 
+/**
+ * Trennt einen kombinierten Straßen-String (z.B. "Altgrabauer Straße 227")
+ * in Straßenname und Hausnummer auf.
+ * Gibt ["Altgrabauer Straße", "227"] zurück.
+ * Wenn keine Hausnummer erkennbar ist: ["Altgrabauer Straße", ""].
+ */
+export function splitStrasseHausnummer(combined: string): [string, string] {
+  const trimmed = combined.trim()
+  if (!trimmed) return ['', '']
+  const match = trimmed.match(/^(.*)\s+(\d+[a-zA-Z0-9/\-]*)$/)
+  if (match) return [match[1].trim(), match[2].trim()]
+  return [trimmed, '']
+}
+
 export async function parseSchuelerCsv(file: File): Promise<{ rows: SchuelerImportRow[]; unmappedHeaders: string[] }> {
   return new Promise((resolve, reject) => {
     Papa.parse<Record<string, string>>(file, {
@@ -175,9 +189,15 @@ export async function parseLehrerCsv(file: File): Promise<LehrerImportRow[]> {
     Papa.parse<Record<string, string>>(file, {
       header: true,
       skipEmptyLines: true,
+      delimiter: /\.dat$/i.test(file.name) ? '|' : '',
       complete(results) {
         const rows: LehrerImportRow[] = results.data.map(record => {
           const m = buildLookup(record)
+          const strasseRaw = get(m, 'straße', 'strasse', 'strassenname', 'street', 'adresse')
+          const explicitHnr = get(m, 'hausnummer', 'hnr', 'hausnr')
+          const [strassenname, hausnummer] = explicitHnr
+            ? [strasseRaw, explicitHnr]
+            : splitStrasseHausnummer(strasseRaw)
           const row: LehrerImportRow = {
             _id: generateId(),
             _valid: true,
@@ -192,8 +212,12 @@ export async function parseLehrerCsv(file: File): Promise<LehrerImportRow[]> {
             geburtsdatum: normalisiereDatum(get(m, 'geburtsdatum', 'geburtstag', 'birthdate')),
             geschlecht: get(m, 'geschlecht', 'gender'),
             staatsangehoerigkeitID: get(m, '1.staatsang.', 'staatsangehoerigkeit', 'staatsangehörigkeit', 'nationalität', 'nationality', 'staatsang'),
-            emailDienstlich: get(m, 'emaildienstlich', 'email', 'mail', 'e-mail'),
-            telefon: get(m, 'telefon', 'phone', 'tel'),
+            emailDienstlich: get(m, 'dienstl.email', 'dienstlemail', 'emaildienstlich', 'dienstlicheemail', 'dienstemail'),
+            telefon: get(m, 'tel.festnetz', 'telfestnetz', 'telefon', 'phone', 'tel', 'festnetz'),
+            strassenname,
+            hausnummer,
+            plz: get(m, 'plz', 'postleitzahl', 'zip'),
+            ort: get(m, 'ort', 'wohnort', 'stadt', 'city'),
           }
           return row
         })

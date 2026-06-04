@@ -44,6 +44,10 @@ export interface LehrerImportRow {
   staatsangehoerigkeitID: string
   emailDienstlich: string
   telefon: string
+  strassenname: string
+  hausnummer: string
+  plz: string
+  ort: string
 }
 
 export function lehrerImportToApi(row: LehrerImportRow): LehrerStammdaten {
@@ -58,8 +62,8 @@ export function lehrerImportToApi(row: LehrerImportRow): LehrerStammdaten {
     geschlecht: parseGeschlecht(row.geschlecht),
     geburtsdatum: row.geburtsdatum || null,
     staatsangehoerigkeitID: row.staatsangehoerigkeitID || null,
-    strassenname: null,
-    hausnummer: null,
+    strassenname: row.strassenname || null,
+    hausnummer: row.hausnummer || null,
     hausnummerZusatz: null,
     wohnortID: null,
     ortsteilID: null,

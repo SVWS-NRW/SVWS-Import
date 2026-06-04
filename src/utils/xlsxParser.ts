@@ -3,7 +3,7 @@ import { type SchuelerImportRow } from '@/models/Schueler'
 import { type LehrerImportRow } from '@/models/Lehrer'
 import { type FloskelImportRow } from '@/models/Floskel'
 import { generateId } from './idHelper'
-import { normalisiereDatum, SCHUELER_KNOWN_KEYS } from './csvParser'
+import { normalisiereDatum, SCHUELER_KNOWN_KEYS, splitStrasseHausnummer } from './csvParser'
 
 type CellValue = string | number | boolean | Date | null
 type SheetObject = { sheet: string; data: CellValue[][] }
@@ -50,6 +50,9 @@ export async function parseSchuelerXlsx(file: File): Promise<{ rows: SchuelerImp
   const rows: SchuelerImportRow[] = allRows.slice(1).map(row => {
     const rawData: Record<string, string> = {}
     originalHeaders.forEach((h, i) => { rawData[h] = normalize(row[i]) })
+    const strasseRaw = col(row, headerMap, 'straße', 'strasse', 'strassenname', 'street', 'adresse')
+    const explicitHnr = col(row, headerMap, 'hausnummer', 'hnr', 'hausnr')
+    const [strassenname, hausnummer] = explicitHnr ? [strasseRaw, explicitHnr] : splitStrasseHausnummer(strasseRaw)
     return {
       _id: generateId(),
       _valid: true,
@@ -79,8 +82,8 @@ export async function parseSchuelerXlsx(file: File): Promise<{ rows: SchuelerImp
       geburtslandVater:            col(row, headerMap, 'geburtslandvater', 'geburtsland vater'),
       geburtslandMutter:           col(row, headerMap, 'geburtslandmutter', 'geburtsland mutter'),
       // Adresse
-      strassenname:                col(row, headerMap, 'straße', 'strasse', 'strassenname', 'street', 'adresse'),
-      hausnummer:                  col(row, headerMap, 'hausnummer', 'hnr', 'hausnr'),
+      strassenname,
+      hausnummer,
       hausnummerZusatz:            col(row, headerMap, 'hausnummernzusatz', 'hausnrz', 'adresszusatz'),
       plz:                         col(row, headerMap, 'plz', 'postleitzahl', 'postal code', 'zip'),
       ort:                         col(row, headerMap, 'ort', 'wohnort', 'stadt', 'city'),

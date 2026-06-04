@@ -143,8 +143,12 @@ export async function parseSchuelerCsv(file: File): Promise<{ rows: SchuelerImpo
             geburtslandVater:            get(m, 'geburtslandvater', 'geburtsland vater'),
             geburtslandMutter:           get(m, 'geburtslandmutter', 'geburtsland mutter'),
             // Adresse
-            strassenname:                get(m, 'straße', 'strasse', 'strassenname', 'street', 'adresse', 'wohnstraße', 'strae'),
-            hausnummer:                  get(m, 'hausnummer', 'hnr', 'hausnr'),
+            ...(() => {
+              const strasseRaw = get(m, 'straße', 'strasse', 'strassenname', 'street', 'adresse', 'wohnstraße', 'strae')
+              const explicitHnr = get(m, 'hausnummer', 'hnr', 'hausnr')
+              const [strassenname, hausnummer] = explicitHnr ? [strasseRaw, explicitHnr] : splitStrasseHausnummer(strasseRaw)
+              return { strassenname, hausnummer }
+            })(),
             hausnummerZusatz:            get(m, 'hausnummernzusatz', 'hausnrz', 'adresszusatz'),
             plz:                         get(m, 'plz', 'postleitzahl', 'postal code', 'zip'),
             ort:                         get(m, 'ort', 'wohnort', 'stadt', 'city'),

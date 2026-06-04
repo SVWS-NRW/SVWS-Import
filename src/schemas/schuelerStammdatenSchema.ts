@@ -325,7 +325,7 @@ export const schuelerStammdatenSchema: ImportModule = {
       aufnahmedatum: normalisiereDatum(str('aufnahmedatum')) || null,
       beginnBildungsgang: normalisiereDatum(str('beginnBildungsgang')) || null,
       dauerBildungsgang: null,
-      staatsangehoerigkeitID: resolveNationalitaet(context.kataloge?.nationalitaeten, str('staatsangehoerigkeitID')) || null,
+      staatsangehoerigkeitID: null,
       idReligion: null,
       idSchuljahresabschnitt: context.idSchuljahresabschnitt ?? null,
       idJahrgang: null,

@@ -4,6 +4,8 @@ import type { ImportKataloge, OrtKatalogEintrag, ReligionKatalogEintrag } from '
 interface SvwsNationalitaet {
   kuerzel: string
   schluessel: string
+  codeDEStatis?: string
+  iso3?: string
 }
 
 async function fetchNationalitaeten(): Promise<Map<string, string>> {
@@ -12,6 +14,10 @@ async function fetchNationalitaeten(): Promise<Map<string, string>> {
   for (const entry of resp.data) {
     if (entry.schluessel && entry.kuerzel) {
       map.set(entry.schluessel, entry.kuerzel)
+    }
+    // codeDEStatis → iso3 zuletzt, damit Schild-NRW-Codes (.dat) immer gewinnen
+    if (entry.codeDEStatis && entry.iso3) {
+      map.set(entry.codeDEStatis, entry.iso3)
     }
   }
   return map

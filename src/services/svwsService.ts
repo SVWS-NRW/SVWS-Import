@@ -178,6 +178,9 @@ async function patchSchuelerAfterCreate(
   if (str('telefon'))      stammdatenPatch.telefon      = str('telefon')
   if (str('email'))        stammdatenPatch.emailPrivat  = str('email')
 
+  const resolvedNat = resolveNationalitaet(context.kataloge?.nationalitaeten, str('staatsangehoerigkeitID'))
+  if (resolvedNat) stammdatenPatch.staatsangehoerigkeitID = resolvedNat
+
   // Herkunft / Migration
   if (str('zuzugsjahr'))         stammdatenPatch.zuzugsjahr         = parseInt(str('zuzugsjahr'), 10) || null
   if (str('verkehrspracheFamilie')) stammdatenPatch.verkehrspracheFamilie = str('verkehrspracheFamilie')
@@ -254,9 +257,6 @@ export async function createSchueler(
 ): Promise<UploadResult> {
   try {
     const payload: SchuelerNeu = schuelerImportToApi(row, idSchuljahresabschnitt)
-    if (payload.staatsangehoerigkeitID) {
-      payload.staatsangehoerigkeitID = resolveNationalitaet(nationalitaetenKatalog, payload.staatsangehoerigkeitID) || null
-    }
     const response = await getApiClient().post('/schueler/create', payload)
     const newId: number = response.data.id
 
@@ -265,6 +265,8 @@ export async function createSchueler(
     // Personaldaten
     if (row.geburtsname)              stammdatenPatch.geburtsname             = row.geburtsname
     if (row.geburtsort)               stammdatenPatch.geburtsort              = row.geburtsort
+    const resolvedNat1 = resolveNationalitaet(nationalitaetenKatalog, row.staatsangehoerigkeitID)
+    if (resolvedNat1)                 stammdatenPatch.staatsangehoerigkeitID  = resolvedNat1
     if (row.geburtsland)              stammdatenPatch.geburtsland             = resolveNationalitaet(nationalitaetenKatalog, row.geburtsland)
     if (row.staatsangehoerigkeit2ID)  stammdatenPatch.staatsangehoerigkeit2ID = resolveNationalitaet(nationalitaetenKatalog, row.staatsangehoerigkeit2ID)
     const drucke = parseBoolean(row.druckeKonfessionAufZeugnisse)

@@ -5,6 +5,7 @@ import { type KlasseImportRow } from '@/models/Klassen'
 import { type JahrgangImportRow } from '@/models/Jahrgaenge'
 import { type FachImportRow } from '@/models/Faecher'
 import { type FloskelImportRow } from '@/models/Floskel'
+import type { BetriebImportRow, AnsprechpartnerImportRow } from '@/models/Betriebe'
 import { generateId } from './idHelper'
 
 // Normalisiert Spaltennamen: Leerzeichen/Groß-Klein entfernen
@@ -327,6 +328,80 @@ export async function parseFloskelCsv(file: File): Promise<FloskelImportRow[]> {
             jahrgang:        get(m, 'jahrgang', 'jg', 'jahrgangsstufe', 'stufe'),
             niveau:          get(m, 'niveau', 'niveaustufe'),
             sortierung:      get(m, 'sortierung', 'sort'),
+          }
+        })
+        resolve(rows)
+      },
+      error(err) {
+        reject(new Error(`CSV-Fehler: ${err.message}`))
+      },
+    })
+  })
+}
+
+export async function parseBetriebeCsv(file: File): Promise<BetriebImportRow[]> {
+  return new Promise((resolve, reject) => {
+    Papa.parse<Record<string, string>>(file, {
+      header: true,
+      skipEmptyLines: true,
+      delimiter: /\.dat$/i.test(file.name) ? '|' : '',
+      complete(results) {
+        const rows: BetriebImportRow[] = results.data.map(record => {
+          const m = buildLookup(record)
+          return {
+            _id: generateId(),
+            _valid: true,
+            _errors: [],
+            _sent: false,
+            name:                              get(m, 'name', 'name1', 'betrieb', 'betriebsname', 'firma'),
+            nameZusatz:                        get(m, 'namezusatz', 'name2', 'zusatz', 'namenszusatz'),
+            bemerkungen:                       get(m, 'bemerkungen', 'bemerkung', 'notizen', 'notes'),
+            branche:                           get(m, 'branche', 'branchenbezeichnung'),
+            strasse:                           get(m, 'strasse', 'straße', 'street', 'strae'),
+            hausnummer:                        get(m, 'hausnummer', 'hnr', 'hausnr'),
+            hausnummerZusatz:                  get(m, 'hausnummerzusatz', 'hausnrz', 'adresszusatz'),
+            plz:                               get(m, 'plz', 'postleitzahl', 'postalcode', 'zip'),
+            ort:                               get(m, 'ort', 'wohnort', 'stadt', 'city'),
+            telefon1:                          get(m, 'telefon1', 'telefonnr.1', 'telefon', 'tel', 'phone'),
+            telefon2:                          get(m, 'telefon2', 'telefonnr.2'),
+            fax:                               get(m, 'fax', 'faxnummer'),
+            eMail:                             get(m, 'email', 'e-mail', 'mail', 'emailadresse'),
+            istAusbildungsbetrieb:             get(m, 'ausbildungsbetrieb', 'istausbildungsbetrieb'),
+            istMassnahmentraeger:              get(m, 'massnahmentraeger', 'istmassnahmentraeger', 'maßnahmenträger'),
+            belehrungNachISGErforderlich:      get(m, 'belehrungisg', 'belehrungnachisg', 'belehrungnachisgerforderlich', 'isg'),
+            erweitertesFuehrungszeugnisErforderlich: get(m, 'erweitertesfuehrungszeugnis', 'fuehrungszeugnis', 'erwfuehrungszeugnis'),
+            bietetPraktikumsplaetzeAn:         get(m, 'praktikumsplaetze', 'bietetzpraktikumsplaetze', 'bietetzpraktikumsplaetzean'),
+          }
+        })
+        resolve(rows)
+      },
+      error(err) {
+        reject(new Error(`CSV-Fehler: ${err.message}`))
+      },
+    })
+  })
+}
+
+export async function parseAnsprechpartnerCsv(file: File): Promise<AnsprechpartnerImportRow[]> {
+  return new Promise((resolve, reject) => {
+    Papa.parse<Record<string, string>>(file, {
+      header: true,
+      skipEmptyLines: true,
+      delimiter: /\.dat$/i.test(file.name) ? '|' : '',
+      complete(results) {
+        const rows: AnsprechpartnerImportRow[] = results.data.map(record => {
+          const m = buildLookup(record)
+          return {
+            _id: generateId(),
+            _valid: true,
+            _errors: [],
+            _sent: false,
+            betriebName: get(m, 'betrieb', 'betriebsname', 'firma', 'betriebname'),
+            anrede:      get(m, 'anrede', 'salutation', 'title'),
+            name:        get(m, 'nachname', 'name', 'familienname'),
+            rufname:     get(m, 'vorname', 'rufname', 'firstname'),
+            telefon:     get(m, 'telefon', 'tel', 'phone'),
+            eMail:       get(m, 'email', 'e-mail', 'mail'),
           }
         })
         resolve(rows)

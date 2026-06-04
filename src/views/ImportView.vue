@@ -43,6 +43,10 @@
         <i class="pi pi-comment card-icon" />
         <strong>Floskeln verwalten</strong>
       </div>
+      <div class="import-card" @click="router.push({ name: 'betriebe' })" title="Betriebe und Ansprechpartner anlegen">
+        <i class="pi pi-building card-icon" />
+        <strong>Betriebe</strong>
+      </div>
       <div class="import-card wizard-card" @click="router.push({ name: 'wizard' })" title="Geführter Import Schritt für Schritt">
         <i class="pi pi-list-check card-icon" />
         <strong>Import-Assistent</strong>

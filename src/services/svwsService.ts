@@ -12,6 +12,7 @@ import { klasseImportToApi } from '@/models/Klassen'
 import { jahrgangImportToApi } from '@/models/Jahrgaenge'
 import { fachImportToApi } from '@/models/Faecher'
 import type { ImportModule, MappedRow, ImportContext, EntityType, OrtKatalogEintrag } from '@/models/ImportSchema'
+import { betriebImportToApi, ansprechpartnerImportToApi, type BetriebImportRow, type BetriebDetails, type AnsprechpartnerImportRow } from '@/models/Betriebe'
 import { resolveWohnortId, resolveReligionId, resolveNationalitaet } from './katalogService'
 import type { Floskelgruppe, Floskel, FloskelApiPayload } from '@/models/Floskel'
 
@@ -402,6 +403,31 @@ export async function createFach(row: FachImportRow): Promise<UploadResult> {
   try {
     const payload = fachImportToApi(row)
     const response = await getApiClient().post('/faecher/create', payload)
+    return { success: true, id: response.data?.id }
+  } catch (error: unknown) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}
+
+export async function fetchBetriebe(): Promise<BetriebDetails[]> {
+  const response = await getApiClient().get('/schule/betriebe')
+  return Array.isArray(response.data) ? response.data : []
+}
+
+export async function createBetrieb(row: BetriebImportRow): Promise<UploadResult> {
+  try {
+    const payload = betriebImportToApi(row)
+    const response = await getApiClient().post('/schule/betriebe/create', payload)
+    return { success: true, id: response.data?.id }
+  } catch (error: unknown) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}
+
+export async function createAnsprechpartner(row: AnsprechpartnerImportRow, idBetrieb: number): Promise<UploadResult> {
+  try {
+    const payload = ansprechpartnerImportToApi(row, idBetrieb)
+    const response = await getApiClient().post('/schule/betriebe-ansprechpartner/create', payload)
     return { success: true, id: response.data?.id }
   } catch (error: unknown) {
     return { success: false, error: toAppError(error).messageUser }

@@ -7,6 +7,5 @@ export const betriebeSchema: ImportModule = {
   label: 'Betriebe',
   description: 'Ausbildungsbetriebe anlegen: Name, Adresse, Ansprechpartner',
   icon: 'pi pi-building',
-  comingSoon: true,
   fields: [],
 }

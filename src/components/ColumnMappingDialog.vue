@@ -20,7 +20,7 @@
         <div class="grid-head">Zielfeld</div>
 
         <template v-for="header in unmappedHeaders" :key="header">
-          <div class="csv-name">{{ header }}</div>
+          <div class="csv-name" :title="header">{{ header }}</div>
           <div class="samples">{{ getSamples(header) }}</div>
           <Select
             v-model="selections[header]"

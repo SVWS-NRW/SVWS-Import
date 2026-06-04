@@ -62,18 +62,20 @@ export const useFaecherStore = defineStore('faecher', () => {
     }
   }
 
-  async function uploadAll(): Promise<{ sent: number; failed: number }> {
+  async function uploadAll(selectedIds?: Set<string>): Promise<{ sent: number; failed: number }> {
     uploading.value = true
     let sent = 0
     let failed = 0
+    const useSelection = selectedIds !== undefined && selectedIds.size > 0
     const updated = [...rows.value]
-    uploadTotal.value = updated.filter(r => r._valid && !r._sent).length
+    uploadTotal.value = updated.filter(r => r._valid && !r._sent && (!useSelection || selectedIds!.has(r._id))).length
     uploadProgress.value = 0
     uploadCancelled.value = false
     for (let i = 0; i < updated.length; i++) {
       if (uploadCancelled.value) break
       const row = updated[i]
       if (!row._valid || row._sent) continue
+      if (useSelection && !selectedIds!.has(row._id)) continue
       const result = await createFach(row)
       if (result.success) {
         updated[i] = { ...row, _sent: true, _errors: [] }

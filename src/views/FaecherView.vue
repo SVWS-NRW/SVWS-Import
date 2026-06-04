@@ -31,7 +31,7 @@
           @select="onFileSelect"
         />
         <Button
-          :label="store.uploading ? `${store.uploadProgress} / ${store.uploadTotal}` : 'Alles senden'"
+          :label="store.uploading ? `${store.uploadProgress} / ${store.uploadTotal}` : selectedCount > 0 ? `${selectedCount} senden` : 'Alles senden'"
           icon="pi pi-upload"
           size="small"
           :disabled="store.validCount === 0 || store.uploading"
@@ -91,7 +91,11 @@
         :defaultColDef="defaultColDef"
         :rowClassRules="rowClassRules"
         :getRowId="getRowId"
+        rowSelection="multiple"
+        :suppressRowClickSelection="true"
         @cell-value-changed="onCellChanged"
+        @grid-ready="onGridReady"
+        @selection-changed="onSelectionChanged"
         :animateRows="true"
         :stopEditingWhenCellsLoseFocus="true"
       />
@@ -106,7 +110,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { AgGridVue } from '@ag-grid-community/vue3'
 import { ClientSideRowModelModule } from '@ag-grid-community/client-side-row-model'
-import { ModuleRegistry, type ColDef, type GetRowIdParams, type CellValueChangedEvent } from '@ag-grid-community/core'
+import { ModuleRegistry, type ColDef, type GetRowIdParams, type CellValueChangedEvent, type GridApi, type GridReadyEvent } from '@ag-grid-community/core'
 import Button from 'primevue/button'
 import FileUpload from 'primevue/fileupload'
 import Message from 'primevue/message'
@@ -128,6 +132,16 @@ const uploadResult = ref<{ sent: number; failed: number } | null>(null)
 const loadError = ref('')
 const parseError = ref('')
 const parsing = ref(false)
+const gridApi = ref<GridApi | null>(null)
+const selectedCount = ref(0)
+
+function onGridReady(params: GridReadyEvent): void {
+  gridApi.value = params.api
+}
+
+function onSelectionChanged(): void {
+  selectedCount.value = gridApi.value?.getSelectedRows().length ?? 0
+}
 
 async function onFileSelect(event: { files: File[] }): Promise<void> {
   const file = event.files[0]
@@ -179,6 +193,7 @@ const existingColDefs: ColDef[] = [
 
 const importColDefs: ColDef<FachImportRow>[] = [
   { field: 'kuerzel',          headerName: 'Kürzel',        width: 120,
+    checkboxSelection: true, headerCheckboxSelection: true,
     cellStyle: (p) => p.data?._errors.some(e => e.includes('Kürzel')) ? { background: isDark.value ? '#7f1d1d' : '#fee2e2' } : null },
   { field: 'kuerzelStatistik', headerName: 'Statistik-Kz.', width: 140 },
   { field: 'bezeichnung',      headerName: 'Bezeichnung',   flex: 1,
@@ -257,7 +272,9 @@ async function handleLoadExisting(): Promise<void> {
 
 async function handleUploadAll(): Promise<void> {
   uploadResult.value = null
-  uploadResult.value = await store.uploadAll()
+  const selected = gridApi.value?.getSelectedRows() ?? []
+  const selectedIds = selected.length > 0 ? new Set(selected.map((r: { _id: string }) => r._id)) : undefined
+  uploadResult.value = await store.uploadAll(selectedIds)
   if ((uploadResult.value?.sent ?? 0) > 0) {
     await handleLoadExisting()
   }

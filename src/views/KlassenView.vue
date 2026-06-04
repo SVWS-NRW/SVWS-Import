@@ -48,7 +48,7 @@
           @select="onFileSelect"
         />
         <Button
-          :label="store.uploading ? `${store.uploadProgress} / ${store.uploadTotal}` : 'Alles senden'"
+          :label="store.uploading ? `${store.uploadProgress} / ${store.uploadTotal}` : selectedCount > 0 ? `${selectedCount} senden` : 'Alles senden'"
           icon="pi pi-upload"
           size="small"
           :disabled="store.validCount === 0 || store.uploading"
@@ -116,9 +116,12 @@
         :defaultColDef="defaultColDef"
         :rowClassRules="rowClassRules"
         :getRowId="getRowId"
+        rowSelection="multiple"
+        :suppressRowClickSelection="true"
         @cell-value-changed="onCellChanged"
         @grid-ready="onImportGridReady"
         @row-data-updated="onImportRowDataUpdated"
+        @selection-changed="onSelectionChanged"
         :animateRows="true"
         :stopEditingWhenCellsLoseFocus="true"
       />
@@ -159,6 +162,7 @@ const jahrgaengeStore = useJahrgaengeStore()
 const confirm = useConfirm()
 const { isDark } = useDarkMode()
 const importGridApi = ref<GridApi | null>(null)
+const selectedCount = ref(0)
 
 function onImportGridReady(params: { api: GridApi }): void {
   importGridApi.value = params.api
@@ -166,6 +170,10 @@ function onImportGridReady(params: { api: GridApi }): void {
 
 function onImportRowDataUpdated(): void {
   importGridApi.value?.refreshCells({ force: true })
+}
+
+function onSelectionChanged(): void {
+  selectedCount.value = importGridApi.value?.getSelectedRows().length ?? 0
 }
 
 onMounted(async () => {
@@ -226,6 +234,7 @@ const existingColDefs: ColDef[] = [
 
 const importColDefs: ColDef<KlasseImportRow>[] = [
   { field: 'kuerzel',          headerName: 'Kürzel',        width: 100,
+    checkboxSelection: true, headerCheckboxSelection: true,
     cellStyle: (p) => p.data?._errors.some(e => e.includes('Kürzel')) ? { background: isDark.value ? '#7f1d1d' : '#fee2e2' } : null },
   { field: 'kuerzelStatistik', headerName: 'Statistik-Kz.', width: 120 },
   { field: 'beschreibung',     headerName: 'Bezeichnung',   flex: 1.5 },
@@ -314,7 +323,9 @@ async function handleLoadExisting(): Promise<void> {
 
 async function doUpload(): Promise<void> {
   uploadResult.value = null
-  uploadResult.value = await store.uploadAll()
+  const selected = importGridApi.value?.getSelectedRows() ?? []
+  const selectedIds = selected.length > 0 ? new Set(selected.map((r: { _id: string }) => r._id)) : undefined
+  uploadResult.value = await store.uploadAll(selectedIds)
   importGridApi.value?.refreshCells({ force: true })
   if ((uploadResult.value?.sent ?? 0) > 0) {
     await store.loadExisting()

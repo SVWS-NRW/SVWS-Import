@@ -86,6 +86,7 @@ export const useSchuelerStore = defineStore('schueler', () => {
     let orteKatalog: Map<string, OrtKatalogEintrag> | undefined
     let religionenKatalog: Map<string, import('@/models/ImportSchema').ReligionKatalogEintrag> | undefined
     let nationalitaetenKatalog: Map<string, string> | undefined
+    let verkehrssprachen: Map<string, string> | undefined
     let klassenMap: Map<string, number> | undefined
     let jahrgaengeMap: Map<string, number> | undefined
 
@@ -95,6 +96,7 @@ export const useSchuelerStore = defineStore('schueler', () => {
       orteKatalog            = kataloge.orte
       religionenKatalog      = kataloge.religionen
       nationalitaetenKatalog = kataloge.nationalitaeten
+      verkehrssprachen       = kataloge.verkehrssprachen
     } catch {
       // Kataloge nicht verfügbar — Code-Lookups werden übersprungen
     }
@@ -120,7 +122,7 @@ export const useSchuelerStore = defineStore('schueler', () => {
       const row = updated[i]
       if (!row._valid || row._sent) continue
       if (useSelection && !selectedIds!.has(row._id)) continue
-      const result = await createSchueler(row, idSchuljahresabschnitt.value, orteKatalog, religionenKatalog, klassenMap, jahrgaengeMap, nationalitaetenKatalog)
+      const result = await createSchueler(row, idSchuljahresabschnitt.value, orteKatalog, religionenKatalog, klassenMap, jahrgaengeMap, nationalitaetenKatalog, verkehrssprachen)
       if (result.success) {
         updated[i] = { ...row, _sent: true, _errors: [] }
         sent++

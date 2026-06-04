@@ -132,15 +132,54 @@ export function resolveNationalitaet(
   return nationalitaeten.get(raw) ?? raw
 }
 
+// ── Verkehrssprachen ──────────────────────────────────────────────────────────
+
+interface SvwsVerkehrssprache {
+  kuerzel: string
+  bezeichnung: string
+  iso2: string
+}
+
+async function fetchVerkehrssprachen(): Promise<Map<string, string>> {
+  const resp = await getApiClient().get<SvwsVerkehrssprache[]>('/schule/allgemein/verkehrssprachen')
+  const map = new Map<string, string>()
+  for (const entry of resp.data) {
+    if (entry.bezeichnung && entry.kuerzel) {
+      map.set(entry.bezeichnung.trim().toLowerCase(), entry.kuerzel)
+    }
+    if (entry.kuerzel) {
+      map.set(entry.kuerzel.trim().toLowerCase(), entry.kuerzel)
+    }
+    if (entry.iso2 && entry.kuerzel) {
+      map.set(entry.iso2.trim().toLowerCase(), entry.kuerzel)
+    }
+  }
+  return map
+}
+
+/**
+ * Löst einen Freitext-Sprachname (z.B. "Polnisch") oder ein Kürzel/ISO3-Code
+ * gegen den Verkehrssprachen-Katalog auf und gibt das Server-Kürzel zurück.
+ */
+export function resolveVerkehrssprache(
+  verkehrssprachen: Map<string, string> | undefined,
+  raw: string,
+): string {
+  if (!raw || !verkehrssprachen) return raw
+  return verkehrssprachen.get(raw.trim().toLowerCase()) ?? raw
+}
+
 export async function loadKataloge(): Promise<ImportKataloge> {
   const kataloge: ImportKataloge = {}
   const results = await Promise.allSettled([
     fetchNationalitaeten(),
     fetchOrte(),
     fetchReligionen(),
+    fetchVerkehrssprachen(),
   ])
-  if (results[0].status === 'fulfilled') kataloge.nationalitaeten = results[0].value
-  if (results[1].status === 'fulfilled') kataloge.orte            = results[1].value
-  if (results[2].status === 'fulfilled') kataloge.religionen      = results[2].value
+  if (results[0].status === 'fulfilled') kataloge.nationalitaeten  = results[0].value
+  if (results[1].status === 'fulfilled') kataloge.orte             = results[1].value
+  if (results[2].status === 'fulfilled') kataloge.religionen       = results[2].value
+  if (results[3].status === 'fulfilled') kataloge.verkehrssprachen = results[3].value
   return kataloge
 }

@@ -13,7 +13,7 @@ import { jahrgangImportToApi } from '@/models/Jahrgaenge'
 import { fachImportToApi } from '@/models/Faecher'
 import type { ImportModule, MappedRow, ImportContext, EntityType, OrtKatalogEintrag } from '@/models/ImportSchema'
 import { betriebImportToApi, ansprechpartnerImportToApi, type BetriebImportRow, type BetriebDetails, type AnsprechpartnerImportRow } from '@/models/Betriebe'
-import { resolveWohnortId, resolveReligionId, resolveNationalitaet } from './katalogService'
+import { resolveWohnortId, resolveReligionId, resolveNationalitaet, resolveVerkehrssprache } from './katalogService'
 import type { Floskelgruppe, Floskel, FloskelApiPayload } from '@/models/Floskel'
 
 export type { Floskelgruppe, Floskel }
@@ -183,7 +183,7 @@ async function patchSchuelerAfterCreate(
 
   // Herkunft / Migration
   if (str('zuzugsjahr'))         stammdatenPatch.zuzugsjahr         = parseInt(str('zuzugsjahr'), 10) || null
-  if (str('verkehrspracheFamilie')) stammdatenPatch.verkehrspracheFamilie = str('verkehrspracheFamilie')
+  if (str('verkehrspracheFamilie')) stammdatenPatch.verkehrspracheFamilie = resolveVerkehrssprache(context.kataloge?.verkehrssprachen, str('verkehrspracheFamilie'))
   if (str('geburtsland'))        stammdatenPatch.geburtsland        = resolveNationalitaet(context.kataloge?.nationalitaeten, str('geburtsland'))
   if (str('geburtslandVater'))   stammdatenPatch.geburtslandVater   = resolveNationalitaet(context.kataloge?.nationalitaeten, str('geburtslandVater'))
   if (str('geburtslandMutter'))  stammdatenPatch.geburtslandMutter  = resolveNationalitaet(context.kataloge?.nationalitaeten, str('geburtslandMutter'))
@@ -254,6 +254,7 @@ export async function createSchueler(
   klassenMap?: Map<string, number>,
   jahrgaengeMap?: Map<string, number>,
   nationalitaetenKatalog?: Map<string, string>,
+  verkehrssprachen?: Map<string, string>,
 ): Promise<UploadResult> {
   try {
     const payload: SchuelerNeu = schuelerImportToApi(row, idSchuljahresabschnitt)
@@ -275,7 +276,7 @@ export async function createSchueler(
     if (row.religionabmeldung)        stammdatenPatch.religionabmeldung       = row.religionabmeldung
     // Herkunft / Migration
     if (row.zuzugsjahr)               stammdatenPatch.zuzugsjahr              = parseInt(row.zuzugsjahr, 10) || null
-    if (row.verkehrspracheFamilie)    stammdatenPatch.verkehrspracheFamilie   = row.verkehrspracheFamilie
+    if (row.verkehrspracheFamilie)    stammdatenPatch.verkehrspracheFamilie   = resolveVerkehrssprache(verkehrssprachen, row.verkehrspracheFamilie)
     if (row.geburtslandVater)         stammdatenPatch.geburtslandVater        = resolveNationalitaet(nationalitaetenKatalog, row.geburtslandVater)
     if (row.geburtslandMutter)        stammdatenPatch.geburtslandMutter       = resolveNationalitaet(nationalitaetenKatalog, row.geburtslandMutter)
     // hatMigrationshintergrund: true wenn Herkunftsfelder gesetzt, sonst expliziten Wert nehmen

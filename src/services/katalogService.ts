@@ -29,6 +29,10 @@ async function fetchOrte(): Promise<Map<string, OrtKatalogEintrag>> {
   return map
 }
 
+export async function fetchOrteKatalog(): Promise<Map<string, OrtKatalogEintrag>> {
+  return fetchOrte()
+}
+
 export function resolveWohnortId(
   orte: Map<string, OrtKatalogEintrag>,
   plz: string,

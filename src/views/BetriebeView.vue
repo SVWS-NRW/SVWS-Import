@@ -111,7 +111,7 @@
               <ag-grid-vue
                 :class="[isDark ? 'ag-theme-quartz-dark' : 'ag-theme-quartz', 'data-table']"
                 :rowData="store.betriebeRows"
-                :columnDefs="betriebeImportColDefs"
+                :columnDefs="computedBetriebeImportColDefs"
                 :defaultColDef="defaultColDef"
                 :rowClassRules="rowClassRules"
                 :getRowId="getBetriebeRowId"
@@ -471,7 +471,7 @@ const existingBetriebeColDefs: ColDef[] = [
       Array.isArray(p.data?.ansprechpartner) ? (p.data.ansprechpartner as unknown[]).length : 0 },
 ]
 
-const betriebeImportColDefs: ColDef<BetriebImportRow>[] = [
+const betriebeImportStaticColDefs: ColDef<BetriebImportRow>[] = [
   { field: 'name', headerName: 'Name', flex: 1, minWidth: 160,
     checkboxSelection: true, headerCheckboxSelection: true,
     cellStyle: (p) => p.data?._errors.some(e => e.includes('Name')) ? { background: isDark.value ? '#7f1d1d' : '#fee2e2' } : null },
@@ -506,6 +506,31 @@ const betriebeImportColDefs: ColDef<BetriebImportRow>[] = [
         : `<button onclick="window.__deleteBetrieb('${params.data._id}')" style="border:none;background:none;cursor:pointer;color:#ef4444;font-size:1rem" title="Zeile löschen">✕</button>`,
   },
 ]
+
+const betriebeReservedFields = new Set([
+  '_id', '_valid', '_errors', '_sent', '_serverError', '_createdId',
+  'name', 'nameZusatz', 'branche', 'plz', 'ort', 'strasse', 'hausnummer',
+  'telefon1', 'eMail', 'istAusbildungsbetrieb',
+])
+
+const computedBetriebeImportColDefs = computed<ColDef<BetriebImportRow>[]>(() => {
+  const dynamicFields = new Set<string>()
+  for (const row of store.betriebeRows) {
+    for (const key of Object.keys(row)) {
+      if (!betriebeReservedFields.has(key)) dynamicFields.add(key)
+    }
+  }
+  const dynamicCols: ColDef<BetriebImportRow>[] = Array.from(dynamicFields).map(field => ({
+    field,
+    headerName: field,
+    editable: false,
+    minWidth: 110,
+    width: 130,
+  }))
+  const staticWithoutTrail = betriebeImportStaticColDefs.slice(0, -2)
+  const trail = betriebeImportStaticColDefs.slice(-2)
+  return [...staticWithoutTrail, ...dynamicCols, ...trail]
+})
 
 const existingApColDefs: ColDef[] = [
   { field: 'id',          headerName: 'ID',      width: 80 },

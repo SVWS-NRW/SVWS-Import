@@ -6,6 +6,7 @@ export interface BetriebApiPayload {
   strasse: string | null
   hausnummer: string | null
   hausnummerZusatz: string | null
+  idOrt: number | null
   telefon1: string | null
   telefon2: string | null
   fax: string | null
@@ -106,6 +107,7 @@ export function betriebImportToApi(row: BetriebImportRow): BetriebApiPayload {
     strasse: row.strasse?.trim() || null,
     hausnummer: row.hausnummer?.trim() || null,
     hausnummerZusatz: row.hausnummerZusatz?.trim() || null,
+    idOrt: null, // wird im Service per Orte-Katalog aufgelöst
     telefon1: row.telefon1?.trim() || null,
     telefon2: row.telefon2?.trim() || null,
     fax: row.fax?.trim() || null,

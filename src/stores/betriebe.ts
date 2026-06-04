@@ -2,11 +2,14 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { BetriebImportRow, BetriebDetails, AnsprechpartnerImportRow, AnsprechpartnerDetails } from '@/models/Betriebe'
 import { fetchBetriebe, createBetrieb, createAnsprechpartner } from '@/services/svwsService'
+import { fetchOrteKatalog } from '@/services/katalogService'
+import type { OrtKatalogEintrag } from '@/models/ImportSchema'
 
 export const useBetriebeStore = defineStore('betriebe', () => {
   const betriebeRows = ref<BetriebImportRow[]>([])
   const ansprechpartnerRows = ref<AnsprechpartnerImportRow[]>([])
   const existingBetriebe = ref<BetriebDetails[]>([])
+  const orteKatalog = ref<Map<string, OrtKatalogEintrag> | null>(null)
 
   const uploading = ref(false)
   const uploadProgress = ref(0)
@@ -114,7 +117,13 @@ export const useBetriebeStore = defineStore('betriebe', () => {
   async function loadExisting(): Promise<{ error?: string }> {
     loadingExisting.value = true
     try {
-      existingBetriebe.value = await fetchBetriebe()
+      const [betriebe, orte] = await Promise.allSettled([
+        fetchBetriebe(),
+        fetchOrteKatalog(),
+      ])
+      if (betriebe.status === 'fulfilled') existingBetriebe.value = betriebe.value
+      if (orte.status === 'fulfilled') orteKatalog.value = orte.value
+      if (betriebe.status === 'rejected') throw betriebe.reason
       return {}
     } catch (e) {
       return { error: e instanceof Error ? e.message : 'Fehler beim Laden der Betriebe' }
@@ -139,7 +148,7 @@ export const useBetriebeStore = defineStore('betriebe', () => {
       if (!row._valid || row._sent) continue
       if (useSelection && !selectedIds!.has(row._id)) continue
 
-      const result = await createBetrieb(row)
+      const result = await createBetrieb(row, orteKatalog.value ?? undefined)
       if (result.success) {
         updated[i] = { ...row, _sent: true, _errors: [], _createdId: result.id }
         sent++

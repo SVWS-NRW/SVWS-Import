@@ -414,13 +414,36 @@ export async function fetchBetriebe(): Promise<BetriebDetails[]> {
   return Array.isArray(response.data) ? response.data : []
 }
 
-export async function createBetrieb(row: BetriebImportRow): Promise<UploadResult> {
+export async function createBetrieb(
+  row: BetriebImportRow,
+  orteMap?: Map<string, OrtKatalogEintrag>,
+): Promise<UploadResult> {
   try {
     const payload = betriebImportToApi(row)
+    const idOrt = orteMap ? resolveWohnortId(orteMap, row.plz ?? '', row.ort ?? '') : null
     const response = await getApiClient().post('/schule/betriebe/create', payload)
-    return { success: true, id: response.data?.id }
+    const newId: number = response.data?.id
+    if (newId) {
+      await patchBetriebAfterCreate(newId, row, idOrt)
+    }
+    return { success: true, id: newId }
   } catch (error: unknown) {
     return { success: false, error: toAppError(error).messageUser }
+  }
+}
+
+async function patchBetriebAfterCreate(
+  id: number,
+  row: BetriebImportRow,
+  idOrt: number | null,
+): Promise<void> {
+  const patch: Record<string, unknown> = {}
+  if (row.strasse?.trim())           patch.strasse           = row.strasse.trim()
+  if (row.hausnummer?.trim())        patch.hausnummer        = row.hausnummer.trim()
+  if (row.hausnummerZusatz?.trim())  patch.hausnummerZusatz  = row.hausnummerZusatz.trim()
+  if (idOrt !== null)                patch.idOrt             = idOrt
+  if (Object.keys(patch).length > 0) {
+    await getApiClient().patch(`/schule/betriebe/${id}`, patch)
   }
 }
 

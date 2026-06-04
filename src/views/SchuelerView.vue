@@ -2,34 +2,32 @@
   <div class="table-view">
     <div class="table-header">
       <div class="header-left">
-        <div class="header-title-row">
-          <Button
-            icon="pi pi-arrow-left"
-            text
-            rounded
-            @click="router.push({ name: 'import' })"
-            aria-label="Zurück"
-          />
-          <h2>Schülerdaten</h2>
-        </div>
-        <div class="abschnitt-field">
-          <label>Schuljahresabschnitt</label>
-          <Select
-            v-if="schuleStore.loaded"
-            v-model="store.idSchuljahresabschnitt"
-            :options="schuleStore.abschnitteOptions"
-            optionLabel="label"
-            optionValue="id"
-            placeholder="Abschnitt wählen"
-            style="width: 220px"
-          />
-          <InputNumber
-            v-else
-            v-model="store.idSchuljahresabschnitt"
-            :min="1"
-            style="width: 130px"
-          />
-        </div>
+        <Button
+          icon="pi pi-arrow-left"
+          text
+          rounded
+          size="small"
+          @click="router.push({ name: 'import' })"
+          aria-label="Zurück"
+        />
+        <h2>Schülerdaten</h2>
+        <Select
+          v-if="schuleStore.loaded"
+          v-model="store.idSchuljahresabschnitt"
+          :options="schuleStore.abschnitteOptions"
+          optionLabel="label"
+          optionValue="id"
+          placeholder="Abschnitt wählen"
+          style="width: 160px"
+          size="small"
+        />
+        <InputNumber
+          v-else
+          v-model="store.idSchuljahresabschnitt"
+          :min="1"
+          size="small"
+          style="width: 100px"
+        />
       </div>
       <ImportStats
         :total="store.totalCount"
@@ -50,8 +48,9 @@
           @select="onFileSelect"
         />
         <Button
-          :label="store.uploading ? `${store.uploadProgress} / ${store.uploadTotal}` : 'Alles senden'"
+          :label="store.uploading ? `${store.uploadProgress} / ${store.uploadTotal}` : selectedCount > 0 ? `${selectedCount} senden` : 'Alles senden'"
           icon="pi pi-upload"
+          size="small"
           :disabled="store.validCount === 0 || store.uploading"
           :loading="store.uploading"
           @click="handleUploadAll"
@@ -61,6 +60,7 @@
           :icon="store.uploading ? 'pi pi-stop' : 'pi pi-trash'"
           :severity="store.uploading ? 'warn' : 'danger'"
           text
+          size="small"
           @click="store.uploading ? store.stopUpload() : confirmClear()"
         />
       </div>
@@ -82,7 +82,11 @@
       :defaultColDef="defaultColDef"
       :rowClassRules="rowClassRules"
       :getRowId="getRowId"
+      rowSelection="multiple"
+      :suppressRowClickSelection="true"
       @cell-value-changed="onCellChanged"
+      @grid-ready="onGridReady"
+      @selection-changed="onSelectionChanged"
       :animateRows="true"
       :stopEditingWhenCellsLoseFocus="true"
     />
@@ -104,7 +108,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { AgGridVue } from '@ag-grid-community/vue3'
 import { ClientSideRowModelModule } from '@ag-grid-community/client-side-row-model'
-import { ModuleRegistry, type ColDef, type GetRowIdParams, type CellValueChangedEvent } from '@ag-grid-community/core'
+import { ModuleRegistry, type ColDef, type GetRowIdParams, type CellValueChangedEvent, type GridReadyEvent, type GridApi } from '@ag-grid-community/core'
 import Button from 'primevue/button'
 import FileUpload from 'primevue/fileupload'
 import InputNumber from 'primevue/inputnumber'
@@ -132,6 +136,16 @@ const uploadResult = ref<{ sent: number; failed: number } | null>(null)
 const parseError = ref('')
 const parsing = ref(false)
 const showMappingDialog = ref(false)
+const gridApi = ref<GridApi | null>(null)
+const selectedCount = ref(0)
+
+function onGridReady(params: GridReadyEvent): void {
+  gridApi.value = params.api
+}
+
+function onSelectionChanged(): void {
+  selectedCount.value = gridApi.value?.getSelectedRows().length ?? 0
+}
 
 async function onFileSelect(event: { files: File[] }): Promise<void> {
   const file = event.files[0]
@@ -178,6 +192,8 @@ const columnDefs = computed<ColDef<SchuelerImportRow>[]>(() => {
       pinned: 'left',
       flex: 1.5,
       minWidth: 120,
+      checkboxSelection: true,
+      headerCheckboxSelection: true,
       cellStyle: (p) => p.data?._errors.some(e => e.includes('Nachname')) ? { background: '#fee2e2' } : null,
     },
     {
@@ -231,6 +247,20 @@ const columnDefs = computed<ColDef<SchuelerImportRow>[]>(() => {
     { field: 'dauerBildungsgang',         headerName: 'Dauer Bildungsgang',     width: 140,  hide: !has('dauerBildungsgang') },
     { field: 'externeSchulNr',            headerName: 'Externe Schulnr.',       width: 140,  hide: !has('externeSchulNr') },
     { field: 'beruf',                     headerName: 'Beruf',                  width: 130,  hide: !has('beruf') },
+    {
+      field: 'status',
+      headerName: 'Schülerstatus',
+      width: 140,
+      hide: !has('status'),
+      valueFormatter: (p: { value: string }) => {
+        const labels: Record<string, string> = {
+          '0': 'Aufnahme', '1': 'Warteliste', '2': 'Aktiv',
+          '3': 'Beurlaubt', '6': 'Extern', '8': 'Abschluss',
+          '9': 'Abgang', '10': 'Ehemalige',
+        }
+        return labels[p.value] ?? p.value
+      },
+    },
     // ── Sonstiges ────────────────────────────────────────────────────────────
     { field: 'hatMasernimpfnachweis',     headerName: 'Masernimpfnachweis',     width: 160,  hide: !has('hatMasernimpfnachweis') },
     { field: 'keineAuskunftAnDritte',     headerName: 'Keine Auskunft',         width: 130,  hide: !has('keineAuskunftAnDritte') },
@@ -238,7 +268,7 @@ const columnDefs = computed<ColDef<SchuelerImportRow>[]>(() => {
     { field: 'erhaeltMeisterBAFOEG',      headerName: 'Meister-BAföG',          width: 130,  hide: !has('erhaeltMeisterBAFOEG') },
     // ── Import-Status ────────────────────────────────────────────────────────
     {
-      headerName: 'Status',
+      headerName: 'Importstatus',
       width: 100,
       editable: false,
       cellRenderer: (params: { data: SchuelerImportRow }) => {
@@ -299,7 +329,9 @@ function onMappingConfirm(mapping: Record<string, string>): void {
 
 async function handleUploadAll(): Promise<void> {
   uploadResult.value = null
-  uploadResult.value = await store.uploadAll()
+  const selected = gridApi.value?.getSelectedRows() ?? []
+  const selectedIds = selected.length > 0 ? new Set(selected.map((r: { _id: string }) => r._id)) : undefined
+  uploadResult.value = await store.uploadAll(selectedIds)
 }
 
 function confirmClear(): void {
@@ -322,57 +354,89 @@ function confirmClear(): void {
   display: flex;
   flex-direction: column;
   height: 100%;
-  gap: 1rem;
-  padding: 1rem 1.5rem;
+  gap: 0.375rem;
+  padding: 0.375rem 1rem;
 }
 
 .table-header {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 0.75rem;
   flex-wrap: wrap;
 }
 
 .header-left {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.25rem;
-}
-
-.header-title-row {
-  display: flex;
+  flex-direction: row;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.25rem;
 }
 
 h2 {
   margin: 0;
-  font-size: 1.4rem;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  font-weight: 600;
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.375rem;
   margin-left: auto;
 }
 
-.abschnitt-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  font-size: 0.8rem;
-  color: var(--p-text-muted-color);
-}
 
 .data-table {
   flex: 1;
   min-height: 400px;
 }
+
+:deep(.header-actions .p-button),
+:deep(.p-fileupload-basic .p-button) {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+:deep(.header-actions .p-button .p-button-icon),
+:deep(.p-fileupload-basic .p-button .p-button-icon) {
+  font-size: 0.75rem;
+}
+
+:deep(.p-fileupload-label),
+:deep(.p-fileupload-basic-content > span:not([class*="p-button"])) {
+  font-size: 0.72rem;
+  color: var(--p-text-muted-color);
+}
+
+:deep(.header-left .p-select) {
+  font-size: 0.72rem;
+}
+:deep(.header-left .p-select .p-select-label) {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.25rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:deep(.header-left .p-select .p-select-dropdown) {
+  width: 1.25rem;
+}
+:deep(.header-left .p-select .p-select-dropdown .p-icon) {
+  width: 0.65rem;
+  height: 0.65rem;
+}
 </style>
 
 <style>
+.p-select-overlay .p-select-option {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+}
+.p-select-overlay .p-select-list-container {
+  max-height: 200px;
+}
+
 .row-sent { opacity: 0.6; }
 .row-error { background-color: #fff5f5 !important; }
 

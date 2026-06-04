@@ -4,12 +4,14 @@ node_modules/
 # Build-Ausgabe
 dist/
 dist-ssr/
+release/
 
 # Umgebungsvariablen (enthalten ggf. Zugangsdaten)
 .env
 .env.local
 .env.*.local
 examples/export/
+examples/csv/
 
 # Logs
 npm-debug.log*

@@ -41,7 +41,7 @@ Der Wizard ist implementiert und in aktiver Weiterentwicklung. ADR 0015 ist noch
 
 ## Voraussetzungen
 
-- Node.js 20+ (empfohlen)
+- Node.js 22+ (erforderlich für Electron-Build; ältere Versionen funktionieren nur für den Web-Build)
 - npm 10+ (empfohlen)
 - Zugriff auf einen erreichbaren SVWS-Server mit gültigen Zugangsdaten
 
@@ -59,6 +59,49 @@ Die App läuft dann im Vite-Dev-Server (Standard: `http://localhost:5173`).
 - `npm run dev` startet den Entwicklungsserver
 - `npm run build` führt Typecheck (`vue-tsc`) und Production-Build aus
 - `npm run preview` startet eine lokale Vorschau des Build-Ergebnisses
+- `npm run electron:dev` startet die App als Electron-Desktop-App im Entwicklungsmodus (nur Linux)
+- `npm run electron:build` baut die Electron-App für die aktuelle Plattform (Linux → AppImage)
+- `npm run electron:build:win` baut den Windows-Installer (`.exe` via NSIS) – erfordert `wine` auf Linux
+- `npm run release` baut Linux (AppImage) und Windows (NSIS-Installer) in einem Durchgang – erfordert `wine` auf Linux
+
+## Electron Desktop-App
+
+Neben dem Betrieb als Web-App im Browser kann SVWS-Import auch als eigenständige Desktop-Anwendung ausgeliefert werden. Grundlage ist [Electron](https://www.electronjs.org/), das die Vue-SPA in einem Chromium-basierten Fenster ausführt – ohne dass ein separater Webserver oder Browser benötigt wird.
+
+### Vorteile gegenüber dem reinen Browser-Betrieb
+
+- Keine CORS-Probleme beim Zugriff auf den SVWS-Server (Electron umgeht Browser-Sicherheitsrestriktionen nicht, aber der Kontext ist kontrollierter)
+- Einfache Verteilung als Installer ohne Serverinfrastruktur
+- Vertrautes Desktop-Fenster für Endanwender
+
+### Voraussetzungen für den Build
+
+| Zielplattform | Build auf Linux | Zusatzanforderung |
+|---|---|---|
+| Linux (AppImage) | ✓ nativ | – |
+| Windows (NSIS `.exe`) | ✓ Cross-Build | `wine` muss installiert sein |
+| macOS (DMG) | ✗ | nur auf macOS möglich |
+
+Auf Ubuntu/Debian kann `wine` wie folgt installiert werden:
+
+```bash
+sudo apt install wine
+```
+
+### Builds ausführen
+
+```bash
+# Nur Linux
+npm run electron:build
+
+# Nur Windows
+npm run electron:build:win
+
+# Linux + Windows in einem Durchgang
+npm run release
+```
+
+Die fertigen Pakete landen im Verzeichnis `release/`.
 
 ## Build und Auslieferung
 
@@ -100,20 +143,19 @@ Wichtige Build-Eigenschaften:
 
 ```text
 src/
-	components/      Wiederverwendbare UI-Bausteine
-	components/import/
-									 Wizard-spezifische Schritt-Komponenten
-	views/           Seiten (Routing-Ziele)
-	stores/          Pinia-Stores (Auth, Wizard, Legacy-Entitäten)
-	services/        API-Kommunikation, Kataloge, Mapping-Logik
-	schemas/         ImportModule-Definitionen (modularer Ansatz)
-	models/          Typdefinitionen und Entitätsmodelle
-	utils/           Parser und Hilfsfunktionen
-	router/          Vue-Router-Konfiguration
+  components/        Wiederverwendbare UI-Bausteine
+  components/import/ Wizard-spezifische Schritt-Komponenten
+  views/             Seiten (Routing-Ziele)
+  stores/            Pinia-Stores (Auth, Wizard, Legacy-Entitäten)
+  services/          API-Kommunikation, Kataloge, Mapping-Logik
+  schemas/           ImportModule-Definitionen (modularer Ansatz)
+  models/            Typdefinitionen und Entitätsmodelle
+  utils/             Parser und Hilfsfunktionen
+  router/            Vue-Router-Konfiguration
 
-docs/adr/          Architecture Decision Records
-examples/          Beispielimporte und lokale Testdaten
-memory/            Projektskizze/Arbeitsnotizen zur Struktur
+docs/adr/            Architecture Decision Records
+examples/            Beispielimporte und lokale Testdaten
+electron/            Electron-Main-Process (Desktop-Verteilung)
 ```
 
 ## Importkonzepte im Code

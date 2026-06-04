@@ -41,6 +41,7 @@
           optionValue="id"
           placeholder="Abschnitt wählen"
           :disabled="uploading || isDone"
+          size="small"
           style="width: 220px"
         />
         <InputNumber
@@ -48,7 +49,8 @@
           v-model="idSchuljahresabschnitt"
           :min="1"
           :disabled="uploading || isDone"
-          style="width: 140px"
+          size="small"
+          style="width: 100px"
         />
         <small class="context-hint">
           Welchem Schuljahresabschnitt sollen die Schüler zugeordnet werden?
@@ -89,14 +91,25 @@
     <!-- ── Aktionen ───────────────────────────────────────────────────── -->
     <div class="send-actions">
       <template v-if="!isDone">
-        <Button
-          :label="`${readyCount} Datensätze an SVWS senden`"
-          icon="pi pi-upload"
-          :disabled="readyCount === 0 || uploading || !canSend"
-          :loading="uploading"
-          size="large"
-          @click="sendAll"
-        />
+        <div class="send-row">
+          <Button
+            :label="uploading ? `${sessionSentCount} / ${toSendCount}` : `${readyCount} Datensätze an SVWS senden`"
+            icon="pi pi-upload"
+            :disabled="readyCount === 0 || uploading || !canSend"
+            :loading="uploading"
+            size="small"
+            @click="sendAll"
+          />
+          <Button
+            v-if="uploading"
+            label="Stoppen"
+            icon="pi pi-stop"
+            severity="warn"
+            size="small"
+            text
+            @click="stopSend"
+          />
+        </div>
         <small v-if="!canSend && module.entityType === 'schueler'" class="action-hint error">
           Bitte Schuljahresabschnitt-ID angeben.
         </small>
@@ -124,6 +137,7 @@
           icon="pi pi-refresh"
           severity="secondary"
           outlined
+          size="small"
           @click="retryFailed"
         />
       </template>
@@ -200,6 +214,7 @@ const canSend = computed(() => {
 // ── Sendelogik ─────────────────────────────────────────────────────────────
 
 const uploading        = ref(false)
+const sendCancelled    = ref(false)
 const hasSendStarted   = ref(false)
 const toSendCount      = ref(0)
 const sessionSentCount = ref(0)
@@ -224,16 +239,22 @@ const progressPercent = computed(() =>
 
 const isDone = computed(() => hasSendStarted.value && !uploading.value)
 
+function stopSend(): void {
+  sendCancelled.value = true
+}
+
 async function sendAll() {
   const pending = wizardStore.mappedRows.filter(r => r._valid && !r._sent)
   if (pending.length === 0) return
 
   hasSendStarted.value   = true
   uploading.value        = true
+  sendCancelled.value    = false
   toSendCount.value      = pending.length
   sessionSentCount.value = 0
 
   for (const row of pending) {
+    if (sendCancelled.value) break
     const result = await sendMappedRow(props.module, row, wizardStore.context)
     wizardStore.markSent(row._id, result.success ? undefined : result.error)
     sessionSentCount.value++
@@ -247,6 +268,7 @@ async function retryFailed() {
   if (pending.length === 0) return
 
   uploading.value        = true
+  sendCancelled.value    = false
   toSendCount.value      = pending.length
   sessionSentCount.value = 0
 
@@ -256,6 +278,7 @@ async function retryFailed() {
   }
 
   for (const row of pending) {
+    if (sendCancelled.value) break
     const result = await sendMappedRow(props.module, row, wizardStore.context)
     wizardStore.markSent(row._id, result.success ? undefined : result.error)
     sessionSentCount.value++
@@ -280,8 +303,8 @@ function rowLabel(row: MappedRow): string {
 .step-send {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  max-width: 680px;
+  gap: 0.625rem;
+  max-width: 600px;
 }
 
 /* ── Zusammenfassung ──────────────────────────────────────────────────────── */
@@ -296,39 +319,37 @@ function rowLabel(row: MappedRow): string {
 .summary-row {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
-  padding: 0.65rem 1.1rem;
+  gap: 0.75rem;
+  padding: 0.3rem 0.75rem;
   border-bottom: 1px solid var(--p-surface-border);
-  font-size: 0.875rem;
+  font-size: 0.75rem;
 }
 
-.summary-row:last-child {
-  border-bottom: none;
-}
+.summary-row:last-child { border-bottom: none; }
 
 .summary-label {
-  width: 120px;
+  width: 90px;
   flex-shrink: 0;
   color: var(--p-text-muted-color);
-  font-size: 0.8rem;
+  font-size: 0.72rem;
 }
 
 .summary-value { font-weight: 500; }
-.summary-value.ready  { color: var(--p-green-500); }
-.summary-value.error  { color: var(--p-red-500); }
-.summary-value.muted  { color: var(--p-text-muted-color); font-weight: 400; font-size: 0.82rem; }
+.summary-value.ready { color: var(--p-green-500); }
+.summary-value.error { color: var(--p-red-500); }
+.summary-value.muted { color: var(--p-text-muted-color); font-weight: 400; font-size: 0.72rem; }
 
 /* ── Kontext ──────────────────────────────────────────────────────────────── */
 
 .context-section {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.35rem;
 }
 
 .section-title {
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 0.68rem;
   color: var(--p-text-muted-color);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -336,21 +357,21 @@ function rowLabel(row: MappedRow): string {
 
 .context-row {
   display: flex;
+  flex-direction: row;
   align-items: center;
-  gap: 1rem;
-  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .context-label {
-  font-size: 0.875rem;
+  font-size: 0.72rem;
   font-weight: 500;
-  width: 180px;
+  white-space: nowrap;
   flex-shrink: 0;
 }
 
 .context-hint {
   color: var(--p-text-muted-color);
-  font-size: 0.8rem;
+  font-size: 0.68rem;
 }
 
 /* ── Fortschritt ──────────────────────────────────────────────────────────── */
@@ -358,14 +379,14 @@ function rowLabel(row: MappedRow): string {
 .progress-section {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.35rem;
 }
 
 .progress-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
 }
 
 .progress-label { color: var(--p-text-muted-color); }
@@ -373,9 +394,10 @@ function rowLabel(row: MappedRow): string {
 .done-label {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.25rem;
   color: var(--p-green-500);
   font-weight: 600;
+  font-size: 0.75rem;
 }
 
 .error-list {
@@ -388,9 +410,9 @@ function rowLabel(row: MappedRow): string {
 .error-list-title {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.5rem 0.875rem;
-  font-size: 0.82rem;
+  gap: 0.3rem;
+  padding: 0.3rem 0.625rem;
+  font-size: 0.72rem;
   font-weight: 600;
   color: var(--p-red-500);
   border-bottom: 1px solid color-mix(in srgb, var(--p-red-500) 20%, var(--p-surface-border));
@@ -398,9 +420,9 @@ function rowLabel(row: MappedRow): string {
 
 .error-item {
   display: flex;
-  gap: 0.75rem;
-  padding: 0.4rem 0.875rem;
-  font-size: 0.8rem;
+  gap: 0.5rem;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.72rem;
   border-bottom: 1px solid var(--p-surface-border);
 }
 
@@ -409,7 +431,7 @@ function rowLabel(row: MappedRow): string {
 .error-item-label {
   font-weight: 500;
   flex-shrink: 0;
-  min-width: 120px;
+  min-width: 90px;
 }
 
 .error-item-msg { color: var(--p-red-600); }
@@ -420,19 +442,48 @@ function rowLabel(row: MappedRow): string {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.75rem;
+  gap: 0.5rem;
+}
+
+.send-row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
 }
 
 .action-hint {
   color: var(--p-text-muted-color);
-  font-size: 0.8rem;
+  font-size: 0.72rem;
 }
 
 .action-hint.error { color: var(--p-red-500); }
 
 .done-summary {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
+}
+
+:deep(.p-button) {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+}
+:deep(.p-button .p-button-icon) {
+  font-size: 0.75rem;
+}
+:deep(.p-select .p-select-label) {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.25rem;
+}
+:deep(.p-select .p-select-dropdown) {
+  width: 1.25rem;
+}
+:deep(.p-select .p-select-dropdown .p-icon) {
+  width: 0.6rem;
+  height: 0.6rem;
+}
+:deep(.p-tag) {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.3rem;
 }
 </style>

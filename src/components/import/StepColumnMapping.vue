@@ -133,7 +133,7 @@ const allRequiredMapped = computed(() => {
 .step-mapping {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 0.5rem;
 }
 
 /* ── Header ─────────────────────────────────────────────────────────────── */
@@ -142,7 +142,7 @@ const allRequiredMapped = computed(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
   flex-shrink: 0;
 }
@@ -150,27 +150,28 @@ const allRequiredMapped = computed(() => {
 .header-left {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.4rem;
   flex-wrap: wrap;
 }
 
 .mapping-title {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.35rem;
 }
 
 /* ── Two-column layout ───────────────────────────────────────────────────── */
 
 .mapping-layout {
   display: grid;
-  grid-template-columns: 1fr 300px;
-  gap: 1.5rem;
+  grid-template-columns: 1fr 240px;
+  gap: 0.75rem;
   align-items: start;
 }
 
@@ -186,7 +187,16 @@ const allRequiredMapped = computed(() => {
 .column-list {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.3rem;
+}
+
+:deep(.p-button) {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.5rem;
+}
+:deep(.p-tag) {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.3rem;
 }
 
 /* Klebt am oberen Rand, während die Quellspalten durchgescrollt werden */

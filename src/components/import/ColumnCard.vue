@@ -88,13 +88,13 @@ function onSelect(value: string | null | undefined) {
 
 <style scoped>
 .column-card {
-  padding: 0.875rem 1rem;
+  padding: 0.35rem 0.625rem;
   border: 2px solid var(--p-surface-border);
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--p-surface-card);
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.2rem;
   transition: border-color 0.15s;
 }
 
@@ -111,12 +111,12 @@ function onSelect(value: string | null | undefined) {
 .card-header {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.35rem;
 }
 
 .status-dot {
-  width: 9px;
-  height: 9px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   flex-shrink: 0;
   background: var(--p-surface-border);
@@ -128,7 +128,7 @@ function onSelect(value: string | null | undefined) {
 
 .col-name {
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.75rem;
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -136,8 +136,8 @@ function onSelect(value: string | null | undefined) {
 }
 
 .type-chip {
-  font-size: 0.72rem;
-  padding: 0.15rem 0.45rem;
+  font-size: 0.65rem;
+  padding: 0.1rem 0.3rem;
   border-radius: 4px;
   background: var(--p-surface-ground);
   color: var(--p-text-muted-color);
@@ -148,7 +148,7 @@ function onSelect(value: string | null | undefined) {
 /* ── Samples ─────────────────────────────────────────────────────────────── */
 
 .card-samples {
-  font-size: 0.8rem;
+  font-size: 0.68rem;
   color: var(--p-text-muted-color);
   white-space: nowrap;
   overflow: hidden;
@@ -160,7 +160,7 @@ function onSelect(value: string | null | undefined) {
 .card-select-row {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.35rem;
 }
 
 .card-select {
@@ -169,5 +169,24 @@ function onSelect(value: string | null | undefined) {
 
 .suggestion-tag {
   flex-shrink: 0;
+}
+
+:deep(.p-select .p-select-label) {
+  font-size: 0.72rem;
+  padding: 0.18rem 0.25rem;
+}
+
+:deep(.p-select .p-select-dropdown) {
+  width: 1.25rem;
+}
+
+:deep(.p-select .p-select-dropdown .p-icon) {
+  width: 0.6rem;
+  height: 0.6rem;
+}
+
+:deep(.p-tag) {
+  font-size: 0.62rem;
+  padding: 0.1rem 0.25rem;
 }
 </style>

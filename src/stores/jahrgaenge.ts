@@ -7,6 +7,9 @@ export const useJahrgaengeStore = defineStore('jahrgaenge', () => {
   const rows = ref<JahrgangImportRow[]>([])
   const existingJahrgaenge = ref<JahrgangDetails[]>([])
   const uploading = ref(false)
+  const uploadProgress = ref(0)
+  const uploadTotal = ref(0)
+  const uploadCancelled = ref(false)
   const loadingExisting = ref(false)
 
   const totalCount = computed(() => rows.value.length)
@@ -58,14 +61,20 @@ export const useJahrgaengeStore = defineStore('jahrgaenge', () => {
     }
   }
 
-  async function uploadAll(): Promise<{ sent: number; failed: number }> {
+  async function uploadAll(selectedIds?: Set<string>): Promise<{ sent: number; failed: number }> {
     uploading.value = true
     let sent = 0
     let failed = 0
+    const useSelection = selectedIds !== undefined && selectedIds.size > 0
     const updated = [...rows.value]
+    uploadTotal.value = updated.filter(r => r._valid && !r._sent && (!useSelection || selectedIds!.has(r._id))).length
+    uploadProgress.value = 0
+    uploadCancelled.value = false
     for (let i = 0; i < updated.length; i++) {
+      if (uploadCancelled.value) break
       const row = updated[i]
       if (!row._valid || row._sent) continue
+      if (useSelection && !selectedIds!.has(row._id)) continue
       const result = await createJahrgang(row)
       if (result.success) {
         updated[i] = { ...row, _sent: true, _errors: [] }
@@ -74,15 +83,20 @@ export const useJahrgaengeStore = defineStore('jahrgaenge', () => {
         updated[i] = { ...row, _errors: [result.error ?? 'Unbekannter Fehler'] }
         failed++
       }
+      uploadProgress.value++
     }
     rows.value = updated
     uploading.value = false
     return { sent, failed }
   }
 
+  function stopUpload(): void {
+    uploadCancelled.value = true
+  }
+
   return {
-    rows, existingJahrgaenge, uploading, loadingExisting,
+    rows, existingJahrgaenge, uploading, uploadProgress, uploadTotal, loadingExisting,
     totalCount, validCount, sentCount, errorCount,
-    setRows, updateRow, deleteRow, validateAll, clear, loadExisting, uploadAll,
+    setRows, updateRow, deleteRow, validateAll, clear, loadExisting, uploadAll, stopUpload,
   }
 })

@@ -15,64 +15,37 @@
     </div>
 
     <div class="import-cards">
-      <div class="import-card" @click="router.push({ name: 'schueler' })">
+      <div class="import-card" @click="router.push({ name: 'schueler' })" title="Schülerinnen und Schüler anlegen">
         <i class="pi pi-users card-icon" />
-        <div>
-          <strong>Schülerdaten</strong>
-          <small>Schülerinnen und Schüler anlegen</small>
-        </div>
+        <strong>Schülerdaten</strong>
       </div>
-      <div class="import-card" @click="router.push({ name: 'lehrer' })">
+      <div class="import-card" @click="router.push({ name: 'lehrer' })" title="Lehrkräfte anlegen">
         <i class="pi pi-id-card card-icon" />
-        <div>
-          <strong>Lehrerdaten</strong>
-          <small>Lehrkräfte anlegen</small>
-        </div>
+        <strong>Lehrerdaten</strong>
       </div>
-      <div class="import-card wizard-card" @click="router.push({ name: 'wizard' })">
-        <i class="pi pi-list-check card-icon" />
-        <div>
-          <strong>Import-Assistent</strong>
-          <small>Geführter Import Schritt für Schritt</small>
-        </div>
-      </div>
-    </div>
-
-    <div class="import-cards">
-      <div class="import-card" @click="router.push({ name: 'klassen' })">
+      <div class="import-card" @click="router.push({ name: 'klassen' })" title="Klassen anlegen">
         <i class="pi pi-sitemap card-icon" />
-        <div>
-          <strong>Klassen</strong>
-          <small>Klassen anlegen</small>
-        </div>
+        <strong>Klassen</strong>
       </div>
-      <div class="import-card" @click="router.push({ name: 'jahrgaenge' })">
+      <div class="import-card" @click="router.push({ name: 'jahrgaenge' })" title="Jahrgangsstufen anlegen">
         <i class="pi pi-calendar card-icon" />
-        <div>
-          <strong>Jahrgänge</strong>
-          <small>Jahrgangsstufen anlegen</small>
-        </div>
+        <strong>Jahrgänge</strong>
       </div>
-      <div class="import-card" @click="router.push({ name: 'faecher' })">
+      <div class="import-card" @click="router.push({ name: 'faecher' })" title="Fächer anlegen">
         <i class="pi pi-book card-icon" />
-        <div>
-          <strong>Fächer</strong>
-          <small>Fächer anlegen</small>
-        </div>
+        <strong>Fächer</strong>
       </div>
-      <div class="import-card" @click="router.push({ name: 'schuljahresabschnitte' })">
+      <div class="import-card" @click="router.push({ name: 'schuljahresabschnitte' })" title="Bestehende Abschnitte laden und neue anlegen">
         <i class="pi pi-calendar-plus card-icon" />
-        <div>
-          <strong>Schuljahresabschnitte anlegen</strong>
-          <small>Bestehende Abschnitte laden und neue anlegen</small>
-        </div>
+        <strong>Schuljahresabschnitte</strong>
       </div>
-      <div class="import-card" @click="router.push({ name: 'floskeln' })">
+      <div class="import-card" @click="router.push({ name: 'floskeln' })" title="Floskeln anzeigen, filtern, löschen und importieren">
         <i class="pi pi-comment card-icon" />
-        <div>
-          <strong>Floskeln verwalten</strong>
-          <small>Floskeln anzeigen, filtern, löschen und importieren</small>
-        </div>
+        <strong>Floskeln verwalten</strong>
+      </div>
+      <div class="import-card wizard-card" @click="router.push({ name: 'wizard' })" title="Geführter Import Schritt für Schritt">
+        <i class="pi pi-list-check card-icon" />
+        <strong>Import-Assistent</strong>
       </div>
     </div>
 
@@ -84,11 +57,8 @@
         title="Noch nicht verfügbar"
       >
         <i :class="[mod.icon, 'card-icon']" />
-        <div>
-          <strong>{{ mod.label }}</strong>
-          <small>{{ mod.description }}</small>
-          <span class="coming-soon-badge">In Vorbereitung</span>
-        </div>
+        <strong>{{ mod.label }}</strong>
+        <span class="coming-soon-badge">In Vorbereitung</span>
       </div>
     </div>
 
@@ -107,12 +77,12 @@ const comingSoonModules = importModules.filter(m => m.comingSoon)
 
 <style scoped>
 .import-view {
-  max-width: 800px;
+  max-width: 780px;
   margin: 0 auto;
-  padding: 2rem 1rem;
+  padding: 1.25rem 1rem;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .view-header {
@@ -124,7 +94,7 @@ const comingSoonModules = importModules.filter(m => m.comingSoon)
 
 h2 {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 1.25rem;
 }
 
 .subtitle {
@@ -134,8 +104,14 @@ h2 {
 
 .import-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.625rem;
+}
+
+@media (max-width: 640px) {
+  .import-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .wizard-card {
@@ -173,9 +149,12 @@ h2 {
 
 .import-card {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 1rem;
-  padding: 1.25rem 1.5rem;
+  justify-content: center;
+  text-align: center;
+  gap: 0.25rem;
+  padding: 0.75rem 0.5rem;
   border: 2px solid var(--p-surface-border);
   border-radius: 10px;
   cursor: pointer;
@@ -197,7 +176,7 @@ h2 {
 }
 
 .card-icon {
-  font-size: 2rem;
+  font-size: 1.5rem;
   color: var(--p-primary-color);
 }
 
@@ -215,12 +194,14 @@ h2 {
 
 .import-card strong {
   display: block;
-  font-size: 1rem;
+  font-size: 0.85rem;
+  line-height: 1.2;
 }
 
 .import-card small {
   color: var(--p-text-muted-color);
+  display: block;
+  font-size: 0.72rem;
+  line-height: 1.3;
 }
-
-
 </style>

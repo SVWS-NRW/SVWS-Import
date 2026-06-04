@@ -4,6 +4,7 @@
       <div class="header-left">
         <Button
           icon="pi pi-arrow-left"
+          size="small"
           text
           rounded
           @click="router.push({ name: 'import' })"
@@ -30,18 +31,20 @@
           @select="onFileSelect"
         />
         <Button
-          label="Alles senden"
+          :label="store.uploading ? `${store.uploadProgress} / ${store.uploadTotal}` : selectedCount > 0 ? `${selectedCount} senden` : 'Alles senden'"
           icon="pi pi-upload"
+          size="small"
           :disabled="store.validCount === 0 || store.uploading"
           :loading="store.uploading"
           @click="handleUploadAll"
         />
         <Button
-          label="Leeren"
-          icon="pi pi-trash"
-          severity="danger"
+          :label="store.uploading ? 'Stoppen' : 'Leeren'"
+          :icon="store.uploading ? 'pi pi-stop' : 'pi pi-trash'"
+          :severity="store.uploading ? 'warn' : 'danger'"
           text
-          @click="confirmClear"
+          size="small"
+          @click="store.uploading ? store.stopUpload() : confirmClear()"
         />
       </div>
     </div>
@@ -79,7 +82,11 @@
         :defaultColDef="defaultColDef"
         :rowClassRules="rowClassRules"
         :getRowId="getRowId"
+        rowSelection="multiple"
+        :suppressRowClickSelection="true"
         @cell-value-changed="onCellChanged"
+        @grid-ready="onGridReady"
+        @selection-changed="onSelectionChanged"
         :animateRows="true"
         :stopEditingWhenCellsLoseFocus="true"
       />
@@ -94,7 +101,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { AgGridVue } from '@ag-grid-community/vue3'
 import { ClientSideRowModelModule } from '@ag-grid-community/client-side-row-model'
-import { ModuleRegistry, type ColDef, type GetRowIdParams, type CellValueChangedEvent } from '@ag-grid-community/core'
+import { ModuleRegistry, type ColDef, type GetRowIdParams, type CellValueChangedEvent, type GridApi, type GridReadyEvent } from '@ag-grid-community/core'
 import Button from 'primevue/button'
 import FileUpload from 'primevue/fileupload'
 import Message from 'primevue/message'
@@ -116,6 +123,16 @@ const uploadResult = ref<{ sent: number; failed: number } | null>(null)
 const loadError = ref('')
 const parseError = ref('')
 const parsing = ref(false)
+const gridApi = ref<GridApi | null>(null)
+const selectedCount = ref(0)
+
+function onGridReady(params: GridReadyEvent): void {
+  gridApi.value = params.api
+}
+
+function onSelectionChanged(): void {
+  selectedCount.value = gridApi.value?.getSelectedRows().length ?? 0
+}
 
 async function onFileSelect(event: { files: File[] }): Promise<void> {
   const file = event.files[0]
@@ -164,6 +181,7 @@ const existingColDefs: ColDef[] = [
 
 const importColDefs: ColDef<JahrgangImportRow>[] = [
   { field: 'kuerzel',          headerName: 'Kürzel',        width: 110,
+    checkboxSelection: true, headerCheckboxSelection: true,
     cellStyle: (p) => p.data?._errors.some(e => e.includes('Kürzel')) ? { background: isDark.value ? '#7f1d1d' : '#fee2e2' } : null },
   { field: 'kuerzelStatistik', headerName: 'Statistik-Kz.', width: 130 },
   { field: 'gliederung',       headerName: 'Gliederung',    flex: 1 },
@@ -211,7 +229,9 @@ function onCellChanged(event: CellValueChangedEvent<JahrgangImportRow>): void {
 
 async function handleUploadAll(): Promise<void> {
   uploadResult.value = null
-  uploadResult.value = await store.uploadAll()
+  const selected = gridApi.value?.getSelectedRows() ?? []
+  const selectedIds = selected.length > 0 ? new Set(selected.map((r: { _id: string }) => r._id)) : undefined
+  uploadResult.value = await store.uploadAll(selectedIds)
   if ((uploadResult.value?.sent ?? 0) > 0) {
     const result = await store.loadExisting()
     if (result.error) loadError.value = result.error
@@ -244,14 +264,14 @@ function confirmClear(): void {
   display: flex;
   flex-direction: column;
   height: 100%;
-  gap: 1rem;
-  padding: 1rem 1.5rem;
+  gap: 0.375rem;
+  padding: 0.375rem 1rem;
 }
 
 .table-header {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 0.75rem;
   flex-wrap: wrap;
 }
 
@@ -263,13 +283,13 @@ function confirmClear(): void {
 
 h2 {
   margin: 0;
-  font-size: 1.4rem;
+  font-size: 0.9rem;
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.375rem;
   margin-left: auto;
 }
 
@@ -292,6 +312,26 @@ h2 {
 
 .existing-table {
   height: 220px;
+}
+
+:deep(.header-actions .p-button),
+:deep(.p-fileupload-basic .p-button) {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+:deep(.header-actions .p-button .p-button-icon),
+:deep(.p-fileupload-basic .p-button .p-button-icon) {
+  font-size: 0.75rem;
+}
+
+:deep(.p-fileupload-label),
+:deep(.p-fileupload-basic-content > span:not([class*="p-button"])) {
+  font-size: 0.72rem;
+  color: var(--p-text-muted-color);
+}
+:deep(.p-fileupload-basic .p-button .p-button-icon) {
+  font-size: 0.75rem;
 }
 
 .data-table {

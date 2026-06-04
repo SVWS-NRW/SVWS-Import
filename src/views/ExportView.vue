@@ -13,15 +13,12 @@
           active:        selectedTile === tile.id,
           'coming-soon': tile.comingSoon,
         }"
-        :title="tile.comingSoon ? 'Noch nicht verfügbar' : undefined"
+        :title="tile.comingSoon ? 'Noch nicht verfügbar' : tile.description"
         @click="!tile.comingSoon && selectTile(tile.id)"
       >
         <i :class="[tile.icon, 'card-icon']" />
-        <div>
-          <strong>{{ tile.label }}</strong>
-          <small>{{ tile.description }}</small>
-          <span v-if="tile.comingSoon" class="coming-soon-badge">In Vorbereitung</span>
-        </div>
+        <strong>{{ tile.label }}</strong>
+        <span v-if="tile.comingSoon" class="coming-soon-badge">In Vorbereitung</span>
       </div>
     </div>
 
@@ -69,6 +66,7 @@
               :icon="selectedTile === 'schueler' ? 'pi pi-file-export' : 'pi pi-refresh'"
               severity="secondary"
               outlined
+              size="small"
               :loading="loading"
               :disabled="selectedFields.length === 0 || (selectedTile === 'schueler' && schuelerAuswahl.length === 0) || (selectedTile === 'lehrer' && lehrerListe.length === 0)"
               @click="loadData"
@@ -77,6 +75,7 @@
               v-if="data.length > 0 && selectedTile !== 'schueler' && selectedTile !== 'lehrer'"
               label="Exportieren"
               icon="pi pi-file-export"
+              size="small"
               :disabled="selectedFields.length === 0"
               @click="doExport"
             />
@@ -110,26 +109,30 @@
               optionLabel="label"
               optionValue="id"
               placeholder="Abschnitt wählen"
-              style="width: 200px"
+              size="small"
+              style="width: 160px"
             />
             <InputNumber
               v-else
               v-model="selectedAbschnittId"
               :min="1"
               placeholder="Abschnitt-ID"
-              style="width: 130px"
+              size="small"
+              style="width: 100px"
             />
             <MultiSelect
               v-model="jahrgangFilter"
               :options="jahrgaengeOptions"
               placeholder="Jahrgang"
-              style="width: 140px"
+              size="small"
+              style="width: 110px"
             />
             <MultiSelect
               v-model="klasseFilter"
               :options="klassenOptions"
               placeholder="Klasse"
-              style="width: 140px"
+              size="small"
+              style="width: 110px"
             />
             <MultiSelect
               v-model="statusFilter"
@@ -137,15 +140,17 @@
               optionLabel="label"
               optionValue="value"
               placeholder="Status"
-              style="width: 150px"
+              size="small"
+              style="width: 110px"
             />
             <Button
               icon="pi pi-refresh"
               severity="secondary"
               text
+              size="small"
               :loading="listLoading"
               :disabled="selectedAbschnittId === null"
-              aria-label="Neu laden"
+              v-tooltip.top="'Schülerliste neu laden'"
               @click="reloadAuswahlliste"
             />
           </div>
@@ -206,7 +211,8 @@
               optionLabel="label"
               optionValue="value"
               placeholder="Sichtbarkeit"
-              style="width: 170px"
+              size="small"
+              style="width: 130px"
             />
             <MultiSelect
               v-model="lehrerPersonalTypFilter"
@@ -214,14 +220,16 @@
               optionLabel="label"
               optionValue="value"
               placeholder="Personaltyp"
-              style="width: 185px"
+              size="small"
+              style="width: 130px"
             />
             <Button
               icon="pi pi-refresh"
               severity="secondary"
               text
+              size="small"
               :loading="lehrerListLoading"
-              aria-label="Neu laden"
+              v-tooltip.top="'Lehrerliste neu laden'"
               @click="reloadLehrerListe"
             />
           </div>
@@ -277,7 +285,10 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
+import TooltipDirective from 'primevue/tooltip'
 import Button from 'primevue/button'
+
+const vTooltip = TooltipDirective
 import Checkbox from 'primevue/checkbox'
 import RadioButton from 'primevue/radiobutton'
 import ProgressBar from 'primevue/progressbar'
@@ -750,16 +761,17 @@ function doExport(): void {
 .export-view {
   max-width: 900px;
   margin: 0 auto;
-  padding: 2rem 1rem;
+  padding: 0.375rem 1rem;
   display: flex;
   flex-direction: column;
-  gap: 1.75rem;
+  gap: 0.625rem;
 }
 
-h2 { margin: 0; font-size: 1.5rem; }
+h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 
 .subtitle {
-  margin: -1.25rem 0 0;
+  margin: 0;
+  font-size: 0.75rem;
   color: var(--p-text-muted-color);
 }
 
@@ -767,15 +779,18 @@ h2 { margin: 0; font-size: 1.5rem; }
 
 .export-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.625rem;
 }
 
 .export-card {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 1rem;
-  padding: 1.1rem 1.25rem;
+  justify-content: center;
+  text-align: center;
+  gap: 0.25rem;
+  padding: 0.75rem 0.5rem;
   border: 2px solid var(--p-surface-border);
   border-radius: 10px;
   cursor: pointer;
@@ -803,15 +818,13 @@ h2 { margin: 0; font-size: 1.5rem; }
 }
 
 .card-icon {
-  font-size: 2rem;
+  font-size: 1.5rem;
   color: var(--p-primary-color);
-  flex-shrink: 0;
 }
 
 .export-card.active .card-icon { color: var(--p-primary-700); }
 
-.export-card strong { display: block; font-size: 1rem; }
-.export-card small  { color: var(--p-text-muted-color); font-size: 0.82rem; }
+.export-card strong { display: block; font-size: 0.85rem; line-height: 1.2; }
 
 .coming-soon-badge {
   display: inline-block;
@@ -833,29 +846,29 @@ h2 { margin: 0; font-size: 1.5rem; }
 .config-section {
   background: var(--p-surface-card);
   border: 1px solid var(--p-surface-border);
-  border-radius: 10px;
-  padding: 1.25rem 1.5rem;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.4rem;
 }
 
 .section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.5rem;
 }
 
 .section-title {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.8rem;
   font-weight: 600;
 }
 
 .section-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.35rem;
   align-items: center;
   flex-wrap: wrap;
 }
@@ -863,15 +876,15 @@ h2 { margin: 0; font-size: 1.5rem; }
 /* Checkbox-Raster */
 .field-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 0.6rem 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.3rem 1rem;
 }
 
 .field-label {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
-  font-size: 0.875rem;
+  gap: 0.4rem;
+  font-size: 0.75rem;
   cursor: pointer;
   user-select: none;
 }
@@ -880,35 +893,34 @@ h2 { margin: 0; font-size: 1.5rem; }
 .format-row {
   display: flex;
   align-items: center;
-  gap: 2rem;
+  gap: 1rem;
   flex-wrap: wrap;
 }
 
 .format-option {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.35rem;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 0.78rem;
   font-weight: 500;
 }
 
-.format-option i { color: var(--p-primary-color); }
+.format-option i { color: var(--p-primary-color); font-size: 0.78rem; }
 
 .format-actions {
   margin-left: auto;
   display: flex;
-  gap: 0.75rem;
+  gap: 0.375rem;
   align-items: center;
 }
-
 
 /* Export-Fortschritt */
 .export-progress {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  font-size: 0.82rem;
+  gap: 0.5rem;
+  font-size: 0.72rem;
   color: var(--p-text-muted-color);
 }
 
@@ -919,26 +931,26 @@ h2 { margin: 0; font-size: 1.5rem; }
 .list-error {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-  padding: 0.5rem 0;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  padding: 0.25rem 0;
 }
 
 .list-empty { color: var(--p-text-muted-color); }
 .list-error { color: var(--p-red-500, #ef4444); }
 
 .count-badge {
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   font-weight: 400;
   color: var(--p-text-muted-color);
-  margin-left: 0.5rem;
+  margin-left: 0.35rem;
 }
 
 .status-badge {
   display: inline-block;
-  padding: 0.15rem 0.5rem;
+  padding: 0.1rem 0.35rem;
   border-radius: 4px;
-  font-size: 0.78rem;
+  font-size: 0.7rem;
   font-weight: 600;
 }
 
@@ -975,4 +987,64 @@ h2 { margin: 0; font-size: 1.5rem; }
 :global(.dark) .ptyp-SONSTIGE    { background: #1e293b; color: #94a3b8; }
 :global(.dark) .sichtbar-ja      { background: #14532d; color: #86efac; }
 :global(.dark) .sichtbar-nein    { background: #7f1d1d; color: #fca5a5; }
+
+:deep(.p-datatable thead th),
+:deep(.p-datatable tbody td) {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.5rem;
+}
+
+:deep(.p-datatable .p-checkbox) {
+  width: 14px;
+  height: 14px;
+}
+:deep(.p-datatable .p-checkbox .p-checkbox-box) {
+  width: 14px;
+  height: 14px;
+}
+:deep(.p-datatable .p-checkbox .p-checkbox-icon) {
+  font-size: 0.6rem;
+  width: 0.6rem;
+  height: 0.6rem;
+}
+
+:deep(.p-checkbox) {
+  width: 13px;
+  height: 13px;
+}
+:deep(.p-checkbox .p-checkbox-box) {
+  width: 13px;
+  height: 13px;
+}
+:deep(.p-checkbox .p-checkbox-icon) {
+  display: none;
+}
+:deep(.p-checkbox:not(.p-checkbox-checked) .p-checkbox-box) {
+  border-color: #888;
+}
+
+:deep(.section-actions .p-select .p-select-label),
+:deep(.section-actions .p-multiselect .p-multiselect-label) {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.25rem;
+}
+:deep(.section-actions .p-select .p-select-dropdown),
+:deep(.section-actions .p-multiselect .p-multiselect-dropdown) {
+  width: 1.25rem;
+}
+:deep(.section-actions .p-select .p-select-dropdown .p-icon),
+:deep(.section-actions .p-multiselect .p-multiselect-dropdown .p-icon) {
+  width: 0.6rem;
+  height: 0.6rem;
+}
+
+:deep(.format-actions .p-button),
+:deep(.section-actions .p-button) {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+}
+:deep(.format-actions .p-button .p-button-icon),
+:deep(.section-actions .p-button .p-button-icon) {
+  font-size: 0.75rem;
+}
 </style>

@@ -163,11 +163,15 @@ export const useBetriebeStore = defineStore('betriebe', () => {
     return { sent, failed }
   }
 
-  async function uploadAnsprechpartner(selectedIds?: Set<string>): Promise<{ sent: number; failed: number; unresolved: number }> {
+  async function uploadAnsprechpartner(
+    selectedIds?: Set<string>,
+    fallbackBetriebId?: number,
+  ): Promise<{ sent: number; failed: number; unresolved: number; fallback: number }> {
     uploading.value = true
     let sent = 0
     let failed = 0
     let unresolved = 0
+    let fallback = 0
     const useSelection = selectedIds !== undefined && selectedIds.size > 0
     const betriebMap = buildBetriebNameMap()
     const updated = [...ansprechpartnerRows.value]
@@ -181,12 +185,17 @@ export const useBetriebeStore = defineStore('betriebe', () => {
       if (!row._valid || row._sent) continue
       if (useSelection && !selectedIds!.has(row._id)) continue
 
-      const idBetrieb = betriebMap.get(row.betriebName.trim().toLowerCase())
+      let idBetrieb = betriebMap.get(row.betriebName.trim().toLowerCase())
       if (!idBetrieb) {
-        updated[i] = { ...row, _errors: [`Betrieb "${row.betriebName}" nicht gefunden`], _valid: false }
-        unresolved++
-        uploadProgress.value++
-        continue
+        if (fallbackBetriebId) {
+          idBetrieb = fallbackBetriebId
+          fallback++
+        } else {
+          updated[i] = { ...row, _errors: [`Betrieb "${row.betriebName}" nicht gefunden`], _valid: false }
+          unresolved++
+          uploadProgress.value++
+          continue
+        }
       }
 
       const result = await createAnsprechpartner(row, idBetrieb)
@@ -201,7 +210,7 @@ export const useBetriebeStore = defineStore('betriebe', () => {
     }
     ansprechpartnerRows.value = updated
     uploading.value = false
-    return { sent, failed, unresolved }
+    return { sent, failed, unresolved, fallback }
   }
 
   function stopUpload(): void {

@@ -185,8 +185,9 @@
             </Message>
             <Message v-if="apUploadResult" :severity="apUploadResult.failed > 0 || apUploadResult.unresolved > 0 ? 'warn' : 'success'" :closable="true" @close="apUploadResult = null">
               {{ apUploadResult.sent }} Ansprechpartner übertragen
+              <span v-if="apUploadResult.fallback > 0">, {{ apUploadResult.fallback }} dem ausgewählten Betrieb zugeordnet</span>
               <span v-if="apUploadResult.failed > 0">, {{ apUploadResult.failed }} fehlgeschlagen</span>
-              <span v-if="apUploadResult.unresolved > 0">, {{ apUploadResult.unresolved }} Betrieb nicht gefunden</span>
+              <span v-if="apUploadResult.unresolved > 0">, {{ apUploadResult.unresolved }} Betrieb nicht gefunden (kein Betrieb ausgewählt)</span>
             </Message>
 
             <div class="section">
@@ -280,7 +281,7 @@ const betriebeSelectedCount = ref(0)
 // Ansprechpartner
 const apParseError = ref('')
 const apParsing = ref(false)
-const apUploadResult = ref<{ sent: number; failed: number; unresolved: number } | null>(null)
+const apUploadResult = ref<{ sent: number; failed: number; unresolved: number; fallback: number } | null>(null)
 const apGridApi = ref<GridApi | null>(null)
 const apSelectedCount = ref(0)
 
@@ -373,7 +374,8 @@ async function handleUploadAnsprechpartner(): Promise<void> {
   apUploadResult.value = null
   const selected = apGridApi.value?.getSelectedRows() ?? []
   const selectedIds = selected.length > 0 ? new Set(selected.map((r: { _id: string }) => r._id)) : undefined
-  apUploadResult.value = await store.uploadAnsprechpartner(selectedIds)
+  const fallbackId = selectedExistingBetrieb.value?.id
+  apUploadResult.value = await store.uploadAnsprechpartner(selectedIds, fallbackId)
   if ((apUploadResult.value?.sent ?? 0) > 0) {
     await handleLoadExisting()
   }

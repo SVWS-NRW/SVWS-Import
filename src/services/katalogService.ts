@@ -14,6 +14,23 @@ interface AllinoneHistorie {
   codeDEStatis?: string
 }
 
+interface KursartHistorie {
+  id: number
+  kuerzel: string
+  schluessel: string
+  text: string
+  gueltigVon: number | null
+  gueltigBis: number | null
+  zulaessig: { schulform: string; gliederung: string | null }[]
+  erlaubtGOSt?: boolean
+}
+
+interface KursartEintrag {
+  bezeichner: string
+  idStatistik: string
+  historie: KursartHistorie[]
+}
+
 interface AllinoneEintrag {
   bezeichner: string
   idStatistik: string
@@ -201,6 +218,25 @@ export function resolveWohnortId(
   if (!plz && !ortsname) return null
   const key = `${plz.trim()}|${ortsname.trim().toLowerCase()}`
   return orte.get(key)?.id ?? null
+}
+
+// ── ZulaessigeKursart ────────────────────────────────────────────────────────
+
+export async function fetchKursartenForSchulform(schulform: string): Promise<Set<string>> {
+  const result = new Set<string>()
+  try {
+    const resp = await fetchAllInOne()
+    const katalog = (resp as Record<string, { version: number; daten: KursartEintrag[] } | undefined>)['ZulaessigeKursart']
+    if (!katalog?.daten) return result
+
+    for (const eintrag of katalog.daten) {
+      const aktiv = eintrag.historie.find(h => h.gueltigBis === null)
+      if (!aktiv) continue
+      if (aktiv.zulaessig.some(z => z.schulform === schulform))
+        result.add(aktiv.kuerzel)
+    }
+  } catch { /* Katalog nicht verfügbar → keine Einschränkung */ }
+  return result
 }
 
 // ── Kataloge laden ────────────────────────────────────────────────────────────

@@ -13,6 +13,7 @@ import BetriebeView from '@/views/BetriebeView.vue'
 import SchuljahresabschnitteView from '@/views/SchuljahresabschnitteView.vue'
 import FloskelView from '@/views/FloskelView.vue'
 import OrtsteileView from '@/views/OrtsteileView.vue'
+import UnterrichtView from '@/views/UnterrichtView.vue'
 import HelpView from '@/views/HelpView.vue'
 
 const router = createRouter({
@@ -97,6 +98,12 @@ const router = createRouter({
       path: '/ortsteile',
       name: 'ortsteile',
       component: OrtsteileView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/unterricht',
+      name: 'unterricht',
+      component: UnterrichtView,
       meta: { requiresAuth: true },
     },
     {

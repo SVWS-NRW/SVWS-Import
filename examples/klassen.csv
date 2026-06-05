@@ -1,4 +1,4 @@
-﻿"schuljahr";"abschnitt";"kuerzel";"beschreibung";"kuerzelJahrgang";"parallelitaet";"kuerzelFolgeklasse";"kuerzelVorgaengerklasse";"sortierung";"teilstandort";"noteneingabeGesperrt";"verwendungAnkreuzkompetenzen";"pruefungsordnung";"beginnSommersemester";"klassenlehrer"
+﻿"schuljahr";"abschnitt";"kuerzel";"beschreibung";"jahrgang";"parallelitaet";"folgeklasse";"vorgaengerklasse";"sortierung";"teilstandort";"noteneingabeGesperrt";"verwendungAnkreuzkompetenzen";"pruefungsordnung";"beginnSommersemester";"klassenlehrer"
 "2025";"2";"10a";"10a";"10";"A";"EF";"";"10";"A";"false";"false";"APO-SI 05: Jahrgänge 5-10";"false";"FRIT"
 "2025";"2";"10b";"10b";"10";"B";"EF";"";"20";"A";"false";"false";"APO-SI 05: Jahrgänge 5-10";"false";"SACK"
 "2025";"2";"10c";"10c";"10";"C";"EF";"";"30";"A";"false";"false";"APO-SI 05: Jahrgänge 5-10";"false";"ZAR1"

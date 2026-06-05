@@ -61,14 +61,6 @@
         <TabPanel value="klasse">
           <div class="tab-content">
             <div class="tab-actions">
-              <Select
-                v-model="klasseFormat"
-                :options="klasseFormats"
-                optionLabel="label"
-                optionValue="value"
-                size="small"
-                style="width: 240px"
-              />
               <FileUpload
                 :key="klasseFileKey"
                 mode="basic" :auto="false" :multiple="false"
@@ -78,12 +70,23 @@
                 @select="onKlasseFileSelect"
               />
               <Button label="Importieren" icon="pi pi-upload" size="small"
-                :disabled="klasseRows.filter(r => r._valid && !r._sent).length === 0"
+                :disabled="klasseRows.filter(r => r._valid && !r._sent).length === 0 || klasseImport.running"
                 @click="handleKlasseImport" />
               <Button v-if="klasseRows.length > 0" label="Leeren" icon="pi pi-trash"
-                severity="danger" size="small" text @click="klasseRows = []" />
+                severity="danger" size="small" text :disabled="klasseImport.running"
+                @click="klasseRows = []; klasseFileKey++" />
               <span v-if="loadingKlasseLookups" class="lookup-loading">
                 <i class="pi pi-spin pi-spinner" /> Prüfe Referenzen…
+              </span>
+              <span v-if="klasseImport.running" class="lookup-loading">
+                <i class="pi pi-spin pi-spinner" />
+                {{ klasseImport.done }}&nbsp;/&nbsp;{{ klasseImport.total }} Einträge…
+              </span>
+              <span v-if="!klasseImport.running && klasseImport.total > 0" class="import-result">
+                {{ klasseImport.done - klasseImport.errors }} importiert
+                <span v-if="klasseImport.errors > 0" style="color:#ef4444">
+                  · {{ klasseImport.errors }} Fehler
+                </span>
               </span>
             </div>
 
@@ -411,7 +414,11 @@ import TabPanel from 'primevue/tabpanel'
 import Badge from 'primevue/badge'
 import { useSchuleStore } from '@/stores/schule'
 import { useDarkMode } from '@/composables/useDarkMode'
-import { fetchLehrkraefte, fetchFaecher, fetchKlassenDetails, type LehrkraftListEntry } from '@/services/svwsService'
+import {
+  fetchLehrkraefte, fetchFaecher, fetchKlassenDetails,
+  fetchSchuelerAuswahlliste, fetchLernabschnittId, createLeistungsdaten,
+  type LehrkraftListEntry,
+} from '@/services/svwsService'
 import { fetchKursartenForSchulform } from '@/services/katalogService'
 import type { KlasseDetails } from '@/models/Klassen'
 import type { FachDetails } from '@/models/Faecher'
@@ -510,10 +517,6 @@ const klasseRows = ref<KlassenunterrichtRow[]>([])
 const parsingKlasse = ref(false)
 const loadingKlasseLookups = ref(false)
 const klasseFileKey = ref(0)
-const klasseFormat = ref('klassen-csv')
-const klasseFormats = [
-  { label: 'Klassen-CSV (Schuljahr | Abschnitt | Klasse | Lehrer | Kursart | Fach)', value: 'klassen-csv' },
-]
 
 const cachedLehrkraefte = ref<LehrkraftListEntry[]>([])
 const cachedFaecher = ref<FachDetails[]>([])
@@ -521,6 +524,7 @@ const cachedKlassenByAbschnitt = ref<Record<number, KlasseDetails[]>>({})
 const cachedKursarten = ref<Set<string>>(new Set())
 
 const klasseWarnCount = computed(() => klasseRows.value.filter(r => !r._valid && !r._sent).length)
+const klasseImport = ref({ running: false, total: 0, done: 0, errors: 0 })
 const klasseGridApi = ref<GridApi<KlassenunterrichtRow> | null>(null)
 const klasseSelectedCount = ref(0)
 
@@ -537,7 +541,6 @@ async function onKlasseFileSelect(event: { files: File[] }): Promise<void> {
   if (!file) return
   parsingKlasse.value = true
   parseError.value = ''
-  klasseFileKey.value++ // FileUpload neu mounten → same file kann erneut gewählt werden
   try {
     klasseRows.value = await parseKlassenunterrichtCsv(file)
     await loadKlassenunterrichtLookups(klasseRows.value)
@@ -676,8 +679,61 @@ function resolveKlasseRows(): void {
   }
 }
 
-function handleKlasseImport(): void {
-  // TODO: API-Aufruf für Klassenunterricht-Import
+async function handleKlasseImport(): Promise<void> {
+  const abschnittId: number = idSchuljahresabschnitt.value ?? 0
+  if (!abschnittId) return
+
+  const selected = klasseGridApi.value?.getSelectedRows() ?? []
+  const rows = (selected.length > 0 ? selected : klasseRows.value)
+    .filter(r => r._valid && !r._sent)
+  if (rows.length === 0) return
+
+  // Alle Schüler des Abschnitts einmalig laden
+  const alleSchueler = await fetchSchuelerAuswahlliste(abschnittId)
+  // Nur aktive (status 2), nicht gelöschte Schüler
+  const aktiveSchueler = alleSchueler.filter(s => s.status === 2)
+
+  // Lernabschnitt-IDs cachen: ein Schüler kommt bei mehreren Fächern wieder vor
+  const lernabschnittCache = new Map<number, number | null>()
+  async function getLernabschnittId(schuelerId: number): Promise<number | null> {
+    if (lernabschnittCache.has(schuelerId)) return lernabschnittCache.get(schuelerId)!
+    const id = await fetchLernabschnittId(schuelerId, abschnittId)
+    lernabschnittCache.set(schuelerId, id)
+    return id
+  }
+
+  // Gesamtzahl vorberechnen für Fortschrittsanzeige
+  const total = rows.reduce((sum, row) =>
+    sum + aktiveSchueler.filter(s => s.idKlasse === row.idKlasse).length, 0)
+  klasseImport.value = { running: true, total, done: 0, errors: 0 }
+
+  for (const row of rows) {
+    if (row.idFach === null || row.idKlasse === null) continue
+    const schuelerInKlasse = aktiveSchueler.filter(s => s.idKlasse === row.idKlasse)
+
+    for (const schueler of schuelerInKlasse) {
+      const lernabschnittId = await getLernabschnittId(schueler.id)
+      if (lernabschnittId === null) {
+        klasseImport.value.errors++
+        klasseImport.value.done++
+        continue
+      }
+      const result = await createLeistungsdaten({
+        lernabschnittID: lernabschnittId,
+        fachID: row.idFach,
+        kursart: row.kursart,
+        lehrerID: row.idLehrer,
+        wochenstunden: row.wochenstunden ? parseInt(row.wochenstunden) || null : null,
+        aufZeugnis: row.aufsZeugnis.toLowerCase() === 'true',
+      })
+      if (!result.success) klasseImport.value.errors++
+      klasseImport.value.done++
+    }
+    row._sent = true
+  }
+
+  klasseRows.value = [...klasseRows.value]
+  klasseImport.value.running = false
 }
 
 // ── Tab 2: Kursunterricht (Kurse anlegen) ─────────────────────────────────
@@ -1181,6 +1237,11 @@ h2 {
   gap: 0.35rem;
   font-size: 0.75rem;
   color: var(--p-text-muted-color);
+}
+
+.import-result {
+  font-size: 0.75rem;
+  color: #22c55e;
 }
 
 :deep(.header-left .p-select .p-select-label) {

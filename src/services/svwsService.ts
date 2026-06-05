@@ -634,3 +634,44 @@ export async function fetchSchuelerAuswahlliste(abschnittId: number): Promise<Sc
   }))
 }
 
+export async function fetchLernabschnittId(
+  schuelerId: number,
+  idSchuljahresabschnitt: number,
+): Promise<number | null> {
+  const resp = await getApiClient().get<SchuelerLernabschnitt[]>(
+    `/schueler/lernabschnittsdaten/${schuelerId}/${idSchuljahresabschnitt}`,
+  )
+  const la = resp.data.find(l => l.wechselNr === 0) ?? resp.data[0]
+  return la?.id ?? null
+}
+
+export interface LeistungsdatenCreatePayload {
+  lernabschnittID: number
+  fachID: number
+  kursart: string           // Kursart-Kürzel, z.B. "PUK", "GK", "LK"
+  lehrerID: number | null
+  wochenstunden: number | null
+  aufZeugnis: boolean
+}
+
+export async function createLeistungsdaten(
+  payload: LeistungsdatenCreatePayload,
+): Promise<UploadResult> {
+  try {
+    // Null-Felder nicht mitsenden — Server lehnt unbekannte/leere optionale Felder ab
+    const body: Record<string, unknown> = {
+      lernabschnittID: payload.lernabschnittID,
+      fachID: payload.fachID,
+      kursart: payload.kursart,
+      aufZeugnis: payload.aufZeugnis,
+    }
+    if (payload.lehrerID !== null) body.lehrerID = payload.lehrerID
+    if (payload.wochenstunden !== null) body.wochenstunden = payload.wochenstunden
+
+    const resp = await getApiClient().post('/schueler/leistungsdaten/create', body)
+    return { success: true, id: resp.data?.id }
+  } catch (error) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}
+

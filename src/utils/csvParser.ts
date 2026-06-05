@@ -6,6 +6,7 @@ import { type JahrgangImportRow } from '@/models/Jahrgaenge'
 import { type FachImportRow } from '@/models/Faecher'
 import { type FloskelImportRow } from '@/models/Floskel'
 import type { BetriebImportRow, AnsprechpartnerImportRow } from '@/models/Betriebe'
+import type { OrtsteilImportRow } from '@/models/Ortsteile'
 import { generateId } from './idHelper'
 
 // Normalisiert Spaltennamen: Leerzeichen/Groß-Klein entfernen
@@ -430,6 +431,34 @@ export async function parseAnsprechpartnerCsv(file: File): Promise<Ansprechpartn
             rufname:     get(m, 'vorname', 'rufname', 'firstname'),
             telefon:     get(m, 'telefon', 'tel', 'phone'),
             eMail:       get(m, 'email', 'e-mail', 'mail'),
+          }
+        })
+        resolve(rows)
+      },
+      error(err) {
+        reject(new Error(`CSV-Fehler: ${err.message}`))
+      },
+    })
+  })
+}
+
+export async function parseOrtsteileCsv(file: File): Promise<OrtsteilImportRow[]> {
+  return new Promise((resolve, reject) => {
+    Papa.parse<Record<string, string>>(file, {
+      header: true,
+      skipEmptyLines: true,
+      delimiter: /\.dat$/i.test(file.name) ? '|' : '',
+      complete(results) {
+        const rows: OrtsteilImportRow[] = results.data.map(record => {
+          const m = buildLookup(record)
+          return {
+            _id: generateId(),
+            _valid: true,
+            _errors: [],
+            _sent: false,
+            ortsteil: get(m, 'ortsteil', 'stadtteil', 'bezeichnung', 'name'),
+            plz:      get(m, 'plz', 'postleitzahl', 'postalcode'),
+            ort:      get(m, 'ort', 'ortsname', 'stadt', 'city'),
           }
         })
         resolve(rows)

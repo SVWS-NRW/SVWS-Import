@@ -13,6 +13,7 @@ import { jahrgangImportToApi } from '@/models/Jahrgaenge'
 import { fachImportToApi } from '@/models/Faecher'
 import type { ImportModule, MappedRow, ImportContext, EntityType, OrtKatalogEintrag } from '@/models/ImportSchema'
 import { betriebImportToApi, ansprechpartnerImportToApi, type BetriebImportRow, type BetriebDetails, type AnsprechpartnerImportRow } from '@/models/Betriebe'
+import { ortsteilImportToApi, type OrtsteilImportRow, type OrtsteilDetails } from '@/models/Ortsteile'
 import { resolveWohnortId, resolveReligionId, resolveNationalitaet, resolveVerkehrssprache } from './katalogService'
 import type { Floskelgruppe, Floskel, FloskelApiPayload } from '@/models/Floskel'
 
@@ -524,6 +525,25 @@ export async function createKlasse(row: KlasseImportRow, idSchuljahresabschnitt:
       await getApiClient().patch(`/klassen/${newId}`, { klassenLeitungen: [row.idKlassenlehrer] })
     }
     return { success: true, id: newId }
+  } catch (error: unknown) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}
+
+export async function fetchOrtsteile(): Promise<OrtsteilDetails[]> {
+  const response = await getApiClient().get('/ortsteile')
+  return Array.isArray(response.data) ? response.data : []
+}
+
+export async function createOrtsteil(
+  row: OrtsteilImportRow,
+  orteMap?: Map<string, OrtKatalogEintrag>,
+): Promise<UploadResult> {
+  try {
+    const ortId = orteMap ? resolveWohnortId(orteMap, row.plz, row.ort) : null
+    const payload = ortsteilImportToApi(row, ortId)
+    const response = await getApiClient().post('/ortsteile/create', payload)
+    return { success: true, id: response.data?.id }
   } catch (error: unknown) {
     return { success: false, error: toAppError(error).messageUser }
   }

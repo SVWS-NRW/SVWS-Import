@@ -3,7 +3,7 @@ import { type SchuelerImportRow } from '@/models/Schueler'
 import { type LehrerImportRow } from '@/models/Lehrer'
 import { type FloskelImportRow } from '@/models/Floskel'
 import { generateId } from './idHelper'
-import { normalisiereDatum, SCHUELER_KNOWN_KEYS, splitStrasseHausnummer } from './csvParser'
+import { normalisiereDatum, SCHUELER_KNOWN_KEYS, LEHRER_KNOWN_KEYS, splitStrasseHausnummer } from './csvParser'
 
 type CellValue = string | number | boolean | Date | null
 type SheetObject = { sheet: string; data: CellValue[][] }
@@ -136,29 +136,45 @@ export async function parseFloskelXlsx(file: File): Promise<FloskelImportRow[]> 
   }))
 }
 
-export async function parseLehrerXlsx(file: File): Promise<LehrerImportRow[]> {
-  const rows = extractRows(await readXlsxFile(file) as unknown)
-  if (rows.length < 2) return []
-  const headerMap = buildHeaderMap(rows[0])
-  return rows.slice(1).map(row => ({
-    _id: generateId(),
-    _valid: true,
-    _errors: [],
-    _sent: false,
-    kuerzel: col(row, headerMap, 'kuerzel', 'kürzel', 'abbreviation', 'internkrz'),
-    nachname: col(row, headerMap, 'nachname', 'name', 'familienname'),
-    vorname: col(row, headerMap, 'vorname', 'firstname'),
-    personalTyp: col(row, headerMap, 'personaltyp', 'typ', 'type') || 'LEHRKRAFT',
-    anrede: col(row, headerMap, 'anrede', 'salutation'),
-    titel: col(row, headerMap, 'titel', 'title'),
-    geburtsdatum: normalisiereDatum(col(row, headerMap, 'geburtsdatum', 'geburtstag', 'birthdate')),
-    geschlecht: col(row, headerMap, 'geschlecht', 'gender'),
-    staatsangehoerigkeitID: col(row, headerMap, '1.staatsang.', 'staatsangehoerigkeit', 'staatsangehörigkeit', 'nationalität', 'nationality', 'staatsang'),
-    emailDienstlich: col(row, headerMap, 'dienstl.email', 'emaildienstlich', 'dienstemail'),
-    telefon: col(row, headerMap, 'tel.festnetz', 'telefon', 'phone', 'tel', 'festnetz'),
-    strassenname: col(row, headerMap, 'straße', 'strasse', 'strassenname', 'street', 'adresse'),
-    hausnummer: col(row, headerMap, 'hausnummer', 'hnr', 'hausnr'),
-    plz: col(row, headerMap, 'plz', 'postleitzahl', 'zip'),
-    ort: col(row, headerMap, 'ort', 'wohnort', 'stadt', 'city'),
-  }))
+export async function parseLehrerXlsx(file: File): Promise<{ rows: LehrerImportRow[]; unmappedHeaders: string[] }> {
+  const allRows = extractRows(await readXlsxFile(file) as unknown)
+  if (allRows.length < 2) return { rows: [], unmappedHeaders: [] }
+  const headerRow = allRows[0]
+  const originalHeaders = headerRow.map(normalize)
+  const headerMap = buildHeaderMap(headerRow)
+  const normalizeAlias = (k: string) => k.toLowerCase().replace(/[\s_-]/g, '')
+  const rows: LehrerImportRow[] = allRows.slice(1).map(row => {
+    const rawData: Record<string, string> = {}
+    originalHeaders.forEach((h, i) => { rawData[h] = normalize(row[i]) })
+    return {
+      _id: generateId(),
+      _valid: true,
+      _errors: [],
+      _sent: false,
+      _rawData: rawData,
+      kuerzel: col(row, headerMap, 'kuerzel', 'kürzel', 'abbreviation', 'internkrz'),
+      nachname: col(row, headerMap, 'nachname', 'name', 'familienname'),
+      vorname: col(row, headerMap, 'vorname', 'firstname'),
+      personalTyp: col(row, headerMap, 'personaltyp', 'typ', 'type') || 'LEHRKRAFT',
+      anrede: col(row, headerMap, 'anrede', 'salutation'),
+      titel: col(row, headerMap, 'titel', 'title'),
+      amtsbezeichnung: col(row, headerMap, 'amtsbezeichnung', 'amtsbez'),
+      geburtsdatum: normalisiereDatum(col(row, headerMap, 'geburtsdatum', 'geburtstag', 'birthdate')),
+      geschlecht: col(row, headerMap, 'geschlecht', 'gender'),
+      staatsangehoerigkeitID: col(row, headerMap, 'staatsangehoerigkeitID', '1.staatsang.', 'staatsangehoerigkeit', 'staatsangehörigkeit', 'nationalität', 'nationality', 'staatsang'),
+      emailDienstlich: col(row, headerMap, 'dienstl.email', 'emaildienstlich', 'dienstlicheemail', 'dienstemail', 'email', 'e-mail', 'mail', 'emailadresse'),
+      emailPrivat: col(row, headerMap, 'emailprivat', 'privateemail', 'mailprivat', 'emailprivate'),
+      telefon: col(row, headerMap, 'tel.festnetz', 'telefon', 'phone', 'tel', 'festnetz'),
+      telefonMobil: col(row, headerMap, 'telefonmobil', 'mobiltelefon', 'handy', 'mobil', 'mobile', 'tel.mobil'),
+      istSichtbar: col(row, headerMap, 'istsichtbar', 'sichtbar', 'visible'),
+      istRelevantFuerStatistik: col(row, headerMap, 'istrelevantfuerstatistik', 'statistik', 'relevantfuerstatistik'),
+      strassenname: col(row, headerMap, 'straße', 'strasse', 'strassenname', 'street', 'adresse'),
+      hausnummer: col(row, headerMap, 'hausnummer', 'hnr', 'hausnr'),
+      hausnummerZusatz: col(row, headerMap, 'hausnummerzusatz', 'hausnrz', 'adresszusatz'),
+      plz: col(row, headerMap, 'plz', 'postleitzahl', 'zip'),
+      ort: col(row, headerMap, 'ort', 'wohnort', 'stadt', 'city'),
+    }
+  })
+  const unmappedHeaders = originalHeaders.filter(h => h && !LEHRER_KNOWN_KEYS.has(normalizeAlias(h)))
+  return { rows, unmappedHeaders }
 }

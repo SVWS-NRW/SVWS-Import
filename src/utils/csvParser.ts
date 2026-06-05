@@ -189,7 +189,32 @@ export async function parseSchuelerCsv(file: File): Promise<{ rows: SchuelerImpo
   })
 }
 
-export async function parseLehrerCsv(file: File): Promise<LehrerImportRow[]> {
+export const LEHRER_KNOWN_KEYS = new Set([
+  'kuerzel', 'kürzel', 'abbreviation', 'internkrz', 'kurzzeichen', 'kz',
+  'nachname', 'name', 'familienname',
+  'vorname', 'firstname',
+  'personaltyp', 'typ', 'type',
+  'anrede', 'salutation',
+  'titel', 'title',
+  'amtsbezeichnung', 'amtsbez', 'bezeichnung',
+  'geburtsdatum', 'geburtstag', 'birthdate',
+  'geschlecht', 'gender',
+  '1.staatsang.', 'staatsangehoerigkeitid', 'staatsangehoerigkeit', 'staatsangehörigkeit', 'nationalität', 'nationality', 'staatsang',
+  'dienstl.email', 'dienstlemail', 'emaildienstlich', 'dienstlicheemail', 'dienstemail',
+  'email', 'e-mail', 'mail', 'emailadresse',
+  'emailprivat', 'privateemail', 'mailprivat', 'emailprivate',
+  'tel.festnetz', 'telfestnetz', 'telefon', 'phone', 'tel', 'festnetz',
+  'telefonmobil', 'mobiltelefon', 'handy', 'mobil', 'mobile', 'tel.mobil',
+  'istsichtbar', 'sichtbar', 'visible',
+  'istrelevantfuerstatistik', 'statistik', 'relevantfuerstatistik',
+  'straße', 'strasse', 'strassenname', 'street', 'adresse',
+  'hausnummer', 'hnr', 'hausnr',
+  'hausnummerzusatz', 'hausnrz', 'adresszusatz',
+  'plz', 'postleitzahl', 'zip',
+  'ort', 'wohnort', 'stadt', 'city',
+])
+
+export async function parseLehrerCsv(file: File): Promise<{ rows: LehrerImportRow[]; unmappedHeaders: string[] }> {
   return new Promise((resolve, reject) => {
     Papa.parse<Record<string, string>>(file, {
       header: true,
@@ -203,30 +228,41 @@ export async function parseLehrerCsv(file: File): Promise<LehrerImportRow[]> {
           const [strassenname, hausnummer] = explicitHnr
             ? [strasseRaw, explicitHnr]
             : splitStrasseHausnummer(strasseRaw)
+          const rawData: Record<string, string> = {}
+          for (const [k, v] of Object.entries(record)) rawData[k] = v ?? ''
           const row: LehrerImportRow = {
             _id: generateId(),
             _valid: true,
             _errors: [],
             _sent: false,
+            _rawData: rawData,
             kuerzel: get(m, 'kuerzel', 'abbreviation', 'kürzel', 'internkrz', 'kurzzeichen', 'kz'),
             nachname: get(m, 'nachname', 'name', 'familienname'),
             vorname: get(m, 'vorname', 'firstname'),
             personalTyp: get(m, 'personaltyp', 'typ', 'type') || 'LEHRKRAFT',
             anrede: get(m, 'anrede', 'salutation'),
             titel: get(m, 'titel', 'title'),
+            amtsbezeichnung: get(m, 'amtsbezeichnung', 'amtsbez'),
             geburtsdatum: normalisiereDatum(get(m, 'geburtsdatum', 'geburtstag', 'birthdate')),
             geschlecht: get(m, 'geschlecht', 'gender'),
-            staatsangehoerigkeitID: get(m, '1.staatsang.', 'staatsangehoerigkeit', 'staatsangehörigkeit', 'nationalität', 'nationality', 'staatsang'),
-            emailDienstlich: get(m, 'dienstl.email', 'dienstlemail', 'emaildienstlich', 'dienstlicheemail', 'dienstemail'),
+            staatsangehoerigkeitID: get(m, 'staatsangehoerigkeitID', '1.staatsang.', 'staatsangehoerigkeit', 'staatsangehörigkeit', 'nationalität', 'nationality', 'staatsang'),
+            emailDienstlich: get(m, 'dienstl.email', 'dienstlemail', 'emaildienstlich', 'dienstlicheemail', 'dienstemail', 'email', 'e-mail', 'mail', 'emailadresse'),
+            emailPrivat: get(m, 'emailprivat', 'privateemail', 'mailprivat', 'emailprivate'),
             telefon: get(m, 'tel.festnetz', 'telfestnetz', 'telefon', 'phone', 'tel', 'festnetz'),
+            telefonMobil: get(m, 'telefonmobil', 'mobiltelefon', 'handy', 'mobil', 'mobile', 'tel.mobil'),
+            istSichtbar: get(m, 'istsichtbar', 'sichtbar', 'visible'),
+            istRelevantFuerStatistik: get(m, 'istrelevantfuerstatistik', 'statistik', 'relevantfuerstatistik'),
             strassenname,
             hausnummer,
+            hausnummerZusatz: get(m, 'hausnummerzusatz', 'hausnrz', 'adresszusatz'),
             plz: get(m, 'plz', 'postleitzahl', 'zip'),
             ort: get(m, 'ort', 'wohnort', 'stadt', 'city'),
           }
           return row
         })
-        resolve(rows)
+        const allHeaders = results.meta.fields ?? []
+        const unmappedHeaders = allHeaders.filter(h => !LEHRER_KNOWN_KEYS.has(normalizeKey(h)))
+        resolve({ rows, unmappedHeaders })
       },
       error(err) {
         reject(new Error(`CSV-Fehler: ${err.message}`))

@@ -75,11 +75,19 @@
     />
 
     <ConfirmDialog />
+
+    <LehrerColumnMappingDialog
+      v-if="showMappingDialog"
+      :unmappedHeaders="store.unmappedHeaders"
+      :sampleRows="store.rows.slice(0, 3)"
+      @confirm="onMappingConfirm"
+      @skip="showMappingDialog = false"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { AgGridVue } from '@ag-grid-community/vue3'
 import { ClientSideRowModelModule } from '@ag-grid-community/client-side-row-model'
@@ -92,6 +100,7 @@ import { useConfirm } from 'primevue/useconfirm'
 import { useLehrerStore } from '@/stores/lehrer'
 import { type LehrerImportRow } from '@/models/Lehrer'
 import ImportStats from '@/components/ImportStats.vue'
+import LehrerColumnMappingDialog from '@/components/LehrerColumnMappingDialog.vue'
 import { useDarkMode } from '@/composables/useDarkMode'
 import { parseLehrerCsv } from '@/utils/csvParser'
 import { parseLehrerXlsx } from '@/utils/xlsxParser'
@@ -105,6 +114,7 @@ const { isDark } = useDarkMode()
 const uploadResult = ref<{ sent: number; failed: number } | null>(null)
 const parseError = ref('')
 const parsing = ref(false)
+const showMappingDialog = ref(false)
 const gridApi = ref<GridApi | null>(null)
 const selectedCount = ref(0)
 
@@ -123,10 +133,11 @@ async function onFileSelect(event: { files: File[] }): Promise<void> {
   parseError.value = ''
   try {
     const isXlsx = /\.(xlsx|xls)$/i.test(file.name)
-    const rows = isXlsx ? await parseLehrerXlsx(file) : await parseLehrerCsv(file)
+    const { rows, unmappedHeaders } = isXlsx ? await parseLehrerXlsx(file) : await parseLehrerCsv(file)
     if (rows.length === 0) throw new Error('Keine Datensätze gefunden')
-    store.setRows(rows)
+    store.setRows(rows, unmappedHeaders)
     store.validateAll()
+    if (unmappedHeaders.length > 0) showMappingDialog.value = true
   } catch (e) {
     parseError.value = e instanceof Error ? e.message : 'Fehler beim Einlesen der Datei'
   } finally {
@@ -142,23 +153,34 @@ const defaultColDef: ColDef = {
   minWidth: 80,
 }
 
-const columnDefs: ColDef<LehrerImportRow>[] = [
-  { field: 'kuerzel', headerName: 'Kürzel', width: 100,
+const columnDefs = computed<ColDef<LehrerImportRow>[]>(() => [
+  { field: 'kuerzel', headerName: 'Kürzel', width: 100, pinned: 'left',
     checkboxSelection: true, headerCheckboxSelection: true,
     cellStyle: (p) => p.data?._errors.some(e => e.includes('Kürzel')) ? { background: isDark.value ? '#7f1d1d' : '#fee2e2' } : null },
-  { field: 'nachname', headerName: 'Nachname', flex: 1.5,
+  { field: 'nachname', headerName: 'Nachname', width: 150, pinned: 'left',
     cellStyle: (p) => p.data?._errors.some(e => e.includes('Nachname')) ? { background: isDark.value ? '#7f1d1d' : '#fee2e2' } : null },
-  { field: 'vorname', headerName: 'Vorname', flex: 1.5,
+  { field: 'vorname', headerName: 'Vorname', width: 150, pinned: 'left',
     cellStyle: (p) => p.data?._errors.some(e => e.includes('Vorname')) ? { background: isDark.value ? '#7f1d1d' : '#fee2e2' } : null },
   { field: 'personalTyp', headerName: 'Typ', width: 130 },
   { field: 'anrede', headerName: 'Anrede', width: 100 },
   { field: 'titel', headerName: 'Titel', width: 90 },
+  { field: 'amtsbezeichnung', headerName: 'Amtsbezeichnung', width: 160 },
   { field: 'geschlecht', headerName: 'Geschlecht', width: 110 },
   { field: 'geburtsdatum', headerName: 'Geburtsdatum', width: 140 },
   { field: 'staatsangehoerigkeitID', headerName: 'Staatsangehörigkeit', width: 170 },
-  { field: 'emailDienstlich', headerName: 'E-Mail', flex: 2,
-    cellStyle: (p) => p.data?._errors.some(e => e.includes('E-Mail')) ? { background: isDark.value ? '#7f1d1d' : '#fee2e2' } : null },
+  { field: 'emailDienstlich', headerName: 'E-Mail dienstlich', flex: 2,
+    cellStyle: (p) => p.data?._errors.some(e => e.includes('E-Mail dienstlich')) ? { background: isDark.value ? '#7f1d1d' : '#fee2e2' } : null },
+  { field: 'emailPrivat', headerName: 'E-Mail privat', flex: 2,
+    cellStyle: (p) => p.data?._errors.some(e => e.includes('E-Mail privat')) ? { background: isDark.value ? '#7f1d1d' : '#fee2e2' } : null },
+  { field: 'strassenname', headerName: 'Straße', flex: 1.5 },
+  { field: 'hausnummer', headerName: 'Haus-Nr.', width: 90 },
+  { field: 'hausnummerZusatz', headerName: 'Zusatz', width: 80 },
+  { field: 'plz', headerName: 'PLZ', width: 80 },
+  { field: 'ort', headerName: 'Ort', flex: 1 },
   { field: 'telefon', headerName: 'Telefon', width: 140 },
+  { field: 'telefonMobil', headerName: 'Mobil', width: 140 },
+  { field: 'istSichtbar', headerName: 'Sichtbar', width: 100 },
+  { field: 'istRelevantFuerStatistik', headerName: 'Statistik', width: 100 },
   {
     headerName: 'Status',
     width: 100,
@@ -180,7 +202,18 @@ const columnDefs: ColDef<LehrerImportRow>[] = [
         ? ''
         : `<button onclick="window.__deleteLehrer('${params.data._id}')" style="border:none;background:none;cursor:pointer;color:#ef4444;font-size:1rem" title="Zeile löschen">✕</button>`,
   },
-]
+  // ── Nicht zugeordnete Spalten (amber) ────────────────────────────────────
+  ...store.unmappedHeaders.map(header => ({
+    headerName: header,
+    headerClass: 'col-unmapped-header',
+    cellClass: 'col-unmapped-cell',
+    editable: false,
+    width: 130,
+    sortable: true,
+    filter: true,
+    valueGetter: (params: { data?: LehrerImportRow }) => params.data?._rawData?.[header] ?? '',
+  })),
+])
 
 const rowClassRules = {
   'row-sent': (params: { data: LehrerImportRow }) => params.data._sent,
@@ -199,6 +232,11 @@ function onCellChanged(event: CellValueChangedEvent<LehrerImportRow>): void {
 
 ;(window as unknown as Record<string, unknown>).__deleteLehrer = (id: string) => {
   store.deleteRow(id)
+}
+
+function onMappingConfirm(mapping: Record<string, string>): void {
+  showMappingDialog.value = false
+  store.applyColumnMapping(mapping)
 }
 
 async function handleUploadAll(): Promise<void> {
@@ -227,6 +265,23 @@ function confirmClear(): void {
 .row-sent { opacity: 0.6; }
 .row-error { background-color: #fff5f5 !important; }
 .dark .row-error { background-color: #3b0c0c !important; }
+
+.ag-theme-quartz .col-unmapped-header .ag-header-cell-label,
+.ag-theme-quartz .col-unmapped-header {
+  color: #92400e;
+  background-color: #fffbeb;
+}
+.ag-theme-quartz-dark .col-unmapped-header .ag-header-cell-label,
+.ag-theme-quartz-dark .col-unmapped-header {
+  color: #fcd34d;
+  background-color: #1c1408;
+}
+.col-unmapped-cell {
+  color: #92400e;
+}
+.ag-theme-quartz-dark .col-unmapped-cell {
+  color: #fcd34d;
+}
 </style>
 
 <style scoped>

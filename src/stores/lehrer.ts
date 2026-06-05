@@ -3,9 +3,11 @@ import { ref, computed } from 'vue'
 import { type LehrerImportRow } from '@/models/Lehrer'
 import { createLehrer } from '@/services/svwsService'
 import { loadKataloge } from '@/services/katalogService'
+import { normalisiereDatum } from '@/utils/csvParser'
 
 export const useLehrerStore = defineStore('lehrer', () => {
   const rows = ref<LehrerImportRow[]>([])
+  const unmappedHeaders = ref<string[]>([])
   const uploading = ref(false)
   const uploadProgress = ref(0)
   const uploadTotal = ref(0)
@@ -16,8 +18,9 @@ export const useLehrerStore = defineStore('lehrer', () => {
   const sentCount = computed(() => rows.value.filter(r => r._sent).length)
   const errorCount = computed(() => rows.value.filter(r => !r._valid).length)
 
-  function setRows(newRows: LehrerImportRow[]): void {
+  function setRows(newRows: LehrerImportRow[], headers: string[] = []): void {
     rows.value = newRows
+    unmappedHeaders.value = headers
   }
 
   function updateRow(id: string, patch: Partial<LehrerImportRow>): void {
@@ -42,7 +45,10 @@ export const useLehrerStore = defineStore('lehrer', () => {
       errors.push('Geburtsdatum muss im Format YYYY-MM-DD sein')
     }
     if (row.emailDienstlich && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.emailDienstlich)) {
-      errors.push('E-Mail-Adresse ungültig')
+      errors.push('E-Mail dienstlich ungültig')
+    }
+    if (row.emailPrivat && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.emailPrivat)) {
+      errors.push('E-Mail privat ungültig')
     }
     rows.value[idx] = { ...row, _errors: errors, _valid: errors.length === 0 }
   }
@@ -51,8 +57,26 @@ export const useLehrerStore = defineStore('lehrer', () => {
     rows.value.forEach((_, idx) => validateRow(idx))
   }
 
+  function applyColumnMapping(mapping: Record<string, string>): void {
+    if (Object.keys(mapping).length === 0) return
+    const DATE_FIELDS = new Set(['geburtsdatum'])
+    rows.value = rows.value.map(row => {
+      const patch: Partial<LehrerImportRow> = {}
+      for (const [csvHeader, targetField] of Object.entries(mapping)) {
+        const raw = row._rawData[csvHeader] ?? ''
+        ;(patch as Record<string, string>)[targetField] = DATE_FIELDS.has(targetField)
+          ? normalisiereDatum(raw)
+          : raw
+      }
+      return { ...row, ...patch }
+    })
+    unmappedHeaders.value = unmappedHeaders.value.filter(h => !new Set(Object.keys(mapping)).has(h))
+    validateAll()
+  }
+
   function clear(): void {
     rows.value = []
+    unmappedHeaders.value = []
   }
 
   async function uploadAll(selectedIds?: Set<string>): Promise<{ sent: number; failed: number }> {
@@ -101,9 +125,9 @@ export const useLehrerStore = defineStore('lehrer', () => {
   }
 
   return {
-    rows, uploading, uploadProgress, uploadTotal,
+    rows, unmappedHeaders, uploading, uploadProgress, uploadTotal,
     totalCount, validCount, sentCount, errorCount,
-    setRows, updateRow, deleteRow, validateAll, clear, uploadAll, stopUpload,
+    setRows, updateRow, deleteRow, validateAll, clear, uploadAll, stopUpload, applyColumnMapping,
   }
 })
 

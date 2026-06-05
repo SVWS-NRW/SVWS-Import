@@ -1,6 +1,6 @@
 import type { ImportModule, MappedRow, ImportContext } from '@/models/ImportSchema'
 import type { SchuelerNeu, Geschlecht, SchuelerStatus } from '@/models/Schueler'
-import { resolveNationalitaet } from '@/services/katalogService'
+import { resolveNationalitaet, resolveReligionId } from '@/services/katalogService'
 import { normalisiereDatum } from '@/utils/csvParser'
 
 const dateValidate = (v: string): string | null => {
@@ -104,6 +104,15 @@ export const schuelerStammdatenSchema: ImportModule = {
       required: false,
       type: 'string',
       aliases: ['religion', 'religionszugehörigkeit', 'konfession', 'religionsunterricht'],
+    },
+    {
+      key: 'religionKuerzel',
+      label: 'Konfession Kürzel',
+      category: 'Personaldaten',
+      required: false,
+      type: 'string',
+      aliases: ['statistikkrz konfession', 'konfessionskuerzel', 'konfessionkuerzel', 'religionskuerzel', 'krz konfession'],
+      hint: 'Amtliches Kürzel (z.B. KR, ER, IR) — wird bevorzugt gegenüber dem Klartextfeld',
     },
     // ── Herkunft / Migration ─────────────────────────────────────────────────
     {
@@ -325,8 +334,14 @@ export const schuelerStammdatenSchema: ImportModule = {
       aufnahmedatum: normalisiereDatum(str('aufnahmedatum')) || null,
       beginnBildungsgang: normalisiereDatum(str('beginnBildungsgang')) || null,
       dauerBildungsgang: null,
-      staatsangehoerigkeitID: null,
-      idReligion: null,
+      staatsangehoerigkeitID: resolveNationalitaet(context.kataloge?.nationalitaeten, str('staatsangehoerigkeitID')) || null,
+      idReligion: context.kataloge?.religionen && (str('religionKuerzel') || str('religionID'))
+        ? resolveReligionId(
+            context.kataloge.religionen,
+            str('religionKuerzel') || str('religionID'), // Kürzel bevorzugt; falls kein Kürzelfeld: auch den Textwert als Kürzel probieren
+            str('religionID'),
+          )
+        : null,
       idSchuljahresabschnitt: context.idSchuljahresabschnitt ?? null,
       idJahrgang: null,
       idKlasse: null,

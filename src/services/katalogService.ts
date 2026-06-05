@@ -1,64 +1,73 @@
-import { getApiClient } from './apiClient'
+import { getApiClient, getRootClient } from './apiClient'
 import type { ImportKataloge, OrtKatalogEintrag, ReligionKatalogEintrag } from '@/models/ImportSchema'
 
-interface SvwsNationalitaet {
-  kuerzel: string
+// ── allinone.json types ──────────────────────────────────────────────────────
+
+interface AllinoneHistorie {
+  id: number
   schluessel: string
-  codeDEStatis?: string
+  kuerzel: string
+  text: string
+  gueltigVon: number | null
+  gueltigBis: number | null
   iso3?: string
+  codeDEStatis?: string
 }
 
-async function fetchNationalitaeten(): Promise<Map<string, string>> {
-  const resp = await getApiClient().get<SvwsNationalitaet[]>('/schule/allgemein/nationalitaeten')
+interface AllinoneEintrag {
+  bezeichner: string
+  idStatistik: string
+  historie: AllinoneHistorie[]
+}
+
+interface AllinoneKatalog {
+  version: number
+  daten: AllinoneEintrag[]
+}
+
+interface AllinoneResponse {
+  Nationalitaeten?: AllinoneKatalog
+  Religion?: AllinoneKatalog
+  Verkehrssprache?: AllinoneKatalog
+  [key: string]: AllinoneKatalog | undefined
+}
+
+function currentHistorie(entry: AllinoneEintrag): AllinoneHistorie | undefined {
+  return entry.historie.find(h => h.gueltigBis === null) ?? entry.historie[entry.historie.length - 1]
+}
+
+async function fetchAllInOne(): Promise<AllinoneResponse> {
+  const resp = await getRootClient().get<AllinoneResponse>('/types/allinone.json')
+  return resp.data
+}
+
+// ── Nationalitaeten ──────────────────────────────────────────────────────────
+
+function parseNationalitaeten(katalog: AllinoneKatalog): Map<string, string> {
   const map = new Map<string, string>()
-  for (const entry of resp.data) {
-    if (entry.schluessel && entry.kuerzel) {
-      map.set(entry.schluessel, entry.kuerzel)
+  for (const entry of katalog.daten) {
+    const h = currentHistorie(entry)
+    if (!h) continue
+    if (h.schluessel && h.kuerzel) {
+      map.set(h.schluessel, h.kuerzel)
     }
     // codeDEStatis → iso3 zuletzt, damit Schild-NRW-Codes (.dat) immer gewinnen
-    if (entry.codeDEStatis && entry.iso3) {
-      map.set(entry.codeDEStatis, entry.iso3)
+    if (h.codeDEStatis && h.iso3) {
+      map.set(h.codeDEStatis, h.iso3)
     }
   }
   return map
 }
 
-async function fetchOrte(): Promise<Map<string, OrtKatalogEintrag>> {
-  const resp = await getApiClient().get<OrtKatalogEintrag[]>('/orte')
-  const map = new Map<string, OrtKatalogEintrag>()
-  for (const entry of resp.data) {
-    if (entry.plz && entry.ortsname) {
-      const key = `${entry.plz.trim()}|${entry.ortsname.trim().toLowerCase()}`
-      map.set(key, entry)
-    }
-  }
-  return map
-}
-
-export async function fetchOrteKatalog(): Promise<Map<string, OrtKatalogEintrag>> {
-  return fetchOrte()
-}
-
-export function resolveWohnortId(
-  orte: Map<string, OrtKatalogEintrag>,
-  plz: string,
-  ortsname: string,
-): number | null {
-  if (!plz && !ortsname) return null
-  const key = `${plz.trim()}|${ortsname.trim().toLowerCase()}`
-  return orte.get(key)?.id ?? null
+export function resolveNationalitaet(
+  nationalitaeten: Map<string, string> | undefined,
+  raw: string,
+): string {
+  if (!raw || !nationalitaeten) return raw
+  return nationalitaeten.get(raw) ?? raw
 }
 
 // ── Religionen ────────────────────────────────────────────────────────────────
-
-async function fetchReligionen(): Promise<Map<string, ReligionKatalogEintrag>> {
-  const resp = await getApiClient().get<ReligionKatalogEintrag[]>('/schule/religionen')
-  const map = new Map<string, ReligionKatalogEintrag>()
-  for (const entry of resp.data) {
-    if (entry.kuerzel) map.set(entry.kuerzel.toUpperCase(), entry)
-  }
-  return map
-}
 
 /**
  * Bekannte Textvarianten aus Schild-NRW → Katalog-Kürzel.
@@ -66,27 +75,42 @@ async function fetchReligionen(): Promise<Map<string, ReligionKatalogEintrag>> {
  */
 const RELIGION_ALIAS: Record<string, string> = {
   // katholisch
-  'römisch-katholisch': 'KR', 'roemisch-katholisch': 'KR', 'katholisch': 'KR', 'kath': 'KR', 'rk': 'KR',
+  'römisch-katholisch': 'KR', 'roemisch-katholisch': 'KR', 'katholisch': 'KR', 'kath': 'KR', 'kath.': 'KR', 'rk': 'KR',
   // evangelisch
-  'evangelisch': 'ER', 'evangelisch freikirchlich': 'ER', 'ev': 'ER', 'evang': 'ER',
+  'evangelisch': 'ER', 'evangelisch freikirchlich': 'ER', 'ev': 'ER', 'ev.': 'ER', 'evang': 'ER',
+  // evangelisch freikirchlich (Schild-NRW-Kürzel)
+  'ev.frk.': 'ER', 'evfrk': 'ER',
   // islamisch / muslimisch
-  'islamisch': 'IR', 'muslimisch': 'IR', 'muslim': 'IR', 'islam': 'IR',
+  'islamisch': 'IR', 'isl.': 'IR', 'muslimisch': 'IR', 'muslim': 'IR', 'islam': 'IR',
   // ohne Bekenntnis
-  'ohne bekenntnis': 'OH', 'ohne': 'OH', 'konfessionslos': 'OH', 'atheistisch': 'OH',
+  'ohne bekenntnis': 'OH', 'ohne b.': 'OH', 'ohne': 'OH', 'konfessionslos': 'OH', 'atheistisch': 'OH',
   // alevitisch
   'alevitisch': 'AR', 'aleviten': 'AR',
   // jüdisch
   'jüdisch': 'HR', 'juedisch': 'HR', 'jüd': 'HR',
   // griechisch-orthodox
-  'griechisch-orthodox': 'OR', 'griechisch orthodox': 'OR',
+  'griechisch-orthodox': 'OR', 'griechisch orthodox': 'OR', 'gr.orth.': 'OR',
   // syrisch-orthodox (inkl. Tippfehler)
   'syrisch-orthodox': 'SO', 'syrisch orthodox': 'SO', 'syrisch-orthdox': 'SO',
   // sonstige orthodoxe
   'orthodox': 'XO', 'russisch-orthodox': 'XO', 'serbisch-orthodox': 'XO',
   'christlich-orthodox': 'XO', 'bulgarisch-orthodox': 'XO', 'rumänisch-orthodox': 'XO',
-  // andere Religionen
-  'andere religionen': 'XR', 'sonstige': 'XR', 'hinduistisch': 'XR', 'buddhistisch': 'XR',
-  'buddhis.': 'XR', 'buddhist': 'XR', 'sikh': 'XR',
+  'sonst.orth.': 'XO',
+  // andere Religionen (inkl. Schild-NRW-Kürzel)
+  'andere religionen': 'XR', 'and.': 'XR', 'sonstige': 'XR',
+  'hinduistisch': 'XR', 'buddhistisch': 'XR', 'buddhis.': 'XR', 'buddhist': 'XR', 'sikh': 'XR',
+  'zeug.jeh.': 'XR', 'zeugen jehovas': 'XR',
+}
+
+async function fetchReligionen(): Promise<Map<string, ReligionKatalogEintrag>> {
+  // Eigener Endpunkt nötig: allinone.json liefert Typ-Katalog-IDs (1000, 2000…),
+  // der Server erwartet aber die echten DB-IDs als Fremdschlüssel.
+  const resp = await getApiClient().get<ReligionKatalogEintrag[]>('/schule/religionen')
+  const map = new Map<string, ReligionKatalogEintrag>()
+  for (const entry of resp.data) {
+    if (entry.kuerzel) map.set(entry.kuerzel.toUpperCase(), entry)
+  }
+  return map
 }
 
 /**
@@ -124,41 +148,23 @@ export function resolveReligionId(
   return null
 }
 
-export function resolveNationalitaet(
-  nationalitaeten: Map<string, string> | undefined,
-  raw: string,
-): string {
-  if (!raw || !nationalitaeten) return raw
-  return nationalitaeten.get(raw) ?? raw
-}
-
 // ── Verkehrssprachen ──────────────────────────────────────────────────────────
 
-interface SvwsVerkehrssprache {
-  kuerzel: string
-  bezeichnung: string
-  iso2: string
-}
-
-async function fetchVerkehrssprachen(): Promise<Map<string, string>> {
-  const resp = await getApiClient().get<SvwsVerkehrssprache[]>('/schule/allgemein/verkehrssprachen')
+function parseVerkehrssprachen(katalog: AllinoneKatalog): Map<string, string> {
   const map = new Map<string, string>()
-  for (const entry of resp.data) {
-    if (entry.bezeichnung && entry.kuerzel) {
-      map.set(entry.bezeichnung.trim().toLowerCase(), entry.kuerzel)
-    }
-    if (entry.kuerzel) {
-      map.set(entry.kuerzel.trim().toLowerCase(), entry.kuerzel)
-    }
-    if (entry.iso2 && entry.kuerzel) {
-      map.set(entry.iso2.trim().toLowerCase(), entry.kuerzel)
-    }
+  for (const entry of katalog.daten) {
+    const h = currentHistorie(entry)
+    if (!h || !h.kuerzel) continue
+    if (h.text) map.set(h.text.trim().toLowerCase(), h.kuerzel)
+    map.set(h.kuerzel.trim().toLowerCase(), h.kuerzel)
+    // iso3 als zusätzlicher Lookup (3-Buchstaben-Code, z.B. "deu")
+    if (h.iso3) map.set(h.iso3.trim().toLowerCase(), h.kuerzel)
   }
   return map
 }
 
 /**
- * Löst einen Freitext-Sprachname (z.B. "Polnisch") oder ein Kürzel/ISO3-Code
+ * Löst einen Freitext-Sprachname (z.B. "Polnisch") oder ein Kürzel/ISO-Code
  * gegen den Verkehrssprachen-Katalog auf und gibt das Server-Kürzel zurück.
  */
 export function resolveVerkehrssprache(
@@ -169,17 +175,51 @@ export function resolveVerkehrssprache(
   return verkehrssprachen.get(raw.trim().toLowerCase()) ?? raw
 }
 
+// ── Orte (separater Endpunkt — nicht in allinone.json) ───────────────────────
+
+async function fetchOrte(): Promise<Map<string, OrtKatalogEintrag>> {
+  const resp = await getApiClient().get<OrtKatalogEintrag[]>('/orte')
+  const map = new Map<string, OrtKatalogEintrag>()
+  for (const entry of resp.data) {
+    if (entry.plz && entry.ortsname) {
+      const key = `${entry.plz.trim()}|${entry.ortsname.trim().toLowerCase()}`
+      map.set(key, entry)
+    }
+  }
+  return map
+}
+
+export async function fetchOrteKatalog(): Promise<Map<string, OrtKatalogEintrag>> {
+  return fetchOrte()
+}
+
+export function resolveWohnortId(
+  orte: Map<string, OrtKatalogEintrag>,
+  plz: string,
+  ortsname: string,
+): number | null {
+  if (!plz && !ortsname) return null
+  const key = `${plz.trim()}|${ortsname.trim().toLowerCase()}`
+  return orte.get(key)?.id ?? null
+}
+
+// ── Kataloge laden ────────────────────────────────────────────────────────────
+
 export async function loadKataloge(): Promise<ImportKataloge> {
   const kataloge: ImportKataloge = {}
-  const results = await Promise.allSettled([
-    fetchNationalitaeten(),
-    fetchOrte(),
+  const [allinoneResult, religionenResult, orteResult] = await Promise.allSettled([
+    fetchAllInOne(),
     fetchReligionen(),
-    fetchVerkehrssprachen(),
+    fetchOrte(),
   ])
-  if (results[0].status === 'fulfilled') kataloge.nationalitaeten  = results[0].value
-  if (results[1].status === 'fulfilled') kataloge.orte             = results[1].value
-  if (results[2].status === 'fulfilled') kataloge.religionen       = results[2].value
-  if (results[3].status === 'fulfilled') kataloge.verkehrssprachen = results[3].value
+
+  if (allinoneResult.status === 'fulfilled') {
+    const data = allinoneResult.value
+    if (data.Nationalitaeten) kataloge.nationalitaeten  = parseNationalitaeten(data.Nationalitaeten)
+    if (data.Verkehrssprache) kataloge.verkehrssprachen = parseVerkehrssprachen(data.Verkehrssprache)
+  }
+  if (religionenResult.status === 'fulfilled') kataloge.religionen = religionenResult.value
+  if (orteResult.status === 'fulfilled')       kataloge.orte       = orteResult.value
+
   return kataloge
 }

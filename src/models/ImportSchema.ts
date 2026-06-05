@@ -40,6 +40,7 @@ export interface ReligionKatalogEintrag {
   kuerzel: string | null
 }
 
+
 export interface ImportKataloge {
   /** schluessel (codeDEStatis, z.B. "000") → kuerzel (ISO-3, z.B. "DEU") */
   nationalitaeten?: Map<string, string>
@@ -47,6 +48,8 @@ export interface ImportKataloge {
   orte?: Map<string, OrtKatalogEintrag>
   /** kuerzel (uppercase) → ReligionKatalogEintrag */
   religionen?: Map<string, ReligionKatalogEintrag>
+  /** text.toLowerCase() → kuerzel */
+  verkehrssprachen?: Map<string, string>
   /** kuerzel.toLowerCase() → id */
   klassen?: Map<string, number>
   /** kuerzel.toLowerCase() → id */

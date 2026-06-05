@@ -1,11 +1,7 @@
 import type { ImportModule, MappedRow, ImportContext } from '@/models/ImportSchema'
-
-function resolveNationalitaet(raw: string, context: ImportContext): string {
-  if (!raw) return ''
-  return context.kataloge?.nationalitaeten?.get(raw) ?? raw
-}
 import type { LehrerStammdaten, PersonalTyp } from '@/models/Lehrer'
-import { normalisiereDatum } from '@/utils/csvParser'
+import { normalisiereDatum, splitStrasseHausnummer } from '@/utils/csvParser'
+import { resolveWohnortId, resolveNationalitaet } from '@/services/katalogService'
 
 const dateValidate = (v: string): string | null => {
   if (!v) return null
@@ -118,8 +114,8 @@ export const lehrerStammdatenSchema: ImportModule = {
       hint: 'Standard: LEHRKRAFT',
       enumOptions: [
         { value: 'LEHRKRAFT',         label: 'Lehrkraft',         aliases: ['lehrkraft', 'lehrer', 'teacher', 'LEHRKRAFT'] },
-        { value: 'VERWALTUNG_TECHNIK', label: 'Verwaltung/Technik', aliases: ['verwaltung', 'technik', 'VERWALTUNG_TECHNIK', 'administration'] },
-        { value: 'SONSTIGER',         label: 'Sonstiger',         aliases: ['sonstiger', 'sonstig', 'other', 'SONSTIGER'] },
+        { value: 'PERSONAL',  label: 'Verwaltung/Technik', aliases: ['verwaltung', 'technik', 'PERSONAL', 'VERWALTUNG_TECHNIK', 'administration'] },
+        { value: 'SONSTIGE', label: 'Sonstige',          aliases: ['sonstige', 'sonstiger', 'sonstig', 'other', 'SONSTIGE'] },
       ],
     },
     {
@@ -236,8 +232,8 @@ export const lehrerStammdatenSchema: ImportModule = {
     }
     const personalTypMap: Record<string, PersonalTyp> = {
       'lehrkraft': 'LEHRKRAFT', 'lehrer': 'LEHRKRAFT', 'LEHRKRAFT': 'LEHRKRAFT',
-      'verwaltung': 'VERWALTUNG_TECHNIK', 'technik': 'VERWALTUNG_TECHNIK', 'VERWALTUNG_TECHNIK': 'VERWALTUNG_TECHNIK',
-      'sonstiger': 'SONSTIGER', 'sonstig': 'SONSTIGER', 'SONSTIGER': 'SONSTIGER',
+      'verwaltung': 'PERSONAL', 'technik': 'PERSONAL', 'PERSONAL': 'PERSONAL', 'VERWALTUNG_TECHNIK': 'PERSONAL',
+      'sonstige': 'SONSTIGE', 'sonstiger': 'SONSTIGE', 'sonstig': 'SONSTIGE', 'SONSTIGE': 'SONSTIGE',
     }
 
     const rawGeschlecht = str('geschlecht').toLowerCase()
@@ -253,11 +249,20 @@ export const lehrerStammdatenSchema: ImportModule = {
       vorname: str('vorname'),
       geschlecht: geschlechtMap[rawGeschlecht] ?? null,
       geburtsdatum: normalisiereDatum(str('geburtsdatum')) || null,
-      staatsangehoerigkeitID: resolveNationalitaet(str('staatsangehoerigkeitID'), context) || null,
-      strassenname: str('strassenname') || null,
-      hausnummer: str('hausnummer') || null,
+      staatsangehoerigkeitID: resolveNationalitaet(context.kataloge?.nationalitaeten, str('staatsangehoerigkeitID')) || null,
+      ...(() => {
+        const [strassenname, hausnummer] = str('hausnummer')
+          ? [str('strassenname'), str('hausnummer')]
+          : splitStrasseHausnummer(str('strassenname'))
+        return {
+          strassenname: strassenname || null,
+          hausnummer: hausnummer || null,
+        }
+      })(),
       hausnummerZusatz: str('hausnummerZusatz') || null,
-      wohnortID: null,
+      wohnortID: context.kataloge?.orte
+        ? resolveWohnortId(context.kataloge.orte, str('plz'), str('ort'))
+        : null,
       ortsteilID: null,
       telefon: str('telefon') || null,
       telefonMobil: str('telefonMobil') || null,

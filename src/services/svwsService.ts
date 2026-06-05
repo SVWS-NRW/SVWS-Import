@@ -12,7 +12,9 @@ import { klasseImportToApi } from '@/models/Klassen'
 import { jahrgangImportToApi } from '@/models/Jahrgaenge'
 import { fachImportToApi } from '@/models/Faecher'
 import type { ImportModule, MappedRow, ImportContext, EntityType, OrtKatalogEintrag } from '@/models/ImportSchema'
-import { resolveWohnortId, resolveReligionId, resolveNationalitaet } from './katalogService'
+import { betriebImportToApi, ansprechpartnerImportToApi, type BetriebImportRow, type BetriebDetails, type AnsprechpartnerImportRow } from '@/models/Betriebe'
+import { ortsteilImportToApi, type OrtsteilImportRow, type OrtsteilDetails } from '@/models/Ortsteile'
+import { resolveWohnortId, resolveReligionId, resolveNationalitaet, resolveVerkehrssprache } from './katalogService'
 import type { Floskelgruppe, Floskel, FloskelApiPayload } from '@/models/Floskel'
 
 export type { Floskelgruppe, Floskel }
@@ -177,9 +179,12 @@ async function patchSchuelerAfterCreate(
   if (str('telefon'))      stammdatenPatch.telefon      = str('telefon')
   if (str('email'))        stammdatenPatch.emailPrivat  = str('email')
 
+  const resolvedNat = resolveNationalitaet(context.kataloge?.nationalitaeten, str('staatsangehoerigkeitID'))
+  if (resolvedNat) stammdatenPatch.staatsangehoerigkeitID = resolvedNat
+
   // Herkunft / Migration
   if (str('zuzugsjahr'))         stammdatenPatch.zuzugsjahr         = parseInt(str('zuzugsjahr'), 10) || null
-  if (str('verkehrspracheFamilie')) stammdatenPatch.verkehrspracheFamilie = str('verkehrspracheFamilie')
+  if (str('verkehrspracheFamilie')) stammdatenPatch.verkehrspracheFamilie = resolveVerkehrssprache(context.kataloge?.verkehrssprachen, str('verkehrspracheFamilie'))
   if (str('geburtsland'))        stammdatenPatch.geburtsland        = resolveNationalitaet(context.kataloge?.nationalitaeten, str('geburtsland'))
   if (str('geburtslandVater'))   stammdatenPatch.geburtslandVater   = resolveNationalitaet(context.kataloge?.nationalitaeten, str('geburtslandVater'))
   if (str('geburtslandMutter'))  stammdatenPatch.geburtslandMutter  = resolveNationalitaet(context.kataloge?.nationalitaeten, str('geburtslandMutter'))
@@ -250,12 +255,10 @@ export async function createSchueler(
   klassenMap?: Map<string, number>,
   jahrgaengeMap?: Map<string, number>,
   nationalitaetenKatalog?: Map<string, string>,
+  verkehrssprachen?: Map<string, string>,
 ): Promise<UploadResult> {
   try {
     const payload: SchuelerNeu = schuelerImportToApi(row, idSchuljahresabschnitt)
-    if (payload.staatsangehoerigkeitID) {
-      payload.staatsangehoerigkeitID = resolveNationalitaet(nationalitaetenKatalog, payload.staatsangehoerigkeitID) || null
-    }
     const response = await getApiClient().post('/schueler/create', payload)
     const newId: number = response.data.id
 
@@ -264,6 +267,8 @@ export async function createSchueler(
     // Personaldaten
     if (row.geburtsname)              stammdatenPatch.geburtsname             = row.geburtsname
     if (row.geburtsort)               stammdatenPatch.geburtsort              = row.geburtsort
+    const resolvedNat1 = resolveNationalitaet(nationalitaetenKatalog, row.staatsangehoerigkeitID)
+    if (resolvedNat1)                 stammdatenPatch.staatsangehoerigkeitID  = resolvedNat1
     if (row.geburtsland)              stammdatenPatch.geburtsland             = resolveNationalitaet(nationalitaetenKatalog, row.geburtsland)
     if (row.staatsangehoerigkeit2ID)  stammdatenPatch.staatsangehoerigkeit2ID = resolveNationalitaet(nationalitaetenKatalog, row.staatsangehoerigkeit2ID)
     const drucke = parseBoolean(row.druckeKonfessionAufZeugnisse)
@@ -272,7 +277,7 @@ export async function createSchueler(
     if (row.religionabmeldung)        stammdatenPatch.religionabmeldung       = row.religionabmeldung
     // Herkunft / Migration
     if (row.zuzugsjahr)               stammdatenPatch.zuzugsjahr              = parseInt(row.zuzugsjahr, 10) || null
-    if (row.verkehrspracheFamilie)    stammdatenPatch.verkehrspracheFamilie   = row.verkehrspracheFamilie
+    if (row.verkehrspracheFamilie)    stammdatenPatch.verkehrspracheFamilie   = resolveVerkehrssprache(verkehrssprachen, row.verkehrspracheFamilie)
     if (row.geburtslandVater)         stammdatenPatch.geburtslandVater        = resolveNationalitaet(nationalitaetenKatalog, row.geburtslandVater)
     if (row.geburtslandMutter)        stammdatenPatch.geburtslandMutter       = resolveNationalitaet(nationalitaetenKatalog, row.geburtslandMutter)
     // hatMigrationshintergrund: true wenn Herkunftsfelder gesetzt, sonst expliziten Wert nehmen
@@ -355,11 +360,15 @@ export async function createSchueler(
 export async function createLehrer(
   row: LehrerImportRow,
   nationalitaetenKatalog?: Map<string, string>,
+  orteKatalog?: Map<string, OrtKatalogEintrag>,
 ): Promise<UploadResult> {
   try {
     const payload: LehrerStammdaten = lehrerImportToApi(row)
     if (payload.staatsangehoerigkeitID) {
       payload.staatsangehoerigkeitID = resolveNationalitaet(nationalitaetenKatalog, payload.staatsangehoerigkeitID) || null
+    }
+    if (orteKatalog) {
+      payload.wohnortID = resolveWohnortId(orteKatalog, row.plz, row.ort)
     }
     const response = await getApiClient().post('/lehrer/create', payload)
     return { success: true, id: response.data.id }
@@ -402,6 +411,54 @@ export async function createFach(row: FachImportRow): Promise<UploadResult> {
   try {
     const payload = fachImportToApi(row)
     const response = await getApiClient().post('/faecher/create', payload)
+    return { success: true, id: response.data?.id }
+  } catch (error: unknown) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}
+
+export async function fetchBetriebe(): Promise<BetriebDetails[]> {
+  const response = await getApiClient().get('/schule/betriebe')
+  return Array.isArray(response.data) ? response.data : []
+}
+
+export async function createBetrieb(
+  row: BetriebImportRow,
+  orteMap?: Map<string, OrtKatalogEintrag>,
+): Promise<UploadResult> {
+  try {
+    const payload = betriebImportToApi(row)
+    const idOrt = orteMap ? resolveWohnortId(orteMap, row.plz ?? '', row.ort ?? '') : null
+    const response = await getApiClient().post('/schule/betriebe/create', payload)
+    const newId: number = response.data?.id
+    if (newId) {
+      await patchBetriebAfterCreate(newId, row, idOrt)
+    }
+    return { success: true, id: newId }
+  } catch (error: unknown) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}
+
+async function patchBetriebAfterCreate(
+  id: number,
+  row: BetriebImportRow,
+  idOrt: number | null,
+): Promise<void> {
+  const patch: Record<string, unknown> = {}
+  if (row.strasse?.trim())           patch.strasse           = row.strasse.trim()
+  if (row.hausnummer?.trim())        patch.hausnummer        = row.hausnummer.trim()
+  if (row.hausnummerZusatz?.trim())  patch.hausnummerZusatz  = row.hausnummerZusatz.trim()
+  if (idOrt !== null)                patch.idOrt             = idOrt
+  if (Object.keys(patch).length > 0) {
+    await getApiClient().patch(`/schule/betriebe/${id}`, patch)
+  }
+}
+
+export async function createAnsprechpartner(row: AnsprechpartnerImportRow, idBetrieb: number): Promise<UploadResult> {
+  try {
+    const payload = ansprechpartnerImportToApi(row, idBetrieb)
+    const response = await getApiClient().post('/schule/betriebe-ansprechpartner/create', payload)
     return { success: true, id: response.data?.id }
   } catch (error: unknown) {
     return { success: false, error: toAppError(error).messageUser }
@@ -468,6 +525,25 @@ export async function createKlasse(row: KlasseImportRow, idSchuljahresabschnitt:
       await getApiClient().patch(`/klassen/${newId}`, { klassenLeitungen: [row.idKlassenlehrer] })
     }
     return { success: true, id: newId }
+  } catch (error: unknown) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}
+
+export async function fetchOrtsteile(): Promise<OrtsteilDetails[]> {
+  const response = await getApiClient().get('/ortsteile')
+  return Array.isArray(response.data) ? response.data : []
+}
+
+export async function createOrtsteil(
+  row: OrtsteilImportRow,
+  orteMap?: Map<string, OrtKatalogEintrag>,
+): Promise<UploadResult> {
+  try {
+    const ortId = orteMap ? resolveWohnortId(orteMap, row.plz, row.ort) : null
+    const payload = ortsteilImportToApi(row, ortId)
+    const response = await getApiClient().post('/ortsteile/create', payload)
+    return { success: true, id: response.data?.id }
   } catch (error: unknown) {
     return { success: false, error: toAppError(error).messageUser }
   }

@@ -33,17 +33,28 @@ export interface LehrerImportRow {
   _valid: boolean
   _errors: string[]
   _sent: boolean
+  _rawData: Record<string, string>
   kuerzel: string
   nachname: string
   vorname: string
   personalTyp: string
   anrede: string
   titel: string
+  amtsbezeichnung: string
   geburtsdatum: string
   geschlecht: string
   staatsangehoerigkeitID: string
   emailDienstlich: string
+  emailPrivat: string
   telefon: string
+  telefonMobil: string
+  istSichtbar: string
+  istRelevantFuerStatistik: string
+  strassenname: string
+  hausnummer: string
+  hausnummerZusatz: string
+  plz: string
+  ort: string
 }
 
 export function lehrerImportToApi(row: LehrerImportRow): LehrerStammdaten {
@@ -52,26 +63,31 @@ export function lehrerImportToApi(row: LehrerImportRow): LehrerStammdaten {
     personalTyp: parsePersonalTyp(row.personalTyp),
     anrede: row.anrede || null,
     titel: row.titel || null,
-    amtsbezeichnung: null,
+    amtsbezeichnung: row.amtsbezeichnung || null,
     nachname: row.nachname,
     vorname: row.vorname,
     geschlecht: parseGeschlecht(row.geschlecht),
     geburtsdatum: row.geburtsdatum || null,
     staatsangehoerigkeitID: row.staatsangehoerigkeitID || null,
-    strassenname: null,
-    hausnummer: null,
-    hausnummerZusatz: null,
+    strassenname: row.strassenname || null,
+    hausnummer: row.hausnummer || null,
+    hausnummerZusatz: row.hausnummerZusatz || null,
     wohnortID: null,
     ortsteilID: null,
     telefon: row.telefon || null,
-    telefonMobil: null,
-    emailPrivat: null,
+    telefonMobil: row.telefonMobil || null,
+    emailPrivat: row.emailPrivat || null,
     emailDienstlich: row.emailDienstlich || null,
     foto: null,
-    istSichtbar: true,
-    istRelevantFuerStatistik: true,
+    istSichtbar: parseBoolean(row.istSichtbar, true),
+    istRelevantFuerStatistik: parseBoolean(row.istRelevantFuerStatistik, true),
     leitungsfunktionen: [],
   }
+}
+
+function parseBoolean(raw: string, defaultVal: boolean): boolean {
+  if (!raw) return defaultVal
+  return !['false', '0', 'nein', 'no'].includes(raw.toLowerCase().trim())
 }
 
 function parsePersonalTyp(raw: string): PersonalTyp {

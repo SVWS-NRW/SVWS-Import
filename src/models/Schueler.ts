@@ -116,7 +116,7 @@ export function schuelerImportToApi(row: SchuelerImportRow, idSchuljahresabschni
     aufnahmedatum: row.aufnahmedatum || null,
     beginnBildungsgang: row.beginnBildungsgang || null,
     dauerBildungsgang: row.dauerBildungsgang ? parseInt(row.dauerBildungsgang, 10) || null : null,
-    staatsangehoerigkeitID: row.staatsangehoerigkeitID || null,
+    staatsangehoerigkeitID: null,
     idReligion: null,
     idSchuljahresabschnitt,
     idJahrgang: null,

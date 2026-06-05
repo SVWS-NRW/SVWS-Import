@@ -148,7 +148,7 @@ import { useKlassenStore } from '@/stores/klassen'
 import { useSchuleStore } from '@/stores/schule'
 import { useJahrgaengeStore } from '@/stores/jahrgaenge'
 import { type KlasseImportRow } from '@/models/Klassen'
-import { fetchLehrkraefte } from '@/services/svwsService'
+import { fetchLehrkraefte, type LehrkraftListEntry } from '@/services/svwsService'
 import ImportStats from '@/components/ImportStats.vue'
 import { useDarkMode } from '@/composables/useDarkMode'
 import { parseKlassenCsv } from '@/utils/csvParser'
@@ -163,6 +163,7 @@ const confirm = useConfirm()
 const { isDark } = useDarkMode()
 const importGridApi = ref<GridApi | null>(null)
 const selectedCount = ref(0)
+const cachedLehrkraefte = ref<LehrkraftListEntry[]>([])
 
 function onImportGridReady(params: { api: GridApi }): void {
   importGridApi.value = params.api
@@ -185,6 +186,7 @@ onMounted(async () => {
     jahrgaengeStore.existingJahrgaenge.length === 0 ? jahrgaengeStore.loadExisting() : Promise.resolve(),
     fetchLehrkraefte(),
   ])
+  cachedLehrkraefte.value = lehrkraefte
   store.resolveJahrgaenge(jahrgaengeStore.existingJahrgaenge)
   store.resolveLehrkraefte(lehrkraefte)
 })
@@ -202,7 +204,8 @@ async function onFileSelect(event: { files: File[] }): Promise<void> {
     const rows = await parseKlassenCsv(file)
     if (rows.length === 0) throw new Error('Keine Datensätze gefunden')
     store.setRows(rows)
-    store.validateAll()
+    store.resolveJahrgaenge(jahrgaengeStore.existingJahrgaenge)
+    store.resolveLehrkraefte(cachedLehrkraefte.value)
   } catch (e) {
     parseError.value = e instanceof Error ? e.message : 'Fehler beim Einlesen der Datei'
   } finally {

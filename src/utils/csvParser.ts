@@ -5,6 +5,8 @@ import { type KlasseImportRow } from '@/models/Klassen'
 import { type JahrgangImportRow } from '@/models/Jahrgaenge'
 import { type FachImportRow } from '@/models/Faecher'
 import { type FloskelImportRow } from '@/models/Floskel'
+import type { BetriebImportRow, AnsprechpartnerImportRow } from '@/models/Betriebe'
+import type { OrtsteilImportRow } from '@/models/Ortsteile'
 import { generateId } from './idHelper'
 
 // Normalisiert Spaltennamen: Leerzeichen/Groß-Klein entfernen
@@ -90,6 +92,20 @@ function get(map: Map<string, string>, ...keys: string[]): string {
   return ''
 }
 
+/**
+ * Trennt einen kombinierten Straßen-String (z.B. "Altgrabauer Straße 227")
+ * in Straßenname und Hausnummer auf.
+ * Gibt ["Altgrabauer Straße", "227"] zurück.
+ * Wenn keine Hausnummer erkennbar ist: ["Altgrabauer Straße", ""].
+ */
+export function splitStrasseHausnummer(combined: string): [string, string] {
+  const trimmed = combined.trim()
+  if (!trimmed) return ['', '']
+  const match = trimmed.match(/^(.*)\s+(\d+[a-zA-Z0-9/\-]*)$/)
+  if (match) return [match[1].trim(), match[2].trim()]
+  return [trimmed, '']
+}
+
 export async function parseSchuelerCsv(file: File): Promise<{ rows: SchuelerImportRow[]; unmappedHeaders: string[] }> {
   return new Promise((resolve, reject) => {
     Papa.parse<Record<string, string>>(file, {
@@ -128,8 +144,12 @@ export async function parseSchuelerCsv(file: File): Promise<{ rows: SchuelerImpo
             geburtslandVater:            get(m, 'geburtslandvater', 'geburtsland vater'),
             geburtslandMutter:           get(m, 'geburtslandmutter', 'geburtsland mutter'),
             // Adresse
-            strassenname:                get(m, 'straße', 'strasse', 'strassenname', 'street', 'adresse', 'wohnstraße', 'strae'),
-            hausnummer:                  get(m, 'hausnummer', 'hnr', 'hausnr'),
+            ...(() => {
+              const strasseRaw = get(m, 'straße', 'strasse', 'strassenname', 'street', 'adresse', 'wohnstraße', 'strae')
+              const explicitHnr = get(m, 'hausnummer', 'hnr', 'hausnr')
+              const [strassenname, hausnummer] = explicitHnr ? [strasseRaw, explicitHnr] : splitStrasseHausnummer(strasseRaw)
+              return { strassenname, hausnummer }
+            })(),
             hausnummerZusatz:            get(m, 'hausnummernzusatz', 'hausnrz', 'adresszusatz'),
             plz:                         get(m, 'plz', 'postleitzahl', 'postal code', 'zip'),
             ort:                         get(m, 'ort', 'wohnort', 'stadt', 'city'),
@@ -169,34 +189,80 @@ export async function parseSchuelerCsv(file: File): Promise<{ rows: SchuelerImpo
   })
 }
 
-export async function parseLehrerCsv(file: File): Promise<LehrerImportRow[]> {
+export const LEHRER_KNOWN_KEYS = new Set([
+  'kuerzel', 'kürzel', 'abbreviation', 'internkrz', 'kurzzeichen', 'kz',
+  'nachname', 'name', 'familienname',
+  'vorname', 'firstname',
+  'personaltyp', 'typ', 'type',
+  'anrede', 'salutation',
+  'titel', 'title',
+  'amtsbezeichnung', 'amtsbez', 'bezeichnung',
+  'geburtsdatum', 'geburtstag', 'birthdate',
+  'geschlecht', 'gender',
+  '1.staatsang.', 'staatsangehoerigkeitid', 'staatsangehoerigkeit', 'staatsangehörigkeit', 'nationalität', 'nationality', 'staatsang',
+  'dienstl.email', 'dienstlemail', 'emaildienstlich', 'dienstlicheemail', 'dienstemail',
+  'email', 'e-mail', 'mail', 'emailadresse',
+  'emailprivat', 'privateemail', 'mailprivat', 'emailprivate',
+  'tel.festnetz', 'telfestnetz', 'telefon', 'phone', 'tel', 'festnetz',
+  'telefonmobil', 'mobiltelefon', 'handy', 'mobil', 'mobile', 'tel.mobil',
+  'istsichtbar', 'sichtbar', 'visible',
+  'istrelevantfuerstatistik', 'statistik', 'relevantfuerstatistik',
+  'straße', 'strasse', 'strassenname', 'street', 'adresse',
+  'hausnummer', 'hnr', 'hausnr',
+  'hausnummerzusatz', 'hausnrz', 'adresszusatz',
+  'plz', 'postleitzahl', 'zip',
+  'ort', 'wohnort', 'stadt', 'city',
+])
+
+export async function parseLehrerCsv(file: File): Promise<{ rows: LehrerImportRow[]; unmappedHeaders: string[] }> {
   return new Promise((resolve, reject) => {
     Papa.parse<Record<string, string>>(file, {
       header: true,
       skipEmptyLines: true,
+      delimiter: /\.dat$/i.test(file.name) ? '|' : '',
       complete(results) {
         const rows: LehrerImportRow[] = results.data.map(record => {
           const m = buildLookup(record)
+          const strasseRaw = get(m, 'straße', 'strasse', 'strassenname', 'street', 'adresse')
+          const explicitHnr = get(m, 'hausnummer', 'hnr', 'hausnr')
+          const [strassenname, hausnummer] = explicitHnr
+            ? [strasseRaw, explicitHnr]
+            : splitStrasseHausnummer(strasseRaw)
+          const rawData: Record<string, string> = {}
+          for (const [k, v] of Object.entries(record)) rawData[k] = v ?? ''
           const row: LehrerImportRow = {
             _id: generateId(),
             _valid: true,
             _errors: [],
             _sent: false,
+            _rawData: rawData,
             kuerzel: get(m, 'kuerzel', 'abbreviation', 'kürzel', 'internkrz', 'kurzzeichen', 'kz'),
             nachname: get(m, 'nachname', 'name', 'familienname'),
             vorname: get(m, 'vorname', 'firstname'),
             personalTyp: get(m, 'personaltyp', 'typ', 'type') || 'LEHRKRAFT',
             anrede: get(m, 'anrede', 'salutation'),
             titel: get(m, 'titel', 'title'),
+            amtsbezeichnung: get(m, 'amtsbezeichnung', 'amtsbez'),
             geburtsdatum: normalisiereDatum(get(m, 'geburtsdatum', 'geburtstag', 'birthdate')),
             geschlecht: get(m, 'geschlecht', 'gender'),
-            staatsangehoerigkeitID: get(m, '1.staatsang.', 'staatsangehoerigkeit', 'staatsangehörigkeit', 'nationalität', 'nationality', 'staatsang'),
-            emailDienstlich: get(m, 'emaildienstlich', 'email', 'mail', 'e-mail'),
-            telefon: get(m, 'telefon', 'phone', 'tel'),
+            staatsangehoerigkeitID: get(m, 'staatsangehoerigkeitID', '1.staatsang.', 'staatsangehoerigkeit', 'staatsangehörigkeit', 'nationalität', 'nationality', 'staatsang'),
+            emailDienstlich: get(m, 'dienstl.email', 'dienstlemail', 'emaildienstlich', 'dienstlicheemail', 'dienstemail', 'email', 'e-mail', 'mail', 'emailadresse'),
+            emailPrivat: get(m, 'emailprivat', 'privateemail', 'mailprivat', 'emailprivate'),
+            telefon: get(m, 'tel.festnetz', 'telfestnetz', 'telefon', 'phone', 'tel', 'festnetz'),
+            telefonMobil: get(m, 'telefonmobil', 'mobiltelefon', 'handy', 'mobil', 'mobile', 'tel.mobil'),
+            istSichtbar: get(m, 'istsichtbar', 'sichtbar', 'visible'),
+            istRelevantFuerStatistik: get(m, 'istrelevantfuerstatistik', 'statistik', 'relevantfuerstatistik'),
+            strassenname,
+            hausnummer,
+            hausnummerZusatz: get(m, 'hausnummerzusatz', 'hausnrz', 'adresszusatz'),
+            plz: get(m, 'plz', 'postleitzahl', 'zip'),
+            ort: get(m, 'ort', 'wohnort', 'stadt', 'city'),
           }
           return row
         })
-        resolve(rows)
+        const allHeaders = results.meta.fields ?? []
+        const unmappedHeaders = allHeaders.filter(h => !LEHRER_KNOWN_KEYS.has(normalizeKey(h)))
+        resolve({ rows, unmappedHeaders })
       },
       error(err) {
         reject(new Error(`CSV-Fehler: ${err.message}`))
@@ -327,6 +393,108 @@ export async function parseFloskelCsv(file: File): Promise<FloskelImportRow[]> {
             jahrgang:        get(m, 'jahrgang', 'jg', 'jahrgangsstufe', 'stufe'),
             niveau:          get(m, 'niveau', 'niveaustufe'),
             sortierung:      get(m, 'sortierung', 'sort'),
+          }
+        })
+        resolve(rows)
+      },
+      error(err) {
+        reject(new Error(`CSV-Fehler: ${err.message}`))
+      },
+    })
+  })
+}
+
+export async function parseBetriebeCsv(file: File): Promise<BetriebImportRow[]> {
+  return new Promise((resolve, reject) => {
+    Papa.parse<Record<string, string>>(file, {
+      header: true,
+      skipEmptyLines: true,
+      delimiter: /\.dat$/i.test(file.name) ? '|' : '',
+      complete(results) {
+        const rows: BetriebImportRow[] = results.data.map(record => {
+          const m = buildLookup(record)
+          return {
+            _id: generateId(),
+            _valid: true,
+            _errors: [],
+            _sent: false,
+            name:                              get(m, 'name', 'name1', 'betrieb', 'betriebsname', 'firma'),
+            nameZusatz:                        get(m, 'namezusatz', 'name2', 'zusatz', 'namenszusatz'),
+            bemerkungen:                       get(m, 'bemerkungen', 'bemerkung', 'notizen', 'notes'),
+            branche:                           get(m, 'branche', 'branchenbezeichnung'),
+            strasse:                           get(m, 'strasse', 'straße', 'street', 'strae'),
+            hausnummer:                        get(m, 'hausnummer', 'hnr', 'hausnr'),
+            hausnummerZusatz:                  get(m, 'hausnummerzusatz', 'hausnrz', 'adresszusatz'),
+            plz:                               get(m, 'plz', 'postleitzahl', 'postalcode', 'zip'),
+            ort:                               get(m, 'ort', 'wohnort', 'stadt', 'city'),
+            telefon1:                          get(m, 'telefon1', 'telefonnr.1', 'telefon', 'tel', 'phone'),
+            telefon2:                          get(m, 'telefon2', 'telefonnr.2'),
+            fax:                               get(m, 'fax', 'faxnummer'),
+            eMail:                             get(m, 'email', 'e-mail', 'mail', 'emailadresse'),
+            istAusbildungsbetrieb:             get(m, 'ausbildungsbetrieb', 'istausbildungsbetrieb'),
+            istMassnahmentraeger:              get(m, 'massnahmentraeger', 'istmassnahmentraeger', 'maßnahmenträger'),
+            belehrungNachISGErforderlich:      get(m, 'belehrungisg', 'belehrungnachisg', 'belehrungnachisgerforderlich', 'isg'),
+            erweitertesFuehrungszeugnisErforderlich: get(m, 'erweitertesfuehrungszeugnis', 'fuehrungszeugnis', 'erwfuehrungszeugnis'),
+            bietetPraktikumsplaetzeAn:         get(m, 'praktikumsplaetze', 'bietetzpraktikumsplaetze', 'bietetzpraktikumsplaetzean'),
+          }
+        })
+        resolve(rows)
+      },
+      error(err) {
+        reject(new Error(`CSV-Fehler: ${err.message}`))
+      },
+    })
+  })
+}
+
+export async function parseAnsprechpartnerCsv(file: File): Promise<AnsprechpartnerImportRow[]> {
+  return new Promise((resolve, reject) => {
+    Papa.parse<Record<string, string>>(file, {
+      header: true,
+      skipEmptyLines: true,
+      delimiter: /\.dat$/i.test(file.name) ? '|' : '',
+      complete(results) {
+        const rows: AnsprechpartnerImportRow[] = results.data.map(record => {
+          const m = buildLookup(record)
+          return {
+            _id: generateId(),
+            _valid: true,
+            _errors: [],
+            _sent: false,
+            betriebName: get(m, 'betrieb', 'betriebsname', 'firma', 'betriebname'),
+            anrede:      get(m, 'anrede', 'salutation', 'title'),
+            name:        get(m, 'nachname', 'name', 'familienname'),
+            rufname:     get(m, 'vorname', 'rufname', 'firstname'),
+            telefon:     get(m, 'telefon', 'tel', 'phone'),
+            eMail:       get(m, 'email', 'e-mail', 'mail'),
+          }
+        })
+        resolve(rows)
+      },
+      error(err) {
+        reject(new Error(`CSV-Fehler: ${err.message}`))
+      },
+    })
+  })
+}
+
+export async function parseOrtsteileCsv(file: File): Promise<OrtsteilImportRow[]> {
+  return new Promise((resolve, reject) => {
+    Papa.parse<Record<string, string>>(file, {
+      header: true,
+      skipEmptyLines: true,
+      delimiter: /\.dat$/i.test(file.name) ? '|' : '',
+      complete(results) {
+        const rows: OrtsteilImportRow[] = results.data.map(record => {
+          const m = buildLookup(record)
+          return {
+            _id: generateId(),
+            _valid: true,
+            _errors: [],
+            _sent: false,
+            ortsteil: get(m, 'ortsteil', 'stadtteil', 'bezeichnung', 'name'),
+            plz:      get(m, 'plz', 'postleitzahl', 'postalcode'),
+            ort:      get(m, 'ort', 'ortsname', 'stadt', 'city'),
           }
         })
         resolve(rows)

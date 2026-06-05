@@ -1,6 +1,7 @@
 import axios, { type AxiosInstance } from 'axios'
 
 let client: AxiosInstance | null = null
+let rootClient: AxiosInstance | null = null
 
 export interface ConnectionConfig {
   baseUrl: string
@@ -9,23 +10,8 @@ export interface ConnectionConfig {
   password: string
 }
 
-function resolveBaseUrl(config: ConnectionConfig): string {
-  if (import.meta.env.DEV) {
-    return `/svws-proxy/db/${config.schema}`
-  }
-  return `${config.baseUrl}/db/${config.schema}`
-}
-
-export function createApiClient(config: ConnectionConfig): AxiosInstance {
-  client = axios.create({
-    baseURL: resolveBaseUrl(config),
-    headers: {
-      'Authorization': `Basic ${btoa(`${config.username}:${config.password}`)}`,
-      'Content-Type': 'application/json',
-    },
-    timeout: 30000,
-  })
-  client.interceptors.request.use(cfg => {
+function applyInterceptors(instance: AxiosInstance, config: ConnectionConfig): void {
+  instance.interceptors.request.use(cfg => {
     if (!cfg.method || cfg.method.toLowerCase() === 'get') {
       cfg.headers['Cache-Control'] = 'no-cache'
       cfg.headers['Pragma'] = 'no-cache'
@@ -35,6 +21,33 @@ export function createApiClient(config: ConnectionConfig): AxiosInstance {
     }
     return cfg
   })
+}
+
+export function createApiClient(config: ConnectionConfig): AxiosInstance {
+  const schemaBaseUrl = import.meta.env.DEV
+    ? `/svws-proxy/db/${config.schema}`
+    : `${config.baseUrl}/db/${config.schema}`
+
+  const rootBaseUrl = import.meta.env.DEV
+    ? '/svws-proxy'
+    : config.baseUrl
+
+  const authHeader = `Basic ${btoa(`${config.username}:${config.password}`)}`
+
+  client = axios.create({
+    baseURL: schemaBaseUrl,
+    headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
+    timeout: 30000,
+  })
+  applyInterceptors(client, config)
+
+  rootClient = axios.create({
+    baseURL: rootBaseUrl,
+    headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
+    timeout: 30000,
+  })
+  applyInterceptors(rootClient, config)
+
   return client
 }
 
@@ -43,6 +56,13 @@ export function getApiClient(): AxiosInstance {
   return client
 }
 
+/** Client für Endpunkte ohne /db/{schema}-Prefix (z.B. /types/allinone.json) */
+export function getRootClient(): AxiosInstance {
+  if (!rootClient) throw new Error('API-Client nicht initialisiert. Bitte zuerst verbinden.')
+  return rootClient
+}
+
 export function destroyApiClient(): void {
   client = null
+  rootClient = null
 }

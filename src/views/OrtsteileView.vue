@@ -10,7 +10,7 @@
           @click="router.push({ name: 'import' })"
           aria-label="Zurück"
         />
-        <h2>Lehrerdaten</h2>
+        <h2>Ortsteile verwalten</h2>
       </div>
       <ImportStats
         :total="store.totalCount"
@@ -23,7 +23,7 @@
           mode="basic"
           :auto="false"
           :multiple="false"
-          accept=".csv,.xlsx,.xls,.dat"
+          accept=".csv,.dat"
           chooseLabel="Datei laden"
           chooseIcon="pi pi-folder-open"
           :maxFileSize="10000000"
@@ -42,9 +42,18 @@
           :label="store.uploading ? 'Stoppen' : 'Leeren'"
           :icon="store.uploading ? 'pi pi-stop' : 'pi pi-trash'"
           :severity="store.uploading ? 'warn' : 'danger'"
+          text
+          size="small"
+          @click="store.uploading ? store.stopUpload() : confirmClear()"
+        />
+        <Button
+          v-tooltip.top="'Ortsteile aus Datenbank laden'"
+          icon="pi pi-refresh"
+          severity="secondary"
           size="small"
           text
-          @click="store.uploading ? store.stopUpload() : confirmClear()"
+          :loading="store.loadingExisting"
+          @click="handleLoadExisting"
         />
       </div>
     </div>
@@ -58,63 +67,76 @@
       <span v-if="uploadResult.failed > 0">, {{ uploadResult.failed }} fehlgeschlagen</span>
     </Message>
 
-    <ag-grid-vue
-      :class="[isDark ? 'ag-theme-quartz-dark' : 'ag-theme-quartz', 'data-table']"
-      :rowData="store.rows"
-      :columnDefs="columnDefs"
-      :defaultColDef="defaultColDef"
-      :rowClassRules="rowClassRules"
-      :getRowId="getRowId"
-      rowSelection="multiple"
-      :suppressRowClickSelection="true"
-      @cell-value-changed="onCellChanged"
-      @grid-ready="onGridReady"
-      @selection-changed="onSelectionChanged"
-      :animateRows="true"
-      :stopEditingWhenCellsLoseFocus="true"
-    />
+    <Message v-if="loadError" severity="error" :closable="true" @close="loadError = ''">
+      {{ loadError }}
+    </Message>
+
+    <Message severity="info" :closable="false">
+      Die Spalten <strong>plz</strong> und <strong>ort</strong> werden genutzt, um den zugehörigen Ort aus dem Katalog zu ermitteln.
+      Werden beide Felder befüllt, wird die passende Orts-ID automatisch gesetzt.
+    </Message>
+
+    <div class="section">
+      <h3 class="section-title">Vorhandene Ortsteile</h3>
+      <ag-grid-vue
+        :class="[isDark ? 'ag-theme-quartz-dark' : 'ag-theme-quartz', 'existing-table']"
+        :rowData="store.existingOrtsteile"
+        :columnDefs="existingColDefs"
+        :defaultColDef="readOnlyColDef"
+        :animateRows="true"
+      />
+    </div>
+
+    <div class="section import-section">
+      <h3 class="section-title">Zu importierende Ortsteile</h3>
+      <ag-grid-vue
+        :class="[isDark ? 'ag-theme-quartz-dark' : 'ag-theme-quartz', 'data-table']"
+        :rowData="store.rows"
+        :columnDefs="computedImportColDefs"
+        :defaultColDef="defaultColDef"
+        :rowClassRules="rowClassRules"
+        :getRowId="getRowId"
+        rowSelection="multiple"
+        :suppressRowClickSelection="true"
+        @cell-value-changed="onCellChanged"
+        @grid-ready="onGridReady"
+        @selection-changed="onSelectionChanged"
+        :animateRows="true"
+        :stopEditingWhenCellsLoseFocus="true"
+      />
+    </div>
 
     <ConfirmDialog />
-
-    <LehrerColumnMappingDialog
-      v-if="showMappingDialog"
-      :unmappedHeaders="store.unmappedHeaders"
-      :sampleRows="store.rows.slice(0, 3)"
-      @confirm="onMappingConfirm"
-      @skip="showMappingDialog = false"
-    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { AgGridVue } from '@ag-grid-community/vue3'
 import { ClientSideRowModelModule } from '@ag-grid-community/client-side-row-model'
-import { ModuleRegistry, type ColDef, type GetRowIdParams, type CellValueChangedEvent, type GridReadyEvent, type GridApi } from '@ag-grid-community/core'
+import { ModuleRegistry, type ColDef, type GetRowIdParams, type CellValueChangedEvent, type GridApi, type GridReadyEvent } from '@ag-grid-community/core'
 import Button from 'primevue/button'
 import FileUpload from 'primevue/fileupload'
 import Message from 'primevue/message'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
-import { useLehrerStore } from '@/stores/lehrer'
-import { type LehrerImportRow } from '@/models/Lehrer'
+import { useOrtsteileStore } from '@/stores/ortsteile'
+import type { OrtsteilImportRow } from '@/models/Ortsteile'
 import ImportStats from '@/components/ImportStats.vue'
-import LehrerColumnMappingDialog from '@/components/LehrerColumnMappingDialog.vue'
 import { useDarkMode } from '@/composables/useDarkMode'
-import { parseLehrerCsv } from '@/utils/csvParser'
-import { parseLehrerXlsx } from '@/utils/xlsxParser'
+import { parseOrtsteileCsv } from '@/utils/csvParser'
 
 ModuleRegistry.registerModules([ClientSideRowModelModule])
 
 const router = useRouter()
-const store = useLehrerStore()
+const store = useOrtsteileStore()
 const confirm = useConfirm()
 const { isDark } = useDarkMode()
 const uploadResult = ref<{ sent: number; failed: number } | null>(null)
+const loadError = ref('')
 const parseError = ref('')
 const parsing = ref(false)
-const showMappingDialog = ref(false)
 const gridApi = ref<GridApi | null>(null)
 const selectedCount = ref(0)
 
@@ -132,17 +154,26 @@ async function onFileSelect(event: { files: File[] }): Promise<void> {
   parsing.value = true
   parseError.value = ''
   try {
-    const isXlsx = /\.(xlsx|xls)$/i.test(file.name)
-    const { rows, unmappedHeaders } = isXlsx ? await parseLehrerXlsx(file) : await parseLehrerCsv(file)
+    const rows = await parseOrtsteileCsv(file)
     if (rows.length === 0) throw new Error('Keine Datensätze gefunden')
-    store.setRows(rows, unmappedHeaders)
+    store.setRows(rows)
     store.validateAll()
-    if (unmappedHeaders.length > 0) showMappingDialog.value = true
   } catch (e) {
     parseError.value = e instanceof Error ? e.message : 'Fehler beim Einlesen der Datei'
   } finally {
     parsing.value = false
   }
+}
+
+onMounted(async () => {
+  await handleLoadExisting()
+})
+
+const readOnlyColDef: ColDef = {
+  editable: false,
+  sortable: true,
+  filter: true,
+  resizable: true,
 }
 
 const defaultColDef: ColDef = {
@@ -153,39 +184,30 @@ const defaultColDef: ColDef = {
   minWidth: 80,
 }
 
-const columnDefs = computed<ColDef<LehrerImportRow>[]>(() => [
-  { field: 'kuerzel', headerName: 'Kürzel', width: 100, pinned: 'left',
-    checkboxSelection: true, headerCheckboxSelection: true,
-    cellStyle: (p) => p.data?._errors.some(e => e.includes('Kürzel')) ? { background: isDark.value ? '#7f1d1d' : '#fee2e2' } : null },
-  { field: 'nachname', headerName: 'Nachname', width: 150, pinned: 'left',
-    cellStyle: (p) => p.data?._errors.some(e => e.includes('Nachname')) ? { background: isDark.value ? '#7f1d1d' : '#fee2e2' } : null },
-  { field: 'vorname', headerName: 'Vorname', width: 150, pinned: 'left',
-    cellStyle: (p) => p.data?._errors.some(e => e.includes('Vorname')) ? { background: isDark.value ? '#7f1d1d' : '#fee2e2' } : null },
-  { field: 'personalTyp', headerName: 'Typ', width: 130 },
-  { field: 'anrede', headerName: 'Anrede', width: 100 },
-  { field: 'titel', headerName: 'Titel', width: 90 },
-  { field: 'amtsbezeichnung', headerName: 'Amtsbezeichnung', width: 160 },
-  { field: 'geschlecht', headerName: 'Geschlecht', width: 110 },
-  { field: 'geburtsdatum', headerName: 'Geburtsdatum', width: 140 },
-  { field: 'staatsangehoerigkeitID', headerName: 'Staatsangehörigkeit', width: 170 },
-  { field: 'emailDienstlich', headerName: 'E-Mail dienstlich', flex: 2,
-    cellStyle: (p) => p.data?._errors.some(e => e.includes('E-Mail dienstlich')) ? { background: isDark.value ? '#7f1d1d' : '#fee2e2' } : null },
-  { field: 'emailPrivat', headerName: 'E-Mail privat', flex: 2,
-    cellStyle: (p) => p.data?._errors.some(e => e.includes('E-Mail privat')) ? { background: isDark.value ? '#7f1d1d' : '#fee2e2' } : null },
-  { field: 'strassenname', headerName: 'Straße', flex: 1.5 },
-  { field: 'hausnummer', headerName: 'Haus-Nr.', width: 90 },
-  { field: 'hausnummerZusatz', headerName: 'Zusatz', width: 80 },
-  { field: 'plz', headerName: 'PLZ', width: 80 },
-  { field: 'ort', headerName: 'Ort', flex: 1 },
-  { field: 'telefon', headerName: 'Telefon', width: 140 },
-  { field: 'telefonMobil', headerName: 'Mobil', width: 140 },
-  { field: 'istSichtbar', headerName: 'Sichtbar', width: 100 },
-  { field: 'istRelevantFuerStatistik', headerName: 'Statistik', width: 100 },
+const existingColDefs: ColDef[] = [
+  { field: 'id',             headerName: 'ID',          width: 80 },
+  { field: 'ortsteil',       headerName: 'Ortsteil',    flex: 1 },
+  { field: 'bezeichnungOrt', headerName: 'Ort',         width: 180 },
+  { field: 'plzOrt',         headerName: 'PLZ',         width: 100 },
+  { field: 'ort_id',         headerName: 'Orts-ID',     width: 100 },
+]
+
+const importColDefs: ColDef<OrtsteilImportRow>[] = [
+  {
+    field: 'ortsteil',
+    headerName: 'Ortsteil',
+    flex: 1,
+    checkboxSelection: true,
+    headerCheckboxSelection: true,
+    cellStyle: (p) => p.data?._errors.some(e => e.includes('Ortsteil')) ? { background: isDark.value ? '#7f1d1d' : '#fee2e2' } : null,
+  },
+  { field: 'plz', headerName: 'PLZ',  width: 110 },
+  { field: 'ort', headerName: 'Ort',  width: 200 },
   {
     headerName: 'Status',
-    width: 100,
+    width: 110,
     editable: false,
-    cellRenderer: (params: { data: LehrerImportRow }) => {
+    cellRenderer: (params: { data: OrtsteilImportRow }) => {
       if (params.data._sent) return '<span style="color:#22c55e">✔ Gesendet</span>'
       if (!params.data._valid) return `<span style="color:#ef4444" title="${params.data._errors.join('; ')}">✖ Fehler</span>`
       return '<span style="color:#f59e0b">● Bereit</span>'
@@ -197,46 +219,60 @@ const columnDefs = computed<ColDef<LehrerImportRow>[]>(() => [
     editable: false,
     sortable: false,
     filter: false,
-    cellRenderer: (params: { data: LehrerImportRow }) =>
+    cellRenderer: (params: { data: OrtsteilImportRow }) =>
       params.data._sent
         ? ''
-        : `<button onclick="window.__deleteLehrer('${params.data._id}')" style="border:none;background:none;cursor:pointer;color:#ef4444;font-size:1rem" title="Zeile löschen">✕</button>`,
+        : `<button onclick="window.__deleteOrtsteil('${params.data._id}')" style="border:none;background:none;cursor:pointer;color:#ef4444;font-size:1rem" title="Zeile löschen">✕</button>`,
   },
-  // ── Nicht zugeordnete Spalten (amber) ────────────────────────────────────
-  ...store.unmappedHeaders.map(header => ({
-    headerName: header,
-    headerClass: 'col-unmapped-header',
-    cellClass: 'col-unmapped-cell',
+]
+
+const computedImportColDefs = computed<ColDef<OrtsteilImportRow>[]>(() => {
+  const reserved = new Set([
+    '_id', '_valid', '_errors', '_sent', '_serverError',
+    'ortsteil', 'plz', 'ort',
+  ])
+
+  const dynamicFields = new Set<string>()
+  for (const row of store.rows) {
+    for (const key of Object.keys(row)) {
+      if (!reserved.has(key)) dynamicFields.add(key)
+    }
+  }
+
+  const dynamicCols: ColDef<OrtsteilImportRow>[] = Array.from(dynamicFields).map((field) => ({
+    field,
+    headerName: field,
     editable: false,
-    width: 130,
-    sortable: true,
-    filter: true,
-    valueGetter: (params: { data?: LehrerImportRow }) => params.data?._rawData?.[header] ?? '',
-  })),
-])
+    minWidth: 130,
+    flex: 1,
+  }))
+
+  return [...importColDefs, ...dynamicCols]
+})
 
 const rowClassRules = {
-  'row-sent': (params: { data: LehrerImportRow }) => params.data._sent,
-  'row-error': (params: { data: LehrerImportRow }) => !params.data._valid && !params.data._sent,
+  'row-sent':  (params: { data: OrtsteilImportRow }) => params.data._sent,
+  'row-error': (params: { data: OrtsteilImportRow }) => !params.data._valid && !params.data._sent,
 }
 
-function getRowId(params: GetRowIdParams<LehrerImportRow>): string {
+function getRowId(params: GetRowIdParams<OrtsteilImportRow>): string {
   return params.data._id
 }
 
-function onCellChanged(event: CellValueChangedEvent<LehrerImportRow>): void {
+function onCellChanged(event: CellValueChangedEvent<OrtsteilImportRow>): void {
   if (event.data) {
     store.updateRow(event.data._id, { [event.colDef.field as string]: event.newValue })
   }
 }
 
-;(window as unknown as Record<string, unknown>).__deleteLehrer = (id: string) => {
+;(window as unknown as Record<string, unknown>).__deleteOrtsteil = (id: string) => {
   store.deleteRow(id)
 }
 
-function onMappingConfirm(mapping: Record<string, string>): void {
-  showMappingDialog.value = false
-  store.applyColumnMapping(mapping)
+async function handleLoadExisting(): Promise<void> {
+  loadError.value = ''
+  const result = await store.loadExisting()
+  if (result.error) loadError.value = result.error
 }
 
 async function handleUploadAll(): Promise<void> {
@@ -244,11 +280,14 @@ async function handleUploadAll(): Promise<void> {
   const selected = gridApi.value?.getSelectedRows() ?? []
   const selectedIds = selected.length > 0 ? new Set(selected.map((r: { _id: string }) => r._id)) : undefined
   uploadResult.value = await store.uploadAll(selectedIds)
+  if ((uploadResult.value?.sent ?? 0) > 0) {
+    await handleLoadExisting()
+  }
 }
 
 function confirmClear(): void {
   confirm.require({
-    message: 'Alle Lehrerdaten verwerfen?',
+    message: 'Alle Ortsteildaten verwerfen?',
     header: 'Bestätigung',
     icon: 'pi pi-exclamation-triangle',
     acceptLabel: 'Ja, leeren',
@@ -262,26 +301,9 @@ function confirmClear(): void {
 </script>
 
 <style>
-.row-sent { opacity: 0.6; }
+.row-sent  { opacity: 0.6; }
 .row-error { background-color: #fff5f5 !important; }
 .dark .row-error { background-color: #3b0c0c !important; }
-
-.ag-theme-quartz .col-unmapped-header .ag-header-cell-label,
-.ag-theme-quartz .col-unmapped-header {
-  color: #92400e;
-  background-color: #fffbeb;
-}
-.ag-theme-quartz-dark .col-unmapped-header .ag-header-cell-label,
-.ag-theme-quartz-dark .col-unmapped-header {
-  color: #fcd34d;
-  background-color: #1c1408;
-}
-.col-unmapped-cell {
-  color: #92400e;
-}
-.ag-theme-quartz-dark .col-unmapped-cell {
-  color: #fcd34d;
-}
 </style>
 
 <style scoped>
@@ -318,6 +340,27 @@ h2 {
   margin-left: auto;
 }
 
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.import-section {
+  flex: 1;
+  min-height: 0;
+}
+
+.section-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.existing-table {
+  height: 220px;
+}
+
 :deep(.header-actions .p-button),
 :deep(.p-fileupload-basic .p-button) {
   padding: 0.2rem 0.5rem;
@@ -340,6 +383,6 @@ h2 {
 
 .data-table {
   flex: 1;
-  min-height: 400px;
+  min-height: 300px;
 }
 </style>

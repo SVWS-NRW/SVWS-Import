@@ -101,13 +101,30 @@
             </Message>
 
             <div v-if="klasseRows.length === 0" :class="['hint-box', { 'hint-box--dark': isDark }]">
-              <i class="pi pi-info-circle" />
-              <div>
-                <strong>Klassenunterricht</strong> — weist allen Schülern einer Klasse
-                Unterrichtsfächer zu. Format: Klassen-CSV mit Spalten
-                <em>Schuljahr&nbsp;|&nbsp;Abschnitt&nbsp;|&nbsp;Klasse&nbsp;|&nbsp;LehrerKuerzel&nbsp;|&nbsp;Kursart&nbsp;|&nbsp;Fach&nbsp;|&nbsp;Wochenstunden</em>.
-                Trennzeichen: Semikolon, Komma oder Pipe.
-                Nach dem Laden werden Abschnitt, Klasse, Lehrer und Fach automatisch gegen die Datenbank geprüft.
+              <i class="pi pi-info-circle hint-icon" />
+              <div class="hint-body-wrap">
+                <div class="hint-toggle" @click="klasseHintOpen = !klasseHintOpen">
+                  <strong>Klassenunterricht</strong>
+                  <i :class="['pi', klasseHintOpen ? 'pi-chevron-up' : 'pi-chevron-down', 'hint-chevron']" />
+                </div>
+                <div v-show="klasseHintOpen" class="hint-body">
+                  <p style="margin:0 0 0.5rem">
+                    Weist allen Schülern einer Klasse Unterrichtsfächer zu. Trennzeichen: Semikolon, Komma oder Pipe.
+                    Abschnitt, Klasse, Lehrer und Fach werden automatisch gegen die Datenbank geprüft.
+                  </p>
+                  <table class="hint-table">
+                    <tbody>
+                      <tr>
+                        <td class="hint-col-label">Pflichtfelder</td>
+                        <td><code>schuljahr</code> · <code>abschnitt</code> · <code>klasse</code> · <code>fach</code></td>
+                      </tr>
+                      <tr>
+                        <td class="hint-col-label">Optional</td>
+                        <td><code>lehrerkuerzel</code> · <code>kursart</code> · <code>wochenstunden</code> · <code>aufszeugnis</code></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
             <ag-grid-vue
@@ -126,15 +143,8 @@
         <TabPanel value="kurs">
           <div class="tab-content">
             <div class="tab-actions">
-              <Select
-                v-model="kursFormat"
-                :options="kursFormats"
-                optionLabel="label"
-                optionValue="value"
-                size="small"
-                style="width: 240px"
-              />
               <FileUpload
+                :key="kursFileKey"
                 mode="basic" :auto="false" :multiple="false"
                 accept=".csv,.dat,.xlsx"
                 chooseLabel="Datei laden" chooseIcon="pi pi-folder-open"
@@ -142,19 +152,57 @@
                 @select="onKursFileSelect"
               />
               <Button label="Kurse anlegen" icon="pi pi-upload" size="small"
-                :disabled="kursRows.filter(r => r._valid && !r._sent).length === 0"
+                :disabled="kursRows.filter(r => r._valid && !r._sent).length === 0 || kursImport.running || loadingKursLookups"
                 @click="handleKursImport" />
               <Button v-if="kursRows.length > 0" label="Leeren" icon="pi pi-trash"
-                severity="danger" size="small" text @click="kursRows = []" />
+                severity="danger" size="small" text :disabled="kursImport.running"
+                @click="kursRows = []; kursFileKey++" />
+              <span v-if="loadingKursLookups" class="lookup-loading">
+                <i class="pi pi-spin pi-spinner" /> Prüfe Referenzen…
+              </span>
+              <span v-if="kursImport.running" class="lookup-loading">
+                <i class="pi pi-spin pi-spinner" />
+                {{ kursImport.done }}&nbsp;/&nbsp;{{ kursImport.total }} Kurse…
+              </span>
+              <span v-if="!kursImport.running && kursImport.total > 0" class="import-result">
+                {{ kursImport.done - kursImport.errors }} angelegt
+                <span v-if="kursImport.errors > 0" style="color:#ef4444">
+                  · {{ kursImport.errors }} Fehler
+                </span>
+              </span>
             </div>
             <div v-if="kursRows.length === 0" :class="['hint-box', { 'hint-box--dark': isDark }]">
-              <i class="pi pi-info-circle" />
-              <div>
-                <strong>Kursunterricht</strong> — legt neue Kurse in der Datenbank an
-                (Fach, Kursart, Kursnummer, Lehrer). Schüler werden im Tab
-                <em>Schülerunterricht</em> zugewiesen.
-                Unterstützte Formate: Kurse-CSV
-                (Spalten: Fach&nbsp;|&nbsp;Kursart&nbsp;|&nbsp;Kursnummer&nbsp;|&nbsp;Lehrer&nbsp;|&nbsp;Std./Wo.).
+              <i class="pi pi-info-circle hint-icon" />
+              <div class="hint-body-wrap">
+                <div class="hint-toggle" @click="kursHintOpen = !kursHintOpen">
+                  <strong>Kursunterricht</strong>
+                  <i :class="['pi', kursHintOpen ? 'pi-chevron-up' : 'pi-chevron-down', 'hint-chevron']" />
+                </div>
+                <div v-show="kursHintOpen" class="hint-body">
+                  <p style="margin:0 0 0.5rem">
+                    Legt neue Kurse in der Datenbank an. Trennzeichen: Semikolon, Komma oder Pipe.
+                  </p>
+                  <table class="hint-table">
+                    <tbody>
+                      <tr>
+                        <td class="hint-col-label">Pflichtfelder</td>
+                        <td><code>schuljahr</code> · <code>abschnitt</code> · <code>kuerzel</code> · <code>fach</code> · <code>kursart</code></td>
+                      </tr>
+                      <tr>
+                        <td class="hint-col-label">Optional</td>
+                        <td><code>lehrerkuerzel</code> · <code>jahrgaenge</code> · <code>zeugnisbezeichnung</code> · <code>wochenstunden</code> · <code>wochenstundenlehrkraft</code> · <code>schienen</code> · <code>istepochal</code></td>
+                      </tr>
+                      <tr>
+                        <td class="hint-col-label">Fortschreibungsart</td>
+                        <td><code>keine</code> · <code>jghoch</code> · <code>jghalten</code> · <code>komplett</code></td>
+                      </tr>
+                      <tr>
+                        <td class="hint-col-label">Hinweise</td>
+                        <td>Mehrere Jahrgänge kommagetrennt, z.&nbsp;B. <code>05,06,07</code></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
             <ag-grid-vue
@@ -162,6 +210,9 @@
               :class="[isDark ? 'ag-theme-quartz-dark' : 'ag-theme-quartz', 'data-table']"
               :rowData="kursRows" :columnDefs="kursColDefs" :defaultColDef="defaultColDef"
               :rowClassRules="rowClassRules" :getRowId="getRowId" :animateRows="true"
+              rowSelection="multiple"
+              @grid-ready="onKursGridReady"
+              @selection-changed="onKursSelectionChanged"
             />
           </div>
         </TabPanel>
@@ -170,15 +221,8 @@
         <TabPanel value="schueler">
           <div class="tab-content">
             <div class="tab-actions">
-              <Select
-                v-model="schuelerFormat"
-                :options="schuelerFormats"
-                optionLabel="label"
-                optionValue="value"
-                size="small"
-                style="width: 300px"
-              />
               <FileUpload
+                :key="schuelerFileKey"
                 mode="basic" :auto="false" :multiple="false"
                 accept=".csv,.dat,.xlsx"
                 chooseLabel="Datei laden" chooseIcon="pi pi-folder-open"
@@ -186,17 +230,63 @@
                 @select="onSchuelerFileSelect"
               />
               <Button label="Importieren" icon="pi pi-upload" size="small"
-                :disabled="schuelerRows.filter(r => r._valid && !r._sent).length === 0"
+                :disabled="schuelerRows.filter(r => r._valid && !r._sent).length === 0 || schuelerImport.running || loadingSchuelerLookups"
                 @click="handleSchuelerImport" />
               <Button v-if="schuelerRows.length > 0" label="Leeren" icon="pi pi-trash"
-                severity="danger" size="small" text @click="schuelerRows = []" />
+                severity="danger" size="small" text :disabled="schuelerImport.running"
+                @click="schuelerRows = []; schuelerFileKey++" />
+              <span v-if="loadingSchuelerLookups" class="lookup-loading">
+                <i class="pi pi-spin pi-spinner" /> Prüfe Referenzen…
+              </span>
+              <span v-if="schuelerImport.running" class="lookup-loading">
+                <i class="pi pi-spin pi-spinner" />
+                {{ schuelerImport.done }}&nbsp;/&nbsp;{{ schuelerImport.total }} Einträge…
+              </span>
+              <span v-if="!schuelerImport.running && schuelerImport.total > 0" class="import-result">
+                {{ schuelerImport.done - schuelerImport.errors }} importiert
+                <span v-if="schuelerImport.errors > 0" style="color:#ef4444">
+                  · {{ schuelerImport.errors }} Fehler
+                </span>
+              </span>
             </div>
             <div v-if="schuelerRows.length === 0" :class="['hint-box', { 'hint-box--dark': isDark }]">
-              <i class="pi pi-info-circle" />
-              <div>
-                <strong>Schülerunterricht</strong> — weist einzelnen Schülern Unterricht zu
-                (sowohl für Klassen- als auch Kursunterricht).
-                Unterstützt: <em>Schüler-Leistungsdaten (.dat)</em> — ein Eintrag je Schüler und Fach.
+              <i class="pi pi-info-circle hint-icon" />
+              <div class="hint-body-wrap">
+                <div class="hint-toggle" @click="schuelerHintOpen = !schuelerHintOpen">
+                  <strong>Schülerunterricht</strong>
+                  <i :class="['pi', schuelerHintOpen ? 'pi-chevron-up' : 'pi-chevron-down', 'hint-chevron']" />
+                </div>
+                <div v-show="schuelerHintOpen" class="hint-body">
+                  <p style="margin:0 0 0.5rem">
+                    Weist einzelnen Schülern Leistungsdaten zu. Schüler werden per
+                    <em>Nachname&nbsp;+&nbsp;Vorname&nbsp;+&nbsp;Geburtsdatum</em> in der Datenbank identifiziert.
+                    Ein Kurs wird (falls angegeben) über das Kürzel im jeweiligen Abschnitt aufgelöst.
+                  </p>
+                  <table class="hint-table">
+                    <tbody>
+                      <tr>
+                        <td class="hint-col-label">Pflichtfelder</td>
+                        <td><code>nachname</code> · <code>vorname</code> · <code>geburtsdatum</code> · <code>schuljahr</code> · <code>abschnitt</code> · <code>fach</code></td>
+                      </tr>
+                      <tr>
+                        <td class="hint-col-label">Unterricht</td>
+                        <td><code>fachlehrer</code> · <code>kurs</code> · <code>kursart</code> · <code>jahrgaenge</code> · <code>wochenstd</code></td>
+                      </tr>
+                      <tr>
+                        <td class="hint-col-label">Bewertung</td>
+                        <td><code>note</code> · <code>abiturfach</code> (1–4)</td>
+                      </tr>
+                      <tr>
+                        <td class="hint-col-label">Fehlzeiten</td>
+                        <td><code>fehlstd</code> · <code>unentschfehlstd</code> · <code>mahnung</code> (true/false) · <code>mahndatum</code></td>
+                      </tr>
+                      <tr>
+                        <td class="hint-col-label">Sonstiges</td>
+                        <td><code>externeschulnr</code> · <code>zusatzkraft</code> · <code>wochenstdzusatzkraft</code></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
             <ag-grid-vue
@@ -204,6 +294,9 @@
               :class="[isDark ? 'ag-theme-quartz-dark' : 'ag-theme-quartz', 'data-table']"
               :rowData="schuelerRows" :columnDefs="schuelerColDefs" :defaultColDef="defaultColDef"
               :rowClassRules="rowClassRules" :getRowId="getRowId" :animateRows="true"
+              rowSelection="multiple"
+              @grid-ready="onSchuelerGridReady"
+              @selection-changed="onSchuelerSelectionChanged"
             />
           </div>
         </TabPanel>
@@ -415,13 +508,15 @@ import Badge from 'primevue/badge'
 import { useSchuleStore } from '@/stores/schule'
 import { useDarkMode } from '@/composables/useDarkMode'
 import {
-  fetchLehrkraefte, fetchFaecher, fetchKlassenDetails,
-  fetchSchuelerAuswahlliste, fetchLernabschnittId, createLeistungsdaten,
-  type LehrkraftListEntry,
+  fetchLehrkraefte, fetchFaecher, fetchKlassenDetails, fetchJahrgaenge,
+  fetchSchuelerAuswahlliste, fetchLernabschnittId, createLeistungsdaten, createKurs,
+  fetchKurseFuerAbschnitt, createSchuelerLeistungsdaten, patchSchuelerLeistungsdaten,
+  type LehrkraftListEntry, type DbKursEintrag, type SchuelerAuswahl,
 } from '@/services/svwsService'
 import { fetchKursartenForSchulform } from '@/services/katalogService'
 import type { KlasseDetails } from '@/models/Klassen'
 import type { FachDetails } from '@/models/Faecher'
+import type { JahrgangDetails } from '@/models/Jahrgaenge'
 
 ModuleRegistry.registerModules([ClientSideRowModelModule])
 
@@ -452,26 +547,56 @@ interface KlassenunterrichtRow extends BaseRow {
 }
 
 interface KursRow extends BaseRow {
-  fach: string
+  schuljahr: string
+  abschnitt: string
+  kuerzel: string
+  lehrerkuerzel: string
   kursart: string
-  kursnummer: string
-  fachlehrer: string
+  fach: string
+  jahrgaenge: string
+  zeugnisbezeichnung: string
   wochenstunden: string
+  wochenstundenlehrkraft: string
+  fortschreibungsart: string
+  schienen: string
+  istepochal: string
+  // aufgelöste IDs
+  idSchuljahresabschnitt: number | null
+  idFach: number | null
+  idLehrer: number | null
+  idJahrgaenge: number[]
+  _duplicate: boolean
 }
 
 interface SchuelerUnterrichtRow extends BaseRow {
   nachname: string
   vorname: string
   geburtsdatum: string
-  jahr: string
+  schuljahr: string
   abschnitt: string
   fach: string
   fachlehrer: string
-  kursart: string
   kurs: string
+  kursart: string
+  jahrgaenge: string
   note: string
-  wochenstunden: string
-  jahrgang: string
+  abiturfach: string
+  wochenstd: string
+  externeschulnr: string
+  zusatzkraft: string
+  wochenstdzusatzkraft: string
+  fehlstd: string
+  unentschfehlstd: string
+  mahnung: string
+  mahndatum: string
+  // resolved
+  idSchuljahresabschnitt: number | null
+  idSchueler: number | null
+  idFach: number | null
+  idKurs: number | null
+  idLehrer: number | null
+  idZusatzkraft: number | null
+  idLernabschnitt: number | null
 }
 
 interface DbKurs {
@@ -510,6 +635,9 @@ onMounted(() => {
 
 const activeTab = ref<'klasse' | 'kurs' | 'schueler' | 'zuweisung'>('klasse')
 const parseError = ref('')
+const klasseHintOpen = ref(false)
+const kursHintOpen = ref(false)
+const schuelerHintOpen = ref(false)
 
 // ── Tab 1: Klassenunterricht ──────────────────────────────────────────────
 
@@ -549,6 +677,11 @@ async function onKlasseFileSelect(event: { files: File[] }): Promise<void> {
   } finally {
     parsingKlasse.value = false
   }
+}
+
+function normDate(d: string): string {
+  const m = d.match(/^(\d{2})\.(\d{2})\.(\d{4})$/)
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : d
 }
 
 function parseCsvLine(line: string, sep: string): string[] {
@@ -732,7 +865,7 @@ async function handleKlasseImport(): Promise<void> {
     row._sent = true
   }
 
-  klasseRows.value = [...klasseRows.value]
+  klasseRows.value = klasseRows.value.map(r => ({ ...r }))
   klasseImport.value.running = false
 }
 
@@ -740,10 +873,21 @@ async function handleKlasseImport(): Promise<void> {
 
 const kursRows = ref<KursRow[]>([])
 const parsingKurs = ref(false)
-const kursFormat = ref('kurse-csv')
-const kursFormats = [
-  { label: 'Kurse-CSV (Fach | Kursart | Kursnummer | Lehrer | Std.)', value: 'kurse-csv' },
-]
+const kursFileKey = ref(0)
+const loadingKursLookups = ref(false)
+const cachedJahrgaenge = ref<JahrgangDetails[]>([])
+const kursImport = ref({ running: false, total: 0, done: 0, errors: 0 })
+const cachedDbKursByAbschnitt = ref<Record<number, DbKursEintrag[]>>({})
+const kursGridApi = ref<GridApi<KursRow> | null>(null)
+const kursSelectedCount = ref(0)
+
+function onKursGridReady(params: { api: GridApi<KursRow> }): void {
+  kursGridApi.value = params.api
+}
+
+function onKursSelectionChanged(): void {
+  kursSelectedCount.value = kursGridApi.value?.getSelectedRows().length ?? 0
+}
 
 async function onKursFileSelect(event: { files: File[] }): Promise<void> {
   const file = event.files[0]
@@ -751,7 +895,9 @@ async function onKursFileSelect(event: { files: File[] }): Promise<void> {
   parsingKurs.value = true
   parseError.value = ''
   try {
+    cachedDbKursByAbschnitt.value = {}
     kursRows.value = await parseKurseCsv(file)
+    await loadKursLookups()
   } catch (e) {
     parseError.value = e instanceof Error ? e.message : 'Fehler beim Einlesen'
   } finally {
@@ -761,50 +907,239 @@ async function onKursFileSelect(event: { files: File[] }): Promise<void> {
 
 async function parseKurseCsv(file: File): Promise<KursRow[]> {
   const text = await file.text()
-  const lines = text.replace(/^﻿/, '').split(/\r?\n/)
+  const lines = text.replace(/^﻿/, '').split(/\r?\n/).filter(l => l.trim())
   if (lines.length < 2) throw new Error('Keine Datenzeilen gefunden')
-  const header = lines[0].split(/[|;,]/).map(h => h.trim().toLowerCase())
+  const sep = lines[0].includes(';') ? ';' : lines[0].includes('|') ? '|' : ','
+  const header = parseCsvLine(lines[0], sep).map(h => h.toLowerCase())
   const col = (names: string[]) => names.reduce((found, n) => found !== -1 ? found : header.indexOf(n), -1)
 
   const rows: KursRow[] = []
   for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim()
-    if (!line) continue
-    const c = line.split(/[|;,]/).map(v => v.trim())
-    const get = (names: string[]) => c[col(names)] ?? ''
-    const errors: string[] = []
-    const fach = get(['fach'])
-    const kursart = get(['kursart'])
-    if (!fach) errors.push('Fach fehlt')
-    if (!kursart) errors.push('Kursart fehlt')
+    const c = parseCsvLine(lines[i], sep)
+    const get = (names: string[]) => (c[col(names)] ?? '').trim()
     rows.push({
       _id: crypto.randomUUID(),
-      _valid: errors.length === 0,
-      _errors: errors,
+      _valid: true,
+      _errors: [],
       _sent: false,
-      fach,
-      kursart,
-      kursnummer: get(['kursnummer', 'nummer']),
-      fachlehrer: get(['fachlehrer', 'lehrer']),
-      wochenstunden: get(['wochenstd.', 'wochenstunden', 'std.']),
+      schuljahr:             get(['schuljahr', 'jahr']),
+      abschnitt:             get(['abschnitt']),
+      kuerzel:               get(['kuerzel']),
+      lehrerkuerzel:         get(['lehrerkuerzel', 'lehrer', 'fachlehrer']),
+      kursart:               get(['kursart']),
+      fach:                  get(['fach']),
+      jahrgaenge:            get(['jahrgaenge', 'jahrgang']),
+      zeugnisbezeichnung:    get(['zeugnisbezeichnung', 'bezeichnungzeugnis']),
+      wochenstunden:         get(['wochenstunden', 'wochenstd.']),
+      wochenstundenlehrkraft: get(['wochenstundenlehrkraft', 'wochenstundenlehrer']),
+      fortschreibungsart:    get(['fortschreibungsart']),
+      schienen:              get(['schienen']),
+      istepochal:            get(['istepochal', 'istepochalunterricht']),
+      idSchuljahresabschnitt: null,
+      idFach: null,
+      idLehrer: null,
+      idJahrgaenge: [],
+      _duplicate: false,
     })
   }
   if (rows.length === 0) throw new Error('Keine Datensätze gefunden')
   return rows
 }
 
-function handleKursImport(): void {
-  // TODO: POST /db/{schema}/unterrichtsverteilung/kurse/create
+async function loadKursLookups(): Promise<void> {
+  loadingKursLookups.value = true
+  try {
+    const [lehrkraefte, faecher, jahrgaenge] = await Promise.all([
+      cachedLehrkraefte.value.length ? Promise.resolve(cachedLehrkraefte.value) : fetchLehrkraefte(),
+      cachedFaecher.value.length    ? Promise.resolve(cachedFaecher.value)    : fetchFaecher(),
+      cachedJahrgaenge.value.length ? Promise.resolve(cachedJahrgaenge.value) : fetchJahrgaenge(),
+    ])
+    cachedLehrkraefte.value = lehrkraefte
+    cachedFaecher.value     = faecher
+    cachedJahrgaenge.value  = jahrgaenge
+
+    // DB-Kurse für alle eindeutigen Abschnitte aus der CSV laden
+    const abschnittIds = new Set<number>()
+    if (idSchuljahresabschnitt.value !== null) abschnittIds.add(idSchuljahresabschnitt.value)
+    for (const row of kursRows.value) {
+      const sja = schuleStore.abschnitte.find(
+        a => String(a.schuljahr) === row.schuljahr && String(a.abschnitt) === row.abschnitt,
+      )
+      if (sja) abschnittIds.add(sja.id)
+    }
+    await Promise.all(
+      [...abschnittIds]
+        .filter(id => !cachedDbKursByAbschnitt.value[id])
+        .map(async id => {
+          const kurse = await fetchKurseFuerAbschnitt(id)
+          cachedDbKursByAbschnitt.value = {
+            ...cachedDbKursByAbschnitt.value,
+            [id]: kurse,
+          }
+        }),
+    )
+
+    resolveKursRows()
+    checkCsvDuplicates()
+    kursRows.value = [...kursRows.value]
+  } finally {
+    loadingKursLookups.value = false
+  }
+}
+
+function resolveKursRows(): void {
+  for (const row of kursRows.value) {
+    row._errors = []
+
+    if (row.schuljahr && row.abschnitt) {
+      const sja = schuleStore.abschnitte.find(
+        a => String(a.schuljahr) === row.schuljahr && String(a.abschnitt) === row.abschnitt,
+      )
+      row.idSchuljahresabschnitt = sja?.id ?? null
+      if (!sja)
+        row._errors.push(`Schuljahresabschnitt ${row.schuljahr}/${row.abschnitt} nicht gefunden`)
+    } else {
+      row.idSchuljahresabschnitt = idSchuljahresabschnitt.value
+    }
+
+    const fach = cachedFaecher.value.find(f => f.kuerzel.toLowerCase() === row.fach.toLowerCase())
+    row.idFach = fach?.id ?? null
+    if (!fach && row.fach) row._errors.push(`Fach „${row.fach}" nicht gefunden`)
+
+    const lehrer = cachedLehrkraefte.value.find(
+      l => l.kuerzel.toLowerCase() === row.lehrerkuerzel.toLowerCase(),
+    )
+    row.idLehrer = lehrer?.id ?? null
+    if (!lehrer && row.lehrerkuerzel) row._errors.push(`Lehrer „${row.lehrerkuerzel}" nicht gefunden`)
+
+    row.idJahrgaenge = []
+    const jgRaw = row.jahrgaenge.trim()
+    if (jgRaw) {
+      for (const kuerzel of jgRaw.split(/[,/]/).map(s => s.trim()).filter(Boolean)) {
+        const jg = cachedJahrgaenge.value.find(
+          j => j.kuerzel?.toLowerCase() === kuerzel.toLowerCase() ||
+               j.kuerzelStatistik?.toLowerCase() === kuerzel.toLowerCase(),
+        )
+        if (jg) row.idJahrgaenge.push(jg.id)
+        else    row._errors.push(`Jahrgang „${kuerzel}" nicht gefunden`)
+      }
+    }
+
+    // Duplikat-Check gegen DB — nur wenn kuerzel + idFach + kursart + idJahrgaenge übereinstimmen
+    row._duplicate = false
+    if (row.idSchuljahresabschnitt !== null && row.kuerzel && row.idFach !== null) {
+      const dbKurse = cachedDbKursByAbschnitt.value[row.idSchuljahresabschnitt] ?? []
+      const rowJg = [...row.idJahrgaenge].sort((a, b) => a - b)
+      const isDuplicate = dbKurse.some(k => {
+        if (k.kuerzel.toLowerCase() !== row.kuerzel.toLowerCase()) return false
+        if (k.idFach !== row.idFach) return false
+        if ((k.kursartAllg ?? '').toLowerCase() !== row.kursart.toLowerCase()) return false
+        const dbJg = [...(k.idJahrgaenge ?? [])].sort((a, b) => a - b)
+        return dbJg.length === rowJg.length && dbJg.every((id, i) => id === rowJg[i])
+      })
+      if (isDuplicate) {
+        row._duplicate = true
+        row._errors.push(`Kurs mit Kürzel „${row.kuerzel}", diesem Fach, dieser Kursart und diesen Jahrgängen existiert bereits`)
+      }
+    }
+
+    row._valid = row._errors.length === 0
+  }
+}
+
+function checkCsvDuplicates(): void {
+  const seen = new Map<string, KursRow[]>()
+  for (const row of kursRows.value) {
+    if (!row.kuerzel || row.idSchuljahresabschnitt === null) continue
+    const key = `${row.idSchuljahresabschnitt}::${row.kuerzel.toLowerCase()}`
+    const group = seen.get(key) ?? []
+    group.push(row)
+    seen.set(key, group)
+  }
+  for (const group of seen.values()) {
+    if (group.length < 2) continue
+    for (const row of group) {
+      if (!row._duplicate) {
+        row._duplicate = true
+        row._valid = false
+        row._errors.push(`Kürzel „${row.kuerzel}" kommt in der Datei mehrfach im selben Abschnitt vor`)
+      }
+    }
+  }
+}
+
+function kursStatusCell(p: { data: KursRow }): string {
+  if (p.data._sent)      return '<span style="color:#22c55e">✔ Gesendet</span>'
+  if (p.data._duplicate) return `<span style="color:#ef4444" title="${p.data._errors.join('; ')}">⊗ Doppelt</span>`
+  if (!p.data._valid)    return `<span style="color:#ef4444" title="${p.data._errors.join('; ')}">✖ Fehler</span>`
+  return '<span style="color:#f59e0b">● Bereit</span>'
+}
+
+function mapFortschreibungsart(raw: string): number {
+  switch (raw.trim().toLowerCase()) {
+    case 'jghoch':    return 1  // Nur Definition, Jahrgang hochschreiben
+    case 'jghalten':  return 2  // Nur Definition, Jahrgang beibehalten
+    case 'komplett':  return 3  // Komplett
+    default:          return 0  // keine
+  }
+}
+
+async function handleKursImport(): Promise<void> {
+  const selected = kursGridApi.value?.getSelectedRows() ?? []
+  const rows = (selected.length > 0 ? selected : kursRows.value)
+    .filter(r => r._valid && !r._sent)
+  if (rows.length === 0) return
+
+  kursImport.value = { running: true, total: rows.length, done: 0, errors: 0 }
+  for (const row of rows) {
+    if (row.idFach === null || row.idSchuljahresabschnitt === null) {
+      kursImport.value.errors++
+      kursImport.value.done++
+      continue
+    }
+    const result = await createKurs({
+      idSchuljahresabschnitt: row.idSchuljahresabschnitt,
+      kuerzel:                row.kuerzel || `${row.fach}${row.kursart}`,
+      idJahrgaenge:           row.idJahrgaenge,
+      idFach:                 row.idFach,
+      lehrer:                 row.idLehrer,
+      kursartAllg:            row.kursart,
+      sortierung:             0,
+      istSichtbar:            true,
+      schienen:               [],
+      wochenstunden:          parseInt(row.wochenstunden) || 0,
+      wochenstundenLehrer:    parseInt(row.wochenstundenlehrkraft) || parseInt(row.wochenstunden) || 0,
+      idKursFortschreibungsart: mapFortschreibungsart(row.fortschreibungsart),
+      schulnummer:            null,
+      istEpochalunterricht:   row.istepochal.toLowerCase() === 'true',
+      bezeichnungZeugnis:     row.zeugnisbezeichnung,
+    })
+    if (!result.success) kursImport.value.errors++
+    else row._sent = true
+    kursImport.value.done++
+  }
+  kursRows.value = kursRows.value.map(r => ({ ...r }))
+  kursImport.value.running = false
 }
 
 // ── Tab 3: Schülerunterricht ──────────────────────────────────────────────
 
 const schuelerRows = ref<SchuelerUnterrichtRow[]>([])
 const parsingSchueler = ref(false)
-const schuelerFormat = ref('schueler-leistungsdaten')
-const schuelerFormats = [
-  { label: 'Schüler-Leistungsdaten (.dat) — Schüler | Fach | Kurs', value: 'schueler-leistungsdaten' },
-]
+const schuelerFileKey = ref(0)
+const loadingSchuelerLookups = ref(false)
+const schuelerImport = ref({ running: false, total: 0, done: 0, errors: 0 })
+const schuelerGridApi = ref<GridApi<SchuelerUnterrichtRow> | null>(null)
+const schuelerSelectedCount = ref(0)
+const cachedSchuelerListe = ref<SchuelerAuswahl[]>([])
+
+function onSchuelerGridReady(params: { api: GridApi<SchuelerUnterrichtRow> }): void {
+  schuelerGridApi.value = params.api
+}
+
+function onSchuelerSelectionChanged(): void {
+  schuelerSelectedCount.value = schuelerGridApi.value?.getSelectedRows().length ?? 0
+}
 
 async function onSchuelerFileSelect(event: { files: File[] }): Promise<void> {
   const file = event.files[0]
@@ -812,11 +1147,9 @@ async function onSchuelerFileSelect(event: { files: File[] }): Promise<void> {
   parsingSchueler.value = true
   parseError.value = ''
   try {
-    if (schuelerFormat.value === 'schueler-leistungsdaten') {
-      schuelerRows.value = await parseSchuelerLeistungsdaten(file)
-    } else {
-      throw new Error(`Format "${schuelerFormat.value}" wird noch nicht unterstützt`)
-    }
+    cachedSchuelerListe.value = []
+    schuelerRows.value = await parseSchuelerLeistungsdaten(file)
+    await loadSchuelerLookups()
   } catch (e) {
     parseError.value = e instanceof Error ? e.message : 'Fehler beim Einlesen'
   } finally {
@@ -826,44 +1159,221 @@ async function onSchuelerFileSelect(event: { files: File[] }): Promise<void> {
 
 async function parseSchuelerLeistungsdaten(file: File): Promise<SchuelerUnterrichtRow[]> {
   const text = await file.text()
-  const lines = text.replace(/^﻿/, '').split(/\r?\n/)
-  if (lines.length < 2) throw new Error('Datei enthält keine Datenzeilen')
-  const header = lines[0].split('|').map(h => h.trim())
-  const col = (name: string) => header.indexOf(name)
+  const lines = text.replace(/^﻿/, '').split(/\r?\n/).filter(l => l.trim())
+  if (lines.length < 2) throw new Error('Keine Datenzeilen gefunden')
+  const sep = lines[0].includes(';') ? ';' : lines[0].includes('|') ? '|' : ','
+  const header = parseCsvLine(lines[0], sep).map(h => h.toLowerCase())
+  const col = (names: string[]) => names.reduce((found, n) => found !== -1 ? found : header.indexOf(n), -1)
   const rows: SchuelerUnterrichtRow[] = []
   for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim()
-    if (!line) continue
-    const c = line.split('|')
-    const get = (name: string) => (c[col(name)] ?? '').trim()
-    const errors: string[] = []
-    if (!get('Fach')) errors.push('Fach fehlt')
-    if (!get('Nachname') && !get('Vorname')) errors.push('Schüler nicht identifizierbar')
+    const c = parseCsvLine(lines[i], sep)
+    const get = (names: string[]) => (c[col(names)] ?? '').trim()
     rows.push({
       _id: crypto.randomUUID(),
-      _valid: errors.length === 0,
-      _errors: errors,
+      _valid: true,
+      _errors: [],
       _sent: false,
-      nachname:      get('Nachname'),
-      vorname:       get('Vorname'),
-      geburtsdatum:  get('Geburtsdatum'),
-      jahr:          get('Jahr'),
-      abschnitt:     get('Abschnitt'),
-      fach:          get('Fach'),
-      fachlehrer:    get('Fachlehrer'),
-      kursart:       get('Kursart'),
-      kurs:          get('Kurs'),
-      note:          get('Note'),
-      wochenstunden: get('Wochenstd.'),
-      jahrgang:      get('Jahrgang'),
+      nachname:             get(['nachname']),
+      vorname:              get(['vorname']),
+      geburtsdatum:         get(['geburtsdatum']),
+      schuljahr:            get(['schuljahr', 'jahr']),
+      abschnitt:            get(['abschnitt']),
+      fach:                 get(['fach']),
+      fachlehrer:           get(['fachlehrer']),
+      kurs:                 get(['kurs']),
+      kursart:              get(['kursart']),
+      jahrgaenge:           get(['jahrgaenge', 'jahrgang']),
+      note:                 get(['note']),
+      abiturfach:           get(['abiturfach']),
+      wochenstd:            get(['wochenstd', 'wochenstunden']),
+      externeschulnr:       get(['externeschulnr']),
+      zusatzkraft:          get(['zusatzkraft']),
+      wochenstdzusatzkraft: get(['wochenstdzusatzkraft']),
+      fehlstd:              get(['fehlstd']),
+      unentschfehlstd:      get(['unentschfehlstd']),
+      mahnung:              get(['mahnung']),
+      mahndatum:            get(['mahndatum']),
+      idSchuljahresabschnitt: null,
+      idSchueler: null,
+      idFach: null,
+      idKurs: null,
+      idLehrer: null,
+      idZusatzkraft: null,
+      idLernabschnitt: null,
     })
   }
-  if (rows.length === 0) throw new Error('Keine Datenzeilen gefunden')
+  if (rows.length === 0) throw new Error('Keine Datensätze gefunden')
   return rows
 }
 
-function handleSchuelerImport(): void {
-  // TODO: API-Aufruf für Schülerunterricht-Import
+async function loadSchuelerLookups(): Promise<void> {
+  loadingSchuelerLookups.value = true
+  try {
+    const [lehrkraefte, faecher] = await Promise.all([
+      cachedLehrkraefte.value.length ? Promise.resolve(cachedLehrkraefte.value) : fetchLehrkraefte(),
+      cachedFaecher.value.length    ? Promise.resolve(cachedFaecher.value)    : fetchFaecher(),
+    ])
+    cachedLehrkraefte.value = lehrkraefte
+    cachedFaecher.value     = faecher
+
+    const abschnittIds = new Set<number>()
+    for (const row of schuelerRows.value) {
+      if (row.schuljahr && row.abschnitt) {
+        const sja = schuleStore.abschnitte.find(
+          a => String(a.schuljahr) === row.schuljahr && String(a.abschnitt) === row.abschnitt,
+        )
+        if (sja) abschnittIds.add(sja.id)
+      }
+    }
+    if (idSchuljahresabschnitt.value !== null) abschnittIds.add(idSchuljahresabschnitt.value)
+
+    await Promise.all([...abschnittIds].map(async id => {
+      const [kurse, alleSchueler] = await Promise.all([
+        fetchKurseFuerAbschnitt(id),
+        fetchSchuelerAuswahlliste(id),
+      ])
+      cachedDbKursByAbschnitt.value = { ...cachedDbKursByAbschnitt.value, [id]: kurse }
+      for (const s of alleSchueler.filter(s => s.status === 2)) {
+        if (!cachedSchuelerListe.value.some(x => x.id === s.id))
+          cachedSchuelerListe.value.push(s)
+      }
+    }))
+
+    resolveSchuelerRows()
+    schuelerRows.value = schuelerRows.value.map(r => ({ ...r }))
+  } finally {
+    loadingSchuelerLookups.value = false
+  }
+}
+
+function resolveSchuelerRows(): void {
+  for (const row of schuelerRows.value) {
+    row._errors = []
+
+    if (row.schuljahr && row.abschnitt) {
+      const sja = schuleStore.abschnitte.find(
+        a => String(a.schuljahr) === row.schuljahr && String(a.abschnitt) === row.abschnitt,
+      )
+      row.idSchuljahresabschnitt = sja?.id ?? null
+      if (!sja) row._errors.push(`Abschnitt ${row.schuljahr}/${row.abschnitt} nicht gefunden`)
+    } else {
+      row.idSchuljahresabschnitt = idSchuljahresabschnitt.value
+    }
+
+    const match = cachedSchuelerListe.value.find(s => {
+      const nOk = s.nachname.toLowerCase() === row.nachname.toLowerCase()
+      const vOk = s.vorname.toLowerCase() === row.vorname.toLowerCase()
+      if (!nOk || !vOk) return false
+      if (!row.geburtsdatum) return true
+      const dbGeb = String((s as Record<string, unknown>).geburtsdatum ?? '')
+      return normDate(dbGeb) === normDate(row.geburtsdatum)
+    })
+    row.idSchueler = match?.id ?? null
+    if (!match) row._errors.push(`Schüler „${row.nachname}, ${row.vorname}" nicht gefunden`)
+
+    const fach = cachedFaecher.value.find(f => f.kuerzel.toLowerCase() === row.fach.toLowerCase())
+    row.idFach = fach?.id ?? null
+    if (!fach && row.fach) row._errors.push(`Fach „${row.fach}" nicht gefunden`)
+
+    const lehrer = cachedLehrkraefte.value.find(
+      l => l.kuerzel.toLowerCase() === row.fachlehrer.toLowerCase(),
+    )
+    row.idLehrer = lehrer?.id ?? null
+    if (!lehrer && row.fachlehrer) row._errors.push(`Lehrer „${row.fachlehrer}" nicht gefunden`)
+
+    const zusatz = cachedLehrkraefte.value.find(
+      l => l.kuerzel.toLowerCase() === row.zusatzkraft.toLowerCase(),
+    )
+    row.idZusatzkraft = zusatz?.id ?? null
+    if (!zusatz && row.zusatzkraft) row._errors.push(`Zusatzkraft „${row.zusatzkraft}" nicht gefunden`)
+
+    row.idKurs = null
+    if (row.kurs && row.idSchuljahresabschnitt !== null) {
+      const dbKurse = cachedDbKursByAbschnitt.value[row.idSchuljahresabschnitt] ?? []
+      const matched = dbKurse.find(k => k.kuerzel.toLowerCase() === row.kurs.toLowerCase())
+      row.idKurs = matched?.id ?? null
+      if (!matched) row._errors.push(`Kurs „${row.kurs}" in diesem Abschnitt nicht gefunden`)
+    }
+
+    row._valid = row._errors.length === 0
+  }
+}
+
+async function handleSchuelerImport(): Promise<void> {
+  const selected = schuelerGridApi.value?.getSelectedRows() ?? []
+  const rows = (selected.length > 0 ? selected : schuelerRows.value)
+    .filter(r => r._valid && !r._sent)
+  if (rows.length === 0) return
+
+  schuelerImport.value = { running: true, total: rows.length, done: 0, errors: 0 }
+
+  const lernabschnittCache = new Map<string, number | null>()
+  async function getLernabschnittId(schuelerId: number, abschnittId: number): Promise<number | null> {
+    const key = `${schuelerId}:${abschnittId}`
+    if (lernabschnittCache.has(key)) return lernabschnittCache.get(key)!
+    const id = await fetchLernabschnittId(schuelerId, abschnittId)
+    lernabschnittCache.set(key, id)
+    return id
+  }
+
+  for (const row of rows) {
+    if (row.idSchueler === null || row.idFach === null || row.idSchuljahresabschnitt === null) {
+      row._valid = false
+      schuelerImport.value.errors++
+      schuelerImport.value.done++
+      continue
+    }
+
+    const lernabschnittId = await getLernabschnittId(row.idSchueler, row.idSchuljahresabschnitt)
+    if (lernabschnittId === null) {
+      row._errors.push('Lernabschnitt nicht gefunden')
+      row._valid = false
+      schuelerImport.value.errors++
+      schuelerImport.value.done++
+      continue
+    }
+
+    const createResult = await createSchuelerLeistungsdaten(lernabschnittId, row.idFach)
+    if (!createResult.success || !createResult.id) {
+      row._errors.push(createResult.error ?? 'Fehler beim Anlegen')
+      row._valid = false
+      schuelerImport.value.errors++
+      schuelerImport.value.done++
+      continue
+    }
+
+    const patch: Record<string, unknown> = {}
+    if (row.idLehrer !== null)         patch.lehrerID                 = row.idLehrer
+    if (row.idKurs !== null)           patch.kursID                   = row.idKurs
+    if (row.kursart)                   patch.kursart                  = row.kursart
+    if (row.note)                      patch.note                     = row.note
+    if (row.abiturfach)                patch.abifach                  = parseInt(row.abiturfach) || null
+    if (row.wochenstd)                 patch.wochenstunden            = parseInt(row.wochenstd) || null
+    if (row.externeschulnr)            patch.koopSchule               = row.externeschulnr
+    if (row.idZusatzkraft !== null)    patch.zusatzkraftID            = row.idZusatzkraft
+    if (row.wochenstdzusatzkraft)      patch.zusatzkraftWochenstunden = parseInt(row.wochenstdzusatzkraft) || null
+    if (row.fehlstd)                   patch.fehlstundenGesamt        = parseInt(row.fehlstd) || 0
+    if (row.unentschfehlstd)           patch.fehlstundenUnentschuldigt = parseInt(row.unentschfehlstd) || 0
+    if (row.mahnung)                   patch.istGemahnt               = ['true', 'ja', '1', 'j', 'x'].includes(row.mahnung.toLowerCase())
+    if (row.mahndatum)                 patch.mahndatum                = row.mahndatum
+
+    if (Object.keys(patch).length > 0) {
+      const patchResult = await patchSchuelerLeistungsdaten(createResult.id, patch)
+      if (!patchResult.success) {
+        row._errors.push(patchResult.error ?? 'Fehler beim Patchen')
+        row._valid = false
+        schuelerImport.value.errors++
+        schuelerImport.value.done++
+        continue
+      }
+    }
+
+    row._sent = true
+    schuelerImport.value.done++
+  }
+
+  schuelerRows.value = schuelerRows.value.map(r => ({ ...r }))
+  schuelerImport.value.running = false
 }
 
 // ── Tab 4: Kurszuweisung (Drag & Drop) ────────────────────────────────────
@@ -1096,30 +1606,136 @@ const klasseColDefs: ColDef<KlassenunterrichtRow>[] = [
 ]
 
 const kursColDefs: ColDef<KursRow>[] = [
-  { field: 'fach',          headerName: 'Fach',      width: 110 },
-  { field: 'kursart',       headerName: 'Kursart',   width: 100 },
-  { field: 'kursnummer',    headerName: 'Nummer',    width: 90 },
-  { field: 'fachlehrer',    headerName: 'Lehrer',    width: 120 },
-  { field: 'wochenstunden', headerName: 'Std./Wo.',  width: 90 },
-  { headerName: 'Status', width: 110, editable: false, cellRenderer: statusCell },
+  {
+    headerName: '', width: 40, pinned: 'left',
+    checkboxSelection: true, headerCheckboxSelection: true,
+    sortable: false, filter: false, resizable: false, suppressSizeToFit: true,
+  },
+  { field: 'schuljahr', headerName: 'Schuljahr', width: 90 },
+  {
+    headerName: 'Abschnitt', width: 90,
+    cellRenderer: (p: { data: KursRow }) => {
+      const v = p.data.abschnitt
+      if (!v) return '<span style="opacity:.4">—</span>'
+      return p.data.idSchuljahresabschnitt !== null
+        ? `<span style="color:#22c55e">${v}</span>`
+        : `<span style="color:#f59e0b" title="Abschnitt ${p.data.schuljahr}/${v} nicht gefunden">${v} ⚠</span>`
+    },
+  },
+  { field: 'kuerzel', headerName: 'Kürzel', width: 110 },
+  {
+    headerName: 'Fach', width: 80,
+    cellRenderer: (p: { data: KursRow }) => {
+      const v = p.data.fach
+      if (!v) return '<span style="opacity:.4">—</span>'
+      return p.data.idFach !== null
+        ? `<span style="color:#22c55e">${v}</span>`
+        : `<span style="color:#f59e0b" title="Fach nicht gefunden">${v} ⚠</span>`
+    },
+  },
+  { field: 'kursart', headerName: 'Kursart', width: 85 },
+  {
+    headerName: 'Jahrgang', width: 110,
+    cellRenderer: (p: { data: KursRow }) => {
+      const v = p.data.jahrgaenge
+      if (!v) return '<span style="opacity:.4">—</span>'
+      const hasError = p.data._errors.some(e => e.toLowerCase().includes('jahrgang'))
+      return hasError
+        ? `<span style="color:#f59e0b" title="Nicht alle Jahrgänge gefunden">${v} ⚠</span>`
+        : `<span style="color:#22c55e">${v}</span>`
+    },
+  },
+  {
+    headerName: 'Lehrer', width: 85,
+    cellRenderer: (p: { data: KursRow }) => {
+      const v = p.data.lehrerkuerzel
+      if (!v) return '<span style="opacity:.4">—</span>'
+      return p.data.idLehrer !== null
+        ? `<span style="color:#22c55e">${v}</span>`
+        : `<span style="color:#f59e0b" title="Lehrer nicht gefunden">${v} ⚠</span>`
+    },
+  },
+  { field: 'wochenstunden',          headerName: 'Std./Wo.',   width: 82 },
+  { field: 'wochenstundenlehrkraft',  headerName: 'Std. Lkr.', width: 82 },
+  { field: 'zeugnisbezeichnung',     headerName: 'Zeugnis',    width: 130 },
+  {
+    field: 'fortschreibungsart', headerName: 'Fortschr.', width: 90,
+    headerTooltip: 'Erlaubte Werte: keine (0) | jghoch (1) | jghalten (2) | komplett (3)',
+  },
+  { field: 'schienen',               headerName: 'Schienen',   width: 80 },
+  { field: 'istepochal',             headerName: 'Epochal',    width: 75 },
+  { headerName: 'Status', width: 130, editable: false, cellRenderer: kursStatusCell },
 ]
 
 const schuelerColDefs: ColDef<SchuelerUnterrichtRow>[] = [
-  { field: 'nachname',     headerName: 'Nachname',  width: 130 },
-  { field: 'vorname',      headerName: 'Vorname',   width: 110 },
-  { field: 'geburtsdatum', headerName: 'Geb.-datum', width: 110 },
-  { field: 'fach',         headerName: 'Fach',      width: 90,
-    cellStyle: (p) => p.data?._errors.some(e => e.includes('Fach'))
-      ? { background: isDark.value ? '#7f1d1d' : '#fee2e2' } : null },
-  { field: 'fachlehrer',   headerName: 'Lehrer',    width: 110 },
-  { field: 'kursart',      headerName: 'Kursart',   width: 100 },
-  { field: 'kurs',         headerName: 'Kurs',      width: 130 },
-  { field: 'note',         headerName: 'Note',      width: 80 },
-  { field: 'wochenstunden', headerName: 'Std./Wo.', width: 90 },
-  { field: 'jahrgang',     headerName: 'Jahrgang',  width: 100 },
-  { field: 'jahr',         headerName: 'Jahr',      width: 70 },
-  { field: 'abschnitt',    headerName: 'Abschnitt', width: 90 },
-  { headerName: 'Status', width: 110, editable: false, cellRenderer: statusCell },
+  {
+    headerName: '', width: 40, pinned: 'left',
+    checkboxSelection: true, headerCheckboxSelection: true,
+    sortable: false, filter: false, resizable: false, suppressSizeToFit: true,
+  },
+  {
+    headerName: 'Schüler', width: 170,
+    cellRenderer: (p: { data: SchuelerUnterrichtRow }) => {
+      const name = `${p.data.nachname}, ${p.data.vorname}`
+      return p.data.idSchueler !== null
+        ? `<span style="color:#22c55e">${name}</span>`
+        : `<span style="color:#ef4444" title="${p.data._errors.filter(e => e.includes('Schüler')).join('; ')}">${name} ✖</span>`
+    },
+  },
+  { field: 'geburtsdatum',         headerName: 'Geb.-datum',   width: 105 },
+  { field: 'schuljahr',            headerName: 'Schuljahr',    width: 88 },
+  { field: 'abschnitt',            headerName: 'Abschnitt',    width: 88 },
+  {
+    headerName: 'Fach', width: 80,
+    cellRenderer: (p: { data: SchuelerUnterrichtRow }) => {
+      const v = p.data.fach
+      if (!v) return '<span style="opacity:.4">—</span>'
+      return p.data.idFach !== null
+        ? `<span style="color:#22c55e">${v}</span>`
+        : `<span style="color:#f59e0b" title="Fach nicht gefunden">${v} ⚠</span>`
+    },
+  },
+  {
+    headerName: 'Lehrer', width: 90,
+    cellRenderer: (p: { data: SchuelerUnterrichtRow }) => {
+      const v = p.data.fachlehrer
+      if (!v) return '<span style="opacity:.4">—</span>'
+      return p.data.idLehrer !== null
+        ? `<span style="color:#22c55e">${v}</span>`
+        : `<span style="color:#f59e0b" title="Lehrer nicht gefunden">${v} ⚠</span>`
+    },
+  },
+  {
+    headerName: 'Kurs', width: 110,
+    cellRenderer: (p: { data: SchuelerUnterrichtRow }) => {
+      const v = p.data.kurs
+      if (!v) return '<span style="opacity:.4">—</span>'
+      return p.data.idKurs !== null
+        ? `<span style="color:#22c55e">${v}</span>`
+        : `<span style="color:#f59e0b" title="Kurs nicht gefunden">${v} ⚠</span>`
+    },
+  },
+  { field: 'kursart',              headerName: 'Kursart',      width: 85 },
+  { field: 'note',                 headerName: 'Note',         width: 65 },
+  { field: 'abiturfach',           headerName: 'Abiturfach',   width: 90 },
+  { field: 'wochenstd',            headerName: 'Std./Wo.',     width: 78 },
+  { field: 'fehlstd',              headerName: 'Fehlstd.',     width: 78 },
+  { field: 'unentschfehlstd',      headerName: 'Unentsch.',    width: 82 },
+  { field: 'mahnung',              headerName: 'Mahnung',      width: 78 },
+  { field: 'mahndatum',            headerName: 'Mahndatum',    width: 100 },
+  { field: 'externeschulnr',       headerName: 'Ext. Schulnr.', width: 105 },
+  {
+    headerName: 'Zusatzkraft', width: 105,
+    cellRenderer: (p: { data: SchuelerUnterrichtRow }) => {
+      const v = p.data.zusatzkraft
+      if (!v) return '<span style="opacity:.4">—</span>'
+      return p.data.idZusatzkraft !== null
+        ? `<span style="color:#22c55e">${v}</span>`
+        : `<span style="color:#f59e0b" title="Zusatzkraft nicht gefunden">${v} ⚠</span>`
+    },
+  },
+  { field: 'wochenstdzusatzkraft', headerName: 'Std. Zusatz',  width: 95 },
+  { headerName: 'Status', width: 130, editable: false, cellRenderer: statusCell },
 ]
 </script>
 
@@ -1219,11 +1835,65 @@ h2 {
   color: #e2e8f0;
 }
 
-.hint-box .pi {
+.hint-icon {
   font-size: 1rem;
-  margin-top: 0.1rem;
+  margin-top: 0.15rem;
   flex-shrink: 0;
   color: var(--p-primary-color);
+}
+
+.hint-body-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.hint-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  gap: 0.5rem;
+}
+
+.hint-toggle:hover strong {
+  color: var(--p-primary-color);
+}
+
+.hint-chevron {
+  font-size: 0.65rem;
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+.hint-body {
+  margin-top: 0.3rem;
+}
+
+.hint-table {
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  width: 100%;
+}
+
+.hint-table td {
+  padding: 0.18rem 0.5rem 0.18rem 0;
+  vertical-align: top;
+}
+
+.hint-col-label {
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--p-text-muted-color);
+  padding-right: 0.75rem !important;
+}
+
+.hint-table code {
+  font-family: monospace;
+  font-size: 0.76rem;
+  background: color-mix(in srgb, var(--p-primary-color) 10%, transparent);
+  border-radius: 3px;
+  padding: 0.05rem 0.3rem;
 }
 
 .data-table {

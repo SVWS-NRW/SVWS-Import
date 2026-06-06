@@ -1,0 +1,4 @@
+"schuljahr";"abschnitt";"kuerzel";"lehrerkuerzel";"kursart";"fach";"jahrgaenge";"zeugnisbezeichnung";"wochenstunden";"wochenstundenlehrkraft";"fortschreibungsart";"schienen";"istepochal"
+"2025";"2";"ER-05";"BIES";"PUT";"ER";"05";"evangelische Religionslehre";"4";"4";"komplett";"";"false"
+"2025";"2";"KR-05";"ASH";"PUT";"KR";"05";"katholische Religionslehre";"4";"4";"komplett";"";"false"
+"2025";"2";"AG-Sport";"ASH";"PUT";"SP";"05,06,07";"Abenteuer AG";"4";"2";"jghalten";"";"false"

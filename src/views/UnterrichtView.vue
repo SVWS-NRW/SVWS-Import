@@ -511,6 +511,7 @@ import {
   fetchLehrkraefte, fetchFaecher, fetchKlassenDetails, fetchJahrgaenge,
   fetchSchuelerAuswahlliste, fetchLernabschnittId, createLeistungsdaten, createKurs,
   fetchKurseFuerAbschnitt, createSchuelerLeistungsdaten, patchSchuelerLeistungsdaten,
+  fetchLeistungsdatenFuerLernabschnitt, deleteSchuelerLeistungsdaten,
   type LehrkraftListEntry, type DbKursEintrag, type SchuelerAuswahl,
 } from '@/services/svwsService'
 import { fetchKursartenForSchulform } from '@/services/katalogService'
@@ -1316,6 +1317,16 @@ async function handleSchuelerImport(): Promise<void> {
     return id
   }
 
+  // Vorhandene Leistungsdaten je Lernabschnitt cachen (für Duplikaterkennung)
+  const vorhandeneLeistungsdaten = new Map<number, Array<{ id: number; fachID: number }>>()
+  async function getVorhandene(lernabschnittId: number) {
+    if (vorhandeneLeistungsdaten.has(lernabschnittId))
+      return vorhandeneLeistungsdaten.get(lernabschnittId)!
+    const data = await fetchLeistungsdatenFuerLernabschnitt(lernabschnittId)
+    vorhandeneLeistungsdaten.set(lernabschnittId, data)
+    return data
+  }
+
   for (const row of rows) {
     if (row.idSchueler === null || row.idFach === null || row.idSchuljahresabschnitt === null) {
       row._valid = false
@@ -1329,6 +1340,15 @@ async function handleSchuelerImport(): Promise<void> {
       row._errors.push('Lernabschnitt nicht gefunden')
       row._valid = false
       schuelerImport.value.errors++
+      schuelerImport.value.done++
+      continue
+    }
+
+    // Duplikaterkennung: existiert bereits ein Eintrag für dieses Fach?
+    const vorhandene = await getVorhandene(lernabschnittId)
+    if (vorhandene.some(e => e.fachID === row.idFach)) {
+      row._errors.push(`Leistungsdaten für Fach „${row.fach}" bereits vorhanden — übersprungen`)
+      row._sent = true  // als "bereits erledigt" markieren, Button importiert nicht erneut
       schuelerImport.value.done++
       continue
     }
@@ -1360,13 +1380,20 @@ async function handleSchuelerImport(): Promise<void> {
     if (Object.keys(patch).length > 0) {
       const patchResult = await patchSchuelerLeistungsdaten(createResult.id, patch)
       if (!patchResult.success) {
-        row._errors.push(patchResult.error ?? 'Fehler beim Patchen')
+        // Rollback: soeben angelegten Eintrag wieder löschen
+        await deleteSchuelerLeistungsdaten(createResult.id)
+        row._errors.push(
+          (patchResult.error ?? 'Fehler beim Patchen') + ' — Eintrag wurde rückgängig gemacht',
+        )
         row._valid = false
         schuelerImport.value.errors++
         schuelerImport.value.done++
         continue
       }
     }
+
+    // Lokalen Cache aktualisieren, damit ein zweiter Eintrag im gleichen Lauf erkannt wird
+    vorhandeneLeistungsdaten.get(lernabschnittId)?.push({ id: createResult.id, fachID: row.idFach })
 
     row._sent = true
     schuelerImport.value.done++

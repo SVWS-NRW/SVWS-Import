@@ -713,6 +713,29 @@ export interface DbKursEintrag {
   lehrer: number | null
 }
 
+export async function fetchLeistungsdatenFuerLernabschnitt(
+  lernabschnittId: number,
+): Promise<Array<{ id: number; fachID: number }>> {
+  try {
+    const response = await getApiClient().get(
+      `/schueler/leistungsdaten/lernabschnitt/${lernabschnittId}`,
+      { params: { _t: Date.now() } },
+    )
+    return Array.isArray(response.data) ? response.data : []
+  } catch {
+    return []
+  }
+}
+
+export async function deleteSchuelerLeistungsdaten(id: number): Promise<UploadResult> {
+  try {
+    await getApiClient().delete(`/schueler/leistungsdaten/${id}`)
+    return { success: true }
+  } catch (error: unknown) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}
+
 export async function createSchuelerLeistungsdaten(
   lernabschnittID: number,
   fachID: number,

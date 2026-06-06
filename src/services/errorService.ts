@@ -15,7 +15,7 @@ function classifyStatus(status: number): { type: AppErrorType; messageUser: stri
   if (status === 401) return { type: 'api', messageUser: 'Nicht autorisiert – Zugangsdaten prüfen' }
   if (status === 403) return { type: 'api', messageUser: 'Zugriff verweigert' }
   if (status === 409) return { type: 'api', messageUser: 'Datensatz existiert bereits' }
-  if (status >= 500) return { type: 'api', messageUser: 'Server-Fehler – bitte später erneut versuchen' }
+  if (status >= 500) return { type: 'api', messageUser: 'Server-Fehler' }
   return { type: 'api', messageUser: `HTTP ${status}` }
 }
 

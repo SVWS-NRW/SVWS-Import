@@ -316,8 +316,17 @@
                   :options="availableKursarten"
                   optionLabel="label"
                   optionValue="value"
+                  placeholder="Kursart"
                   size="small"
-                  style="width: 130px"
+                  style="width: 160px"
+                />
+                <MultiSelect
+                  v-model="kursJahrgangFilter"
+                  :options="availableJahrgaengeKurse"
+                  placeholder="Jahrgänge"
+                  :showToggleAll="false"
+                  panelClass="toolbar-ms-panel"
+                  style="width: 150px"
                 />
                 <Button
                   label="Laden"
@@ -339,11 +348,18 @@
                   :options="availableKlassen"
                   optionLabel="label"
                   optionValue="value"
+                  placeholder="Klasse"
                   size="small"
-                  style="width: 130px"
+                  style="width: 160px"
                 />
-                <Checkbox v-model="includeExtern" inputId="zuw-extern" binary />
-                <label for="zuw-extern" class="toolbar-sub-label">inkl. Extern</label>
+                <MultiSelect
+                  v-model="schuelerJahrgangFilter"
+                  :options="availableJahrgaengeSchueler"
+                  placeholder="Jahrgänge"
+                  :showToggleAll="false"
+                  panelClass="toolbar-ms-panel"
+                  style="width: 150px"
+                />
                 <Button
                   label="Laden"
                   icon="pi pi-refresh"
@@ -354,6 +370,8 @@
                   :disabled="!idSchuljahresabschnitt"
                   @click="loadSchueler"
                 />
+                <Checkbox v-model="includeExtern" inputId="zuw-extern" binary />
+                <label for="zuw-extern" class="toolbar-sub-label">inkl. Extern</label>
                 <div class="toolbar-spacer" />
                 <span v-if="zuweisungSave.running" class="lookup-loading">
                   <i class="pi pi-spin pi-spinner" />
@@ -503,6 +521,7 @@ import FileUpload from 'primevue/fileupload'
 import InputNumber from 'primevue/inputnumber'
 import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
+import MultiSelect from 'primevue/multiselect'
 import Message from 'primevue/message'
 import Tabs from 'primevue/tabs'
 import TabList from 'primevue/tablist'
@@ -1439,17 +1458,35 @@ const loadingSchueler = ref(false)
 
 const kursSearch = ref('')
 const kursartFilter = ref('')
+const kursJahrgangFilter = ref<string[]>([])
 const schuelerSearch = ref('')
 const klasseFilter = ref('')
+const schuelerJahrgangFilter = ref<string[]>([])
 const includeExtern = ref(false)
 
+const availableJahrgaengeKurse = computed(() =>
+  [...new Set(
+    dbKurse.value.flatMap(k =>
+      k.idJahrgaenge.map(id => cachedJahrgaenge.value.find(j => j.id === id)?.kuerzel ?? null)
+    ).filter((k): k is string => k !== null)
+  )].sort()
+)
+
+const availableJahrgaengeSchueler = computed(() =>
+  [...new Set(dbSchueler.value.map(s => s.jahrgang).filter(Boolean))].sort()
+)
 
 const filteredKurse = computed(() =>
   dbKurse.value.filter(k => {
     const matchFach = !kursSearch.value ||
       k.fach.toLowerCase().includes(kursSearch.value.toLowerCase())
     const matchArt = !kursartFilter.value || k.kursart === kursartFilter.value
-    return matchFach && matchArt
+    const matchJg = kursJahrgangFilter.value.length === 0 || k.idJahrgaenge.length === 0 ||
+      k.idJahrgaenge.some(id => {
+        const kuerzel = cachedJahrgaenge.value.find(j => j.id === id)?.kuerzel
+        return kuerzel ? kursJahrgangFilter.value.includes(kuerzel) : false
+      })
+    return matchFach && matchArt && matchJg
   }),
 )
 
@@ -1475,7 +1512,8 @@ function matchesSchuelerFilter(s: DbSchueler): boolean {
   const matchName = !schuelerSearch.value ||
     `${s.nachname} ${s.vorname}`.toLowerCase().includes(schuelerSearch.value.toLowerCase())
   const matchKlasse = !klasseFilter.value || s.klasse === klasseFilter.value
-  return matchName && matchKlasse
+  const matchJg = schuelerJahrgangFilter.value.length === 0 || schuelerJahrgangFilter.value.includes(s.jahrgang)
+  return matchName && matchKlasse && matchJg
 }
 
 function matchesKursJahrgang(s: DbSchueler): boolean {
@@ -1947,6 +1985,26 @@ const schuelerColDefs: ColDef<SchuelerUnterrichtRow>[] = [
 .row-sent  { opacity: 0.6; }
 .row-error { background-color: #fff5f5 !important; }
 .dark .row-error { background-color: #3b0c0c !important; }
+
+/* MultiSelect Dropdown-Panel (teleportiert ins body) */
+.toolbar-ms-panel .p-multiselect-option {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.78rem;
+}
+
+/* MultiSelect auf gleiche Größe wie Select/InputText bringen */
+.zuweisung-toolbar .p-multiselect .p-multiselect-label {
+  padding: 0.2rem 0.5rem !important;
+  font-size: 0.75rem !important;
+}
+.zuweisung-toolbar .p-multiselect .p-multiselect-dropdown {
+  padding: 0 0.3rem;
+  width: auto;
+}
+.zuweisung-toolbar .p-multiselect .p-multiselect-dropdown .p-icon {
+  width: 0.75rem;
+  height: 0.75rem;
+}
 </style>
 
 <style scoped>
@@ -2152,6 +2210,7 @@ h2 {
   flex-wrap: wrap;
 }
 
+
 .toolbar-spacer {
   flex: 1;
 }
@@ -2188,6 +2247,27 @@ h2 {
 
 :deep(.zuweisung-toolbar .p-select .p-select-dropdown) {
   padding: 0 0.3rem;
+}
+
+:deep(.zuweisung-toolbar .p-select .p-select-dropdown .p-icon) {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+:deep(.zuweisung-toolbar .p-checkbox) {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+:deep(.zuweisung-toolbar .p-checkbox .p-checkbox-box) {
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 2px;
+}
+
+:deep(.zuweisung-toolbar .p-checkbox .p-checkbox-box .p-icon) {
+  width: 0.6rem;
+  height: 0.6rem;
 }
 
 .zuweisung-layout {

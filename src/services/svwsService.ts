@@ -711,17 +711,26 @@ export interface DbKursEintrag {
   kursartAllg: string
   idJahrgaenge: number[]
   lehrer: number | null
+  wochenstunden?: number
+  schueler?: Array<{ id: number }>
+}
+
+export interface LeistungsdatenEintrag {
+  id: number
+  fachID: number
+  kursID?: number | null
 }
 
 export async function fetchLeistungsdatenFuerLernabschnitt(
   lernabschnittId: number,
-): Promise<Array<{ id: number; fachID: number }>> {
+): Promise<LeistungsdatenEintrag[]> {
   try {
     const response = await getApiClient().get(
-      `/schueler/leistungsdaten/lernabschnitt/${lernabschnittId}`,
+      `/schueler/lernabschnittsdaten/${lernabschnittId}`,
       { params: { _t: Date.now() } },
     )
-    return Array.isArray(response.data) ? response.data : []
+    const data = response.data as { leistungsdaten?: LeistungsdatenEintrag[] }
+    return Array.isArray(data?.leistungsdaten) ? data.leistungsdaten : []
   } catch {
     return []
   }
@@ -729,7 +738,7 @@ export async function fetchLeistungsdatenFuerLernabschnitt(
 
 export async function deleteSchuelerLeistungsdaten(id: number): Promise<UploadResult> {
   try {
-    await getApiClient().delete(`/schueler/leistungsdaten/${id}`)
+    await getApiClient().delete(`/schueler/leistungsdaten/delete/multiple`, { data: [id] })
     return { success: true }
   } catch (error: unknown) {
     return { success: false, error: toAppError(error).messageUser }

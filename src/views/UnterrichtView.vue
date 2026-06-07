@@ -307,9 +307,10 @@
 
             <!-- Filter-Leiste -->
             <div class="zuweisung-toolbar">
-              <div class="toolbar-group">
+              <!-- Zeile 1: Kurs-Filter -->
+              <div class="toolbar-row">
                 <span class="toolbar-label">Kurse</span>
-                <InputText v-model="kursSearch" placeholder="Fach suchen…" size="small" />
+                <InputText v-model="kursSearch" placeholder="Fach suchen…" size="small" style="width: 150px" />
                 <Select
                   v-model="kursartFilter"
                   :options="availableKursarten"
@@ -325,13 +326,14 @@
                   severity="secondary"
                   outlined
                   :loading="loadingKurse"
+                  :disabled="!idSchuljahresabschnitt"
                   @click="loadKurse"
                 />
               </div>
-              <div class="toolbar-sep" />
-              <div class="toolbar-group">
+              <!-- Zeile 2: Schüler-Filter -->
+              <div class="toolbar-row">
                 <span class="toolbar-label">Schüler</span>
-                <InputText v-model="schuelerSearch" placeholder="Name suchen…" size="small" />
+                <InputText v-model="schuelerSearch" placeholder="Name suchen…" size="small" style="width: 150px" />
                 <Select
                   v-model="klasseFilter"
                   :options="availableKlassen"
@@ -340,6 +342,8 @@
                   size="small"
                   style="width: 130px"
                 />
+                <Checkbox v-model="includeExtern" inputId="zuw-extern" binary />
+                <label for="zuw-extern" class="toolbar-sub-label">inkl. Extern</label>
                 <Button
                   label="Laden"
                   icon="pi pi-refresh"
@@ -347,17 +351,29 @@
                   severity="secondary"
                   outlined
                   :loading="loadingSchueler"
+                  :disabled="!idSchuljahresabschnitt"
                   @click="loadSchueler"
                 />
+                <div class="toolbar-spacer" />
+                <span v-if="zuweisungSave.running" class="lookup-loading">
+                  <i class="pi pi-spin pi-spinner" />
+                  {{ zuweisungSave.done }}&nbsp;/&nbsp;{{ zuweisungSave.total }}
+                </span>
+                <span v-else-if="!zuweisungSave.running && zuweisungSave.total > 0" class="import-result">
+                  {{ zuweisungSave.done - zuweisungSave.errors }} gespeichert
+                  <span v-if="zuweisungSave.errors > 0" style="color:#ef4444">
+                    · {{ zuweisungSave.errors }} Fehler
+                  </span>
+                </span>
+                <Button
+                  v-if="pendingAssignments > 0"
+                  :label="`${pendingAssignments} Zuweisung(en) speichern`"
+                  icon="pi pi-save"
+                  size="small"
+                  :loading="zuweisungSave.running"
+                  @click="saveAssignments"
+                />
               </div>
-              <div class="toolbar-sep" />
-              <Button
-                v-if="pendingAssignments > 0"
-                :label="`${pendingAssignments} Zuweisung(en) speichern`"
-                icon="pi pi-save"
-                size="small"
-                @click="saveAssignments"
-              />
             </div>
 
             <!-- Zwei-Spalten-Layout -->
@@ -384,7 +400,7 @@
                   >
                     <div class="kurs-item-main">
                       <span class="kurs-fach">{{ kurs.fach }}</span>
-                      <span class="kurs-meta">{{ kurs.kursart }}&nbsp;{{ kurs.kursnummer }}</span>
+                      <span class="kurs-meta">{{ kurs.kuerzel }}</span>
                     </div>
                     <div class="kurs-item-right">
                       <span v-if="kurs.lehrer" class="kurs-lehrer">{{ kurs.lehrer }}</span>
@@ -405,36 +421,31 @@
                     <span class="panel-title">Verfügbare Schüler</span>
                     <span class="panel-count">{{ filteredPool.length }}</span>
                   </div>
-                  <div
-                    class="drop-zone"
-                    :class="{
-                      'drop-zone--over': dragOverZone === 'pool',
-                      'drop-zone--empty': filteredPool.length === 0,
-                    }"
-                    @dragover.prevent="dragOverZone = 'pool'"
-                    @dragleave="dragOverZone = null"
-                    @drop.prevent="onDropToPool"
-                  >
+                  <div class="schueler-list">
                     <div v-if="dbSchueler.length === 0" class="panel-empty">
                       <i class="pi pi-users" />
                       <span>Schüler über „Laden" aus der Datenbank holen</span>
                     </div>
-                    <div v-else-if="filteredPool.length === 0 && selectedKursId" class="drop-hint">
+                    <div v-else-if="poolJahrgangsWarnung" class="list-hint list-hint--warn">
+                      <i class="pi pi-exclamation-triangle" />
+                      {{ poolJahrgangsWarnung }}
+                    </div>
+                    <div v-else-if="filteredPool.length === 0 && selectedKursId" class="list-hint">
                       Alle gefilterten Schüler sind diesem Kurs zugewiesen
                     </div>
-                    <div v-else-if="filteredPool.length === 0" class="drop-hint">
+                    <div v-else-if="filteredPool.length === 0" class="list-hint">
                       Kein Schüler entspricht dem Filter
                     </div>
                     <div
                       v-for="s in filteredPool"
                       :key="s.id"
-                      class="schueler-card"
-                      draggable="true"
-                      @dragstart="onDragStart($event, s.id)"
-                      @dragend="onDragEnd"
+                      class="schueler-row"
+                      :class="{ 'schueler-row--disabled': !selectedKursId }"
+                      @click="onPoolStudentClick(s.id)"
                     >
                       <span class="schueler-name">{{ s.nachname }},&nbsp;{{ s.vorname }}</span>
                       <span class="klasse-tag">{{ s.klasse }}</span>
+                      <i v-if="selectedKursId" class="pi pi-plus schueler-row-action" />
                     </div>
                   </div>
                 </div>
@@ -445,34 +456,27 @@
                     <span class="panel-title">
                       {{ selectedKursId ? `Zugewiesen: ${selectedKursLabel}` : 'Zuerst Kurs wählen' }}
                     </span>
+                    <span v-if="selectedKursJahrgaengeLabel" class="panel-jahrgaenge">
+                      Zulässige Jahrgänge: {{ selectedKursJahrgaengeLabel }}
+                    </span>
                     <span v-if="selectedKursId" class="panel-count">{{ filteredAssigned.length }}</span>
                   </div>
-                  <div
-                    class="drop-zone drop-zone--target"
-                    :class="{
-                      'drop-zone--over': dragOverZone === 'assigned',
-                      'drop-zone--disabled': !selectedKursId,
-                    }"
-                    @dragover.prevent="selectedKursId && (dragOverZone = 'assigned')"
-                    @dragleave="dragOverZone = null"
-                    @drop.prevent="onDropToAssigned"
-                  >
-                    <div v-if="!selectedKursId" class="drop-hint drop-hint--muted">
-                      Kurs in der linken Liste anklicken, dann Schüler hierhin ziehen
+                  <div class="schueler-list schueler-list--assigned">
+                    <div v-if="!selectedKursId" class="list-hint list-hint--muted">
+                      Kurs in der linken Liste anklicken
                     </div>
-                    <div v-else-if="filteredAssigned.length === 0" class="drop-hint">
-                      Schüler aus der Liste oben hierhin ziehen
+                    <div v-else-if="filteredAssigned.length === 0" class="list-hint">
+                      Noch kein Schüler zugewiesen — links anklicken zum Hinzufügen
                     </div>
                     <div
                       v-for="s in filteredAssigned"
                       :key="s.id"
-                      class="schueler-card schueler-card--assigned"
-                      draggable="true"
-                      @dragstart="onDragStart($event, s.id)"
-                      @dragend="onDragEnd"
+                      class="schueler-row schueler-row--assigned"
+                      @click="onAssignedStudentClick(s.id)"
                     >
                       <span class="schueler-name">{{ s.nachname }},&nbsp;{{ s.vorname }}</span>
                       <span class="klasse-tag">{{ s.klasse }}</span>
+                      <i class="pi pi-times schueler-row-action schueler-row-action--remove" />
                     </div>
                   </div>
                 </div>
@@ -488,12 +492,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { AgGridVue } from '@ag-grid-community/vue3'
 import { ClientSideRowModelModule } from '@ag-grid-community/client-side-row-model'
 import { ModuleRegistry, type ColDef, type GetRowIdParams, type GridApi } from '@ag-grid-community/core'
 import Button from 'primevue/button'
+import Checkbox from 'primevue/checkbox'
 import FileUpload from 'primevue/fileupload'
 import InputNumber from 'primevue/inputnumber'
 import InputText from 'primevue/inputtext'
@@ -512,7 +517,7 @@ import {
   fetchSchuelerAuswahlliste, fetchLernabschnittId, createLeistungsdaten, createKurs,
   fetchKurseFuerAbschnitt, createSchuelerLeistungsdaten, patchSchuelerLeistungsdaten,
   fetchLeistungsdatenFuerLernabschnitt, deleteSchuelerLeistungsdaten,
-  type LehrkraftListEntry, type DbKursEintrag, type SchuelerAuswahl,
+  type LehrkraftListEntry, type DbKursEintrag, type SchuelerAuswahl, type LeistungsdatenEintrag,
 } from '@/services/svwsService'
 import { fetchKursartenForSchulform } from '@/services/katalogService'
 import type { KlasseDetails } from '@/models/Klassen'
@@ -604,8 +609,12 @@ interface DbKurs {
   id: number
   fach: string
   kursart: string
-  kursnummer: number
+  kuerzel: string
   lehrer: string
+  idFach: number
+  idLehrer: number | null
+  wochenstunden: number
+  idJahrgaenge: number[]
 }
 
 interface DbSchueler {
@@ -613,6 +622,7 @@ interface DbSchueler {
   nachname: string
   vorname: string
   klasse: string
+  jahrgang: string
 }
 
 // ── Stores & Composables ──────────────────────────────────────────────────
@@ -635,6 +645,12 @@ onMounted(() => {
 // ── Tab-State ─────────────────────────────────────────────────────────────
 
 const activeTab = ref<'klasse' | 'kurs' | 'schueler' | 'zuweisung'>('klasse')
+
+watch(activeTab, (tab) => {
+  if (tab !== 'zuweisung') return
+  if (dbKurse.value.length === 0) loadKurse()
+  if (dbSchueler.value.length === 0) loadSchueler()
+})
 const parseError = ref('')
 const klasseHintOpen = ref(false)
 const kursHintOpen = ref(false)
@@ -1409,10 +1425,13 @@ const dbKurse = ref<DbKurs[]>([])
 const dbSchueler = ref<DbSchueler[]>([])
 // kursId → Array der zugewiesenen Schüler-IDs (inkl. unsaved changes)
 const assignments = ref<Record<number, number[]>>({})
+// Unveränderlicher DB-Stand (für Diff beim Speichern)
+const dbAssignments = ref<Record<number, number[]>>({})
 // IDs der neu hinzugefügten bzw. entfernten Zuweisungen (für Speichern-Button)
 const pendingAdded = ref<{ kursId: number; schuelerId: number }[]>([])
 const pendingRemoved = ref<{ kursId: number; schuelerId: number }[]>([])
 const pendingAssignments = computed(() => pendingAdded.value.length + pendingRemoved.value.length)
+const zuweisungSave = ref({ running: false, done: 0, total: 0, errors: 0 })
 
 const selectedKursId = ref<number | null>(null)
 const loadingKurse = ref(false)
@@ -1422,9 +1441,8 @@ const kursSearch = ref('')
 const kursartFilter = ref('')
 const schuelerSearch = ref('')
 const klasseFilter = ref('')
+const includeExtern = ref(false)
 
-const draggedStudentId = ref<number | null>(null)
-const dragOverZone = ref<'pool' | 'assigned' | null>(null)
 
 const filteredKurse = computed(() =>
   dbKurse.value.filter(k => {
@@ -1438,7 +1456,15 @@ const filteredKurse = computed(() =>
 const selectedKurs = computed(() => dbKurse.value.find(k => k.id === selectedKursId.value))
 const selectedKursLabel = computed(() => {
   const k = selectedKurs.value
-  return k ? `${k.fach} ${k.kursart} ${k.kursnummer}` : ''
+  return k ? `${k.fach} ${k.kuerzel}` : ''
+})
+
+const selectedKursJahrgaengeLabel = computed(() => {
+  const k = selectedKurs.value
+  if (!k || k.idJahrgaenge.length === 0) return null
+  return k.idJahrgaenge
+    .map(id => cachedJahrgaenge.value.find(j => j.id === id)?.kuerzel ?? String(id))
+    .join(', ')
 })
 
 const assignedIds = computed(() =>
@@ -1452,8 +1478,43 @@ function matchesSchuelerFilter(s: DbSchueler): boolean {
   return matchName && matchKlasse
 }
 
+function matchesKursJahrgang(s: DbSchueler): boolean {
+  const kurs = selectedKurs.value
+  if (!kurs || kurs.idJahrgaenge.length === 0) return true
+  const jg = cachedJahrgaenge.value.find(j => j.kuerzel === s.jahrgang)
+  return jg ? kurs.idJahrgaenge.includes(jg.id) : true
+}
+
+// Warnmeldung: wenn ein Klassen-/Namensfilter aktiv ist, aber alle Treffer
+// wegen Jahrgangs-Inkompatibilität zum gewählten Kurs herausgefiltert wurden.
+const poolJahrgangsWarnung = computed(() => {
+  const kurs = selectedKurs.value
+  if (!kurs || kurs.idJahrgaenge.length === 0) return null
+
+  // Nur prüfen wenn ein Filter gesetzt ist, sonst ist die leere Liste selbsterklärend
+  if (!klasseFilter.value && !schuelerSearch.value) return null
+
+  const gefiltertOhneJg = dbSchueler.value.filter(
+    s => !assignedIds.value.has(s.id) && matchesSchuelerFilter(s),
+  )
+  if (gefiltertOhneJg.length === 0) return null  // generell keine Treffer, kein Extra-Hinweis
+
+  const alleBlockiert = gefiltertOhneJg.every(s => !matchesKursJahrgang(s))
+  if (!alleBlockiert) return null
+
+  const jahrgangKuerzel = gefiltertOhneJg[0].jahrgang
+  const erlaubt = kurs.idJahrgaenge
+    .map(id => cachedJahrgaenge.value.find(j => j.id === id)?.kuerzel ?? String(id))
+    .join(', ')
+  return klasseFilter.value
+    ? `Klasse „${klasseFilter.value}" (Jg. ${jahrgangKuerzel}) gehört nicht zu den Jahrgängen dieses Kurses (${erlaubt})`
+    : `Keine gefilterten Schüler passen zum Jahrgang dieses Kurses (${erlaubt})`
+})
+
 const filteredPool = computed(() =>
-  dbSchueler.value.filter(s => !assignedIds.value.has(s.id) && matchesSchuelerFilter(s)),
+  dbSchueler.value.filter(
+    s => !assignedIds.value.has(s.id) && matchesSchuelerFilter(s) && matchesKursJahrgang(s),
+  ),
 )
 
 const filteredAssigned = computed(() =>
@@ -1476,35 +1537,24 @@ const availableKlassen = computed(() => {
   ]
 })
 
-function onDragStart(event: DragEvent, schuelerId: number): void {
-  draggedStudentId.value = schuelerId
-  event.dataTransfer?.setData('text/plain', String(schuelerId))
-}
-
-function onDragEnd(): void {
-  draggedStudentId.value = null
-  dragOverZone.value = null
-}
-
-function onDropToAssigned(): void {
-  const sid = draggedStudentId.value
+function onPoolStudentClick(sid: number): void {
   const kid = selectedKursId.value
-  if (sid === null || kid === null) return
+  if (kid === null) return
   const current = assignments.value[kid] ?? []
   if (current.includes(sid)) return
   assignments.value = { ...assignments.value, [kid]: [...current, sid] }
-  pendingAdded.value = [...pendingAdded.value, { kursId: kid, schuelerId: sid }]
-  // Undo aus pendingRemoved falls vorhanden
+  const isDbEntry = (dbAssignments.value[kid] ?? []).includes(sid)
+  if (!isDbEntry) {
+    pendingAdded.value = [...pendingAdded.value, { kursId: kid, schuelerId: sid }]
+  }
   pendingRemoved.value = pendingRemoved.value.filter(
     p => !(p.kursId === kid && p.schuelerId === sid),
   )
-  dragOverZone.value = null
 }
 
-function onDropToPool(): void {
-  const sid = draggedStudentId.value
+function onAssignedStudentClick(sid: number): void {
   const kid = selectedKursId.value
-  if (sid === null || kid === null) return
+  if (kid === null) return
   const current = assignments.value[kid] ?? []
   if (!current.includes(sid)) return
   assignments.value = { ...assignments.value, [kid]: current.filter(id => id !== sid) }
@@ -1512,35 +1562,162 @@ function onDropToPool(): void {
   pendingAdded.value = pendingAdded.value.filter(
     p => !(p.kursId === kid && p.schuelerId === sid),
   )
-  dragOverZone.value = null
 }
 
 async function loadKurse(): Promise<void> {
+  if (idSchuljahresabschnitt.value === null) return
   loadingKurse.value = true
   try {
-    // TODO: const data = await fetchKurseForAbschnitt(idSchuljahresabschnitt.value)
-    // dbKurse.value = data
-    // assignments.value = buildAssignmentsFromApi(data)
+    const [dbKurseRaw, faecher, lehrkraefte, jahrgaenge] = await Promise.all([
+      fetchKurseFuerAbschnitt(idSchuljahresabschnitt.value),
+      cachedFaecher.value.length    ? Promise.resolve(cachedFaecher.value)    : fetchFaecher(),
+      cachedLehrkraefte.value.length ? Promise.resolve(cachedLehrkraefte.value) : fetchLehrkraefte(),
+      cachedJahrgaenge.value.length  ? Promise.resolve(cachedJahrgaenge.value)  : fetchJahrgaenge(),
+    ])
+    cachedFaecher.value     = faecher
+    cachedLehrkraefte.value = lehrkraefte
+    cachedJahrgaenge.value  = jahrgaenge
+    dbKurse.value = dbKurseRaw.map(k => ({
+      id: k.id,
+      fach: faecher.find(f => f.id === k.idFach)?.kuerzel ?? '?',
+      kursart: k.kursartAllg,
+      kuerzel: k.kuerzel,
+      lehrer: lehrkraefte.find(l => l.id === k.lehrer)?.kuerzel ?? '',
+      idFach: k.idFach ?? 0,
+      idLehrer: k.lehrer,
+      wochenstunden: k.wochenstunden ?? 0,
+      idJahrgaenge: k.idJahrgaenge ?? [],
+    }))
+    // Bestehende Zuweisungen aus der API übernehmen
+    const initialAssignments: Record<number, number[]> = {}
+    for (const k of dbKurseRaw) {
+      initialAssignments[k.id] = (k.schueler ?? []).map(s => s.id)
+    }
+    dbAssignments.value = initialAssignments
+    assignments.value = { ...initialAssignments }
+    pendingAdded.value = []
+    pendingRemoved.value = []
+    selectedKursId.value = null
   } finally {
     loadingKurse.value = false
   }
 }
 
 async function loadSchueler(): Promise<void> {
+  if (idSchuljahresabschnitt.value === null) return
   loadingSchueler.value = true
   try {
-    // TODO: const data = await fetchSchuelerForAbschnitt(idSchuljahresabschnitt.value)
-    // dbSchueler.value = data
+    const alleSchueler = await fetchSchuelerAuswahlliste(idSchuljahresabschnitt.value)
+    const erlaubteStatus = includeExtern.value ? [2, 8] : [2]
+    dbSchueler.value = alleSchueler
+      .filter(s => erlaubteStatus.includes(s.status))
+      .map(s => ({
+        id: s.id,
+        nachname: s.nachname,
+        vorname: s.vorname,
+        klasse: s.klasse ?? '',
+        jahrgang: s.jahrgang ?? '',
+      }))
   } finally {
     loadingSchueler.value = false
   }
 }
 
 async function saveAssignments(): Promise<void> {
-  // TODO: POST /db/{schema}/unterrichtsverteilung/schueler/create für pendingAdded
-  // TODO: DELETE /db/{schema}/unterrichtsverteilung/schueler/multiple für pendingRemoved
+  if (idSchuljahresabschnitt.value === null) return
+  const abschnittId = idSchuljahresabschnitt.value
+  const added = [...pendingAdded.value]
+  const removed = [...pendingRemoved.value]
+  zuweisungSave.value = { running: true, total: added.length + removed.length, done: 0, errors: 0 }
+
+  const lernabschnittCache = new Map<number, number | null>()
+  async function getLernabschnittId(schuelerId: number): Promise<number | null> {
+    if (lernabschnittCache.has(schuelerId)) return lernabschnittCache.get(schuelerId)!
+    const id = await fetchLernabschnittId(schuelerId, abschnittId)
+    lernabschnittCache.set(schuelerId, id)
+    return id
+  }
+
+  // Hinzufügen
+  for (const { kursId, schuelerId } of added) {
+    const kurs = dbKurse.value.find(k => k.id === kursId)
+    if (!kurs || kurs.idFach === 0) {
+      zuweisungSave.value.errors++
+      zuweisungSave.value.done++
+      continue
+    }
+    const lernabschnittId = await getLernabschnittId(schuelerId)
+    if (lernabschnittId === null) {
+      zuweisungSave.value.errors++
+      zuweisungSave.value.done++
+      continue
+    }
+    const createResult = await createSchuelerLeistungsdaten(lernabschnittId, kurs.idFach)
+    if (!createResult.success || !createResult.id) {
+      zuweisungSave.value.errors++
+      zuweisungSave.value.done++
+      continue
+    }
+    const patch: Record<string, unknown> = {
+      kursID: kursId,
+      kursart: kurs.kursart,
+      abifach: null,
+      wochenstunden: kurs.wochenstunden,
+    }
+    if (kurs.idLehrer !== null) patch.lehrerID = kurs.idLehrer
+    const patchResult = await patchSchuelerLeistungsdaten(createResult.id, patch)
+    if (!patchResult.success) {
+      await deleteSchuelerLeistungsdaten(createResult.id)
+      zuweisungSave.value.errors++
+    }
+    zuweisungSave.value.done++
+  }
+
+  // Entfernen
+  const leistungsdatenCache = new Map<number, LeistungsdatenEintrag[]>()
+  async function getLeistungsdaten(lernabschnittId: number): Promise<LeistungsdatenEintrag[]> {
+    if (leistungsdatenCache.has(lernabschnittId)) return leistungsdatenCache.get(lernabschnittId)!
+    const data = await fetchLeistungsdatenFuerLernabschnitt(lernabschnittId)
+    leistungsdatenCache.set(lernabschnittId, data)
+    return data
+  }
+
+  for (const { kursId, schuelerId } of removed) {
+    const lernabschnittId = await getLernabschnittId(schuelerId)
+    if (lernabschnittId === null) {
+      zuweisungSave.value.errors++
+      zuweisungSave.value.done++
+      continue
+    }
+    const leistungen = await getLeistungsdaten(lernabschnittId)
+    const eintrag = leistungen.find(e => e.kursID === kursId)
+    if (!eintrag) {
+      zuweisungSave.value.errors++
+      zuweisungSave.value.done++
+      continue
+    }
+    const result = await deleteSchuelerLeistungsdaten(eintrag.id)
+    if (!result.success) zuweisungSave.value.errors++
+    zuweisungSave.value.done++
+  }
+
+  // dbAssignments auf aktuellen Stand bringen (nur erfolgreiche Operationen)
+  const newDb = { ...dbAssignments.value }
+  for (const { kursId, schuelerId } of added) {
+    if (!(newDb[kursId] ?? []).includes(schuelerId)) {
+      newDb[kursId] = [...(newDb[kursId] ?? []), schuelerId]
+    }
+  }
+  for (const { kursId, schuelerId } of removed) {
+    if (newDb[kursId]) {
+      newDb[kursId] = newDb[kursId].filter(id => id !== schuelerId)
+    }
+  }
+  dbAssignments.value = newDb
+
   pendingAdded.value = []
   pendingRemoved.value = []
+  zuweisungSave.value.running = false
 }
 
 // ── Grid-Konfiguration (gemeinsam) ────────────────────────────────────────
@@ -1956,9 +2133,8 @@ h2 {
 
 .zuweisung-toolbar {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 0.35rem;
   padding: 0.5rem 0.75rem;
   background: var(--p-surface-50, #f9fafb);
   border: 1px solid var(--p-surface-border);
@@ -1969,10 +2145,15 @@ h2 {
   background: var(--p-surface-900, #111827);
 }
 
-.toolbar-group {
+.toolbar-row {
   display: flex;
   align-items: center;
   gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.toolbar-spacer {
+  flex: 1;
 }
 
 .toolbar-label {
@@ -1980,19 +2161,33 @@ h2 {
   font-weight: 600;
   color: var(--p-text-muted-color);
   white-space: nowrap;
+  width: 3.5rem;
 }
 
-.toolbar-sep {
-  width: 1px;
-  height: 1.5rem;
-  background: var(--p-surface-border);
-  margin: 0 0.25rem;
+.toolbar-sub-label {
+  font-size: 0.72rem;
+  color: var(--p-text-muted-color);
+  cursor: pointer;
+  white-space: nowrap;
 }
 
 :deep(.zuweisung-toolbar .p-button),
 :deep(.zuweisung-toolbar .p-inputtext) {
   font-size: 0.75rem;
   padding: 0.2rem 0.5rem;
+}
+
+:deep(.zuweisung-toolbar .p-select) {
+  font-size: 0.75rem;
+}
+
+:deep(.zuweisung-toolbar .p-select .p-select-label) {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+}
+
+:deep(.zuweisung-toolbar .p-select .p-select-dropdown) {
+  padding: 0 0.3rem;
 }
 
 .zuweisung-layout {
@@ -2043,6 +2238,17 @@ h2 {
   border-radius: 10px;
   padding: 0.05rem 0.4rem;
   flex-shrink: 0;
+}
+
+.panel-jahrgaenge {
+  font-size: 0.68rem;
+  color: var(--p-text-muted-color);
+  flex: 1;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 0.5rem;
 }
 
 .panel-empty {
@@ -2161,82 +2367,95 @@ h2 {
   opacity: 0.6;
 }
 
-.drop-zone {
+/* ── Schüler-Grid (Click-Modell) ─────────────────────────────────────── */
+.schueler-list {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 0.4rem;
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(max(180px, calc(25% - 0.25rem)), 1fr));
   align-content: flex-start;
   gap: 0.3rem;
-  transition: background 0.15s;
+  padding: 0.4rem;
 }
 
-.drop-zone--target {
-  background: color-mix(in srgb, var(--p-primary-color) 4%, transparent);
-}
-
-.drop-zone--over {
-  background: color-mix(in srgb, var(--p-primary-color) 14%, transparent);
-  outline: 2px dashed var(--p-primary-color);
-  outline-offset: -2px;
-}
-
-.drop-zone--disabled {
-  pointer-events: none;
-}
-
-.drop-hint {
-  width: 100%;
+.list-hint {
+  grid-column: 1 / -1;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 0.4rem;
   color: var(--p-text-muted-color);
   font-size: 0.78rem;
-  padding: 1rem;
+  padding: 1.2rem 1rem;
   text-align: center;
 }
 
-.drop-hint--muted {
+.list-hint--muted {
   opacity: 0.6;
 }
 
-/* ── Schüler-Karten ──────────────────────────────────────────────────── */
-.schueler-card {
-  display: inline-flex;
+.list-hint--warn {
+  color: #f59e0b;
+  font-weight: 500;
+}
+
+.schueler-row {
+  display: flex;
   align-items: center;
   gap: 0.35rem;
   padding: 0.25rem 0.5rem;
-  background: var(--p-surface-card);
+  cursor: pointer;
   border: 1px solid var(--p-surface-border);
   border-radius: 6px;
   font-size: 0.78rem;
-  cursor: grab;
   user-select: none;
-  transition: box-shadow 0.15s, border-color 0.15s;
+  transition: background 0.1s, border-color 0.1s;
+  min-width: 0;
 }
 
-.schueler-card:hover {
+.schueler-row:hover {
+  background: color-mix(in srgb, var(--p-primary-color) 8%, transparent);
   border-color: var(--p-primary-400);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
-.schueler-card:active {
-  cursor: grabbing;
+.schueler-row--assigned {
+  border-color: color-mix(in srgb, var(--p-primary-color) 40%, var(--p-surface-border));
+  background: color-mix(in srgb, var(--p-primary-color) 5%, transparent);
 }
 
-.schueler-card--assigned {
-  border-color: var(--p-primary-color);
-  background: color-mix(in srgb, var(--p-primary-color) 8%, var(--p-surface-card));
+.schueler-row--disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.schueler-row-action {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  color: var(--p-primary-color);
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.schueler-row:hover .schueler-row-action {
+  opacity: 1;
+}
+
+.schueler-row-action--remove {
+  color: var(--p-red-400, #f87171);
 }
 
 .schueler-name {
   font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .klasse-tag {
+  flex-shrink: 0;
   font-size: 0.68rem;
   color: var(--p-text-muted-color);
   background: var(--p-surface-200, #e5e7eb);

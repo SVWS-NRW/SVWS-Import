@@ -29,7 +29,7 @@ Beide Pfade werden aktiv weiterentwickelt. Der Wizard ist kein Ersatz für den I
 | `src/services/svwsService.ts` | SVWS-API-Aufrufe + `ENTITY_ENDPOINTS` |
 | `src/services/columnMatcher.ts` | Auto-Mapping (Levenshtein + Alias) |
 | `src/utils/rawParser.ts` | Generischer CSV/XLSX-Parser (kein Feldmapping) |
-| `examples/server.json` | OpenAPI-Beschreibung des SVWS-Servers |
+| `examples/openAPI/server.json` | OpenAPI-Beschreibung des SVWS-Servers |
 
 ### Neues Import-Modul hinzufügen (3 Schritte)
 1. `src/schemas/meinModulSchema.ts` anlegen (implementiert `ImportModule`)
@@ -51,5 +51,5 @@ Beide Pfade werden aktiv weiterentwickelt. Der Wizard ist kein Ersatz für den I
 ---
 
 ## Externe Referenzen
-- OpenAPI SVWS-Server: `examples/server.json` (lokal) oder [SVWS-NRW GitHub](https://github.com/SVWS-NRW/SVWS-Server)
+- OpenAPI SVWS-Server: `examples/openAPI/server.json` (lokal) oder [SVWS-NRW GitHub](https://github.com/SVWS-NRW/SVWS-Server)
 - ADR-Dateien: `docs/adr/0001-*.md` bis `docs/adr/0015-*.md`

@@ -19,13 +19,11 @@ Neue Schuljahresabschnitte in SVWS anlegen.
 - Abschnitt korrekt (z. B. 1 oder 2)
 - Keine doppelten Kombinationen
 
-## Screenshot-Platzhalter
+## Screenshots
 
-- [SCREENSHOT: Neuer Schuljahresabschnitt Formular]
-- [SCREENSHOT: Schuljahresabschnitt gespeichert]
+![Formular zum Anlegen eines neuen Schuljahresabschnitts mit den Feldern Schuljahr und Abschnitt](../assets/schuljahresabschnitt-anlegen-formular.png)
 
-## Kapitelnavigation
+---
 
-- Vorheriges Kapitel: [Bestehende Schuljahresabschnitte laden](schuljahresabschnitte-laden.md)
-- Nächstes Kapitel: [Floskeln anzeigen](floskeln-anzeigen.md)
-- Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)
+| « [Schuljahresabschnitte laden](schuljahresabschnitte-laden.md) | [Inhaltsverzeichnis](../index.md) | [Floskeln anzeigen](floskeln-anzeigen.md) » |
+|:---|:---:|---:|

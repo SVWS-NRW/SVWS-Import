@@ -26,13 +26,7 @@ Floskeln aus einer Datei in den Bestand übernehmen.
 - Gab es abgelehnte Datensätze?
 - Müssen Korrekturen erneut importiert werden?
 
-## Screenshot-Platzhalter
+---
 
-- [SCREENSHOT: Floskeln Import starten]
-- [SCREENSHOT: Floskeln Importergebnis]
-
-## Kapitelnavigation
-
-- Vorheriges Kapitel: [Floskeln löschen](floskeln-loeschen.md)
-- Nächstes Kapitel: Ende
-- Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)
+| « [Floskeln löschen](floskeln-loeschen.md) | [Inhaltsverzeichnis](../index.md) | [Unterrichtsdaten importieren](unterricht-importieren.md) » |
+|:---|:---:|---:|

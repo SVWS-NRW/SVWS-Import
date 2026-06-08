@@ -15,12 +15,7 @@ Vorhandene Floskeln in der Übersicht anzeigen und sichten.
 
 Nutzen Sie die Anzeige als Basis für Filter, Löschung oder Import.
 
-## Screenshot-Platzhalter
+---
 
-- [SCREENSHOT: Floskeln Übersicht]
-
-## Kapitelnavigation
-
-- Vorheriges Kapitel: [Neue Schuljahresabschnitte anlegen](schuljahresabschnitte-anlegen.md)
-- Nächstes Kapitel: [Floskeln filtern](floskeln-filtern.md)
-- Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)
+| « [Schuljahresabschnitte anlegen](schuljahresabschnitte-anlegen.md) | [Inhaltsverzeichnis](../index.md) | [Floskeln filtern](floskeln-filtern.md) » |
+|:---|:---:|---:|

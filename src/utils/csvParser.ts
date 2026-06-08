@@ -539,6 +539,74 @@ export async function parseAnkreuzkompetenzCsv(file: File): Promise<Ankreuzkompe
   })
 }
 
+export function parseSchuelerSchulbesuchCsv(file: File): Promise<import('@/models/SchuelerSchulbesuch').SchuelerSchulbesuchImportRow[]> {
+  return new Promise((resolve, reject) => {
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete(results) {
+        try {
+          const rows = (results.data as Record<string, string>[]).map((record) => {
+            const m = buildLookup(record)
+            return {
+              _id: generateId(),
+              _valid: false,
+              _errors: [] as string[],
+              _sent: false,
+              _schuelerId: null,
+              _lookupStatus: 'pending' as const,
+              _vorherigeSchuleStatus: 'empty' as const,
+              // Suchschlüssel
+              nachname:     get(m, 'nachname', 'name', 'familienname'),
+              vorname:      get(m, 'vorname', 'firstname', 'rufname'),
+              geburtsdatum: normalisiereDatum(get(m, 'geburtsdatum', 'geburtstag', 'birthdate', 'birthday', 'geb')),
+              // Vorige Schule — enthält Schulnummer, wird vor dem Upload in DB-ID aufgelöst
+              vorherigeSchule:           get(m, 'vorherigeschule', 'idvorherigeschule', 'vorherigeschuleid', 'vorherige schule'),
+              vorigeAllgHerkunft:        get(m, 'vorigeallgherkunft', 'herkunft', 'herkunftsart', 'schulformvorher'),
+              vorigeEntlassdatum:        normalisiereDatum(get(m, 'vorigeentlassdatum', 'entlassdatumvorher')),
+              vorigeEntlassjahrgang:     get(m, 'vorigeentlassjahrgang', 'jahrgangvorher'),
+              vorigeArtLetzteVersetzung: get(m, 'vorigeartletzteversetzung', 'versetzungsart', 'letzteversetzung'),
+              vorigeEntlassgrundID:      get(m, 'vorigeentlassgrundid', 'vorigeentlassgrund', 'entlassgrundvorher'),
+              vorigeBemerkung:           get(m, 'vorigebemerkung', 'bemerkung'),
+              vorigeAbschlussartID:      get(m, 'vorigeabschlussartid', 'vorigeabschlussart', 'abschlussartvorher', 'abschlussvorher'),
+              // Entlassung von dieser Schule
+              entlassungDatum:           normalisiereDatum(get(m, 'entlassungdatum', 'entlassdatum', 'entlassungsdatum')),
+              idEntlassjahrgang:         get(m, 'identlassjahrgang', 'entlassjahrgang', 'entlassjahrgangid'),
+              entlassungGrundID:         get(m, 'entlassunggrundid', 'entlassunggrund', 'entlassungsgrund', 'entlassungsgrundid'),
+              entlassungAbschlussartID:  get(m, 'entlassungabschlussartid', 'entlassungabschlussart', 'abschlussart', 'abschluss'),
+              // Aufnehmende Schule
+              idAufnehmendeSchule:       get(m, 'idaufnehmendeschule', 'aufnehmendeschule', 'aufnehmendeschuleid'),
+              aufnehmendWechseldatum:    normalisiereDatum(get(m, 'aufnehmendwechseldatum', 'wechseldatumaufnehmend', 'wechseldatum')),
+              aufnehmendBestaetigt:      get(m, 'aufnehmendbestaetigt', 'wechselbestaetigt', 'aufnahmebestaetigt'),
+              // Grundschule
+              grundschuleEinschulungsjahr:             get(m, 'grundschuleeinschulungsjahr', 'einschulungsjahr', 'einschulung'),
+              grundschuleEinschulungsartID:             get(m, 'grundschuleeinschulungsartid', 'grundschuleeinschulungsart', 'einschulungsart'),
+              idGrundschuleJahreEingangsphase:          get(m, 'idgrundschulejahreeingangsphase', 'grundschulejahreeingangsphase', 'jahreeingangsphase', 'eingangsphase'),
+              idKuerzelGrundschuleUebergangsempfehlung: get(m, 'idkuerzelgrundschuleuebergangsempfehlung', 'kuerzelgrundschuleuebergangsempfehlung', 'uebergangsempfehlung'),
+              // Sekundarstufe
+              sekIWechsel:               get(m, 'sekiwechsel', 'wechselseki', 'sek1wechsel'),
+              sekIErsteSchulform:        get(m, 'sekiersteschulform', 'ersteschulform'),
+              sekIIWechsel:              get(m, 'sekiiwechsel', 'wechselsekii', 'sek2wechsel'),
+              // Kindergarten
+              idDauerKindergartenbesuch: get(m, 'iddauerkindergartenbesuch', 'dauerkindergartenbesuch', 'dauerkindergarten', 'kindergartenbesuchdauer'),
+              idKindergarten:            get(m, 'idkindergarten', 'kindergarten', 'kindergartenid'),
+              // Sprachförderung
+              verpflichtungSprachfoerderkurs: get(m, 'verpflichtungsprachfoerderkurs', 'sprachfoerderpflicht'),
+              teilnahmeSprachfoerderkurs:     get(m, 'teilnahmesprachfoerderkurs', 'sprachfoerderteilnahme'),
+            }
+          })
+          resolve(rows)
+        } catch (e) {
+          reject(e)
+        }
+      },
+      error(err) {
+        reject(new Error(`CSV-Fehler: ${err.message}`))
+      },
+    })
+  })
+}
+
 // Versucht gängige Datumsformate nach YYYY-MM-DD zu konvertieren
 export function normalisiereDatum(raw: string): string {
   if (!raw) return ''

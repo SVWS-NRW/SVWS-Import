@@ -827,3 +827,148 @@ export async function fetchKurseFuerAbschnitt(abschnittId: number): Promise<DbKu
   return Array.isArray(response.data) ? response.data : []
 }
 
+export interface SchuelerListeEintrag {
+  id: number
+  nachname: string
+  vorname: string
+  geburtsdatum?: string | null
+  status?: number
+}
+
+export async function fetchSchuelerAktuell(): Promise<SchuelerListeEintrag[]> {
+  try {
+    const response = await getApiClient().get<SchuelerListeEintrag[]>('/schueler/aktuell')
+    return Array.isArray(response.data) ? response.data : []
+  } catch {
+    return []
+  }
+}
+
+export async function fetchSchuelerSchulbesuch(id: number): Promise<Record<string, unknown> | null> {
+  try {
+    const response = await getApiClient().get<Record<string, unknown>>(`/schueler/${id}/schulbesuch`)
+    return response.data ?? null
+  } catch {
+    return null
+  }
+}
+
+export async function patchSchuelerSchulbesuch(
+  id: number,
+  patch: Record<string, unknown>,
+): Promise<UploadResult> {
+  try {
+    await getApiClient().patch(`/schueler/${id}/schulbesuch`, patch)
+    return { success: true }
+  } catch (error: unknown) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}
+
+export interface SchulEintrag {
+  id: number
+  kuerzel?: string | null
+  kurzbezeichnung?: string | null
+  schulnummerStatistik?: string | null
+  name: string
+  idSchulform?: number | null
+  strassenname?: string | null
+  hausnummer?: string | null
+  zusatzHausnummer?: string | null
+  plz?: string | null
+  ort?: string | null
+  telefon?: string | null
+  fax?: string | null
+  email?: string | null
+  schulleiter?: string | null
+  sortierung: number
+  istSichtbar: boolean
+}
+
+/** Eintrag aus dem allgemeinen NRW-Schulverzeichnis (GET /schule/allgemein/schulen) */
+export interface SchulenKatalogEintrag {
+  SchulNr: string
+  ABez1?: string
+  ABez2?: string
+  ABez3?: string
+  KurzBez?: string
+  SF?: string
+  Strasse?: string
+  PLZ?: string
+  Ort?: string
+  TelVorw?: string
+  Telefon?: string
+  FaxVorw?: string
+  Fax?: string
+  Email?: string
+}
+
+export async function fetchSchulKatalog(): Promise<SchulEintrag[]> {
+  try {
+    const response = await getApiClient().get<SchulEintrag[]>('/schule/schulen')
+    return Array.isArray(response.data) ? response.data : []
+  } catch {
+    return []
+  }
+}
+
+export async function fetchAllgemeineSchulen(): Promise<SchulenKatalogEintrag[]> {
+  try {
+    const response = await getApiClient().get<SchulenKatalogEintrag[]>('/schule/allgemein/schulen')
+    return Array.isArray(response.data) ? response.data : []
+  } catch {
+    return []
+  }
+}
+
+function splitStrasse(strasse: string): { name: string; nr: string; zusatz: string } {
+  const match = strasse.trim().match(/^(.*?)\s+(\d+\w*)(\s+\S+)?$/)
+  if (!match) return { name: strasse.trim(), nr: '', zusatz: '' }
+  return { name: match[1].trim(), nr: match[2].trim(), zusatz: match[3]?.trim() ?? '' }
+}
+
+export function schulenKatalogToSchulEintrag(
+  sk: SchulenKatalogEintrag,
+  schulformenMap: Map<string, number>,
+): Omit<SchulEintrag, 'id'> {
+  const idSchulform = sk.SF ? (schulformenMap.get(sk.SF.trim()) ?? null) : null
+  const strasse = splitStrasse(sk.Strasse ?? '')
+  const name = [sk.ABez1, sk.ABez2, sk.ABez3].filter(Boolean).join(' ') || `Schule ${sk.SchulNr}`
+  return {
+    schulnummerStatistik: sk.SchulNr,
+    kuerzel: null,
+    kurzbezeichnung: sk.KurzBez ?? null,
+    name,
+    idSchulform,
+    strassenname: strasse.name || null,
+    hausnummer: strasse.nr || null,
+    zusatzHausnummer: strasse.zusatz || null,
+    plz: sk.PLZ ?? null,
+    ort: sk.Ort ?? null,
+    telefon: sk.Telefon ?? null,
+    fax: sk.Fax ?? null,
+    email: sk.Email ?? null,
+    schulleiter: null,
+    sortierung: 32000,
+    istSichtbar: true,
+  }
+}
+
+export async function createSchuleInKatalog(
+  schulnummer: string,
+  vollDaten?: Omit<SchulEintrag, 'id'>,
+): Promise<{ id: number } | { error: string }> {
+  try {
+    const body = vollDaten ?? {
+      name: `Schule ${schulnummer}`,
+      schulnummerStatistik: schulnummer,
+      sortierung: 32000,
+      istSichtbar: true,
+    }
+    const response = await getApiClient().post<SchulEintrag>('/schule/schulen/create', body)
+    return { id: response.data.id }
+  } catch (error: unknown) {
+    return { error: toAppError(error).messageUser }
+  }
+}
+

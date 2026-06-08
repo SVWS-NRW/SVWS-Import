@@ -220,6 +220,31 @@ export function resolveWohnortId(
   return orte.get(key)?.id ?? null
 }
 
+// ── Schulform ─────────────────────────────────────────────────────────────────
+
+function parseSchulformen(katalog: AllinoneKatalog): Map<string, number> {
+  const map = new Map<string, number>()
+  for (const entry of katalog.daten) {
+    const h = currentHistorie(entry)
+    if (!h?.id) continue
+    // SchulenKatalogEintrag.SF enthält den Statistik-Schlüssel (z.B. "02"), nicht das Kürzel ("G")
+    if (h.schluessel) map.set(h.schluessel.trim(), h.id)
+    if (h.kuerzel)    map.set(h.kuerzel.trim(), h.id)
+  }
+  return map
+}
+
+/** Lädt das Schulform-Kürzel → DB-ID-Mapping aus allinone.json */
+export async function fetchSchulformenMap(): Promise<Map<string, number>> {
+  try {
+    const data = await fetchAllInOne()
+    const katalog = (data as Record<string, AllinoneKatalog | undefined>)['Schulform']
+    return katalog ? parseSchulformen(katalog) : new Map()
+  } catch {
+    return new Map()
+  }
+}
+
 // ── ZulaessigeKursart ────────────────────────────────────────────────────────
 
 export async function fetchKursartenForSchulform(schulform: string): Promise<Set<string>> {

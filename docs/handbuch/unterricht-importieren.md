@@ -81,7 +81,9 @@ Eine ausführliche Beschreibung aller Beispieldateien finden Sie unter [Beispiel
 
 ---
 
----
 
-| « [Floskeln importieren](floskeln-importieren.md) | [Inhaltsverzeichnis](../index.md) | [Klassenunterricht importieren](unterricht-klassenunterricht.md) » |
-|:---|:---:|---:|
+<nav style="display:flex;justify-content:space-between;margin-top:2rem;padding-top:1rem;border-top:1px solid var(--vp-c-divider)">
+  <a href="floskeln-importieren.md">« Floskeln importieren</a>
+  <a href="../index.md">Inhaltsverzeichnis</a>
+  <a href="unterricht-klassenunterricht.md">Klassenunterricht importieren »</a>
+</nav>

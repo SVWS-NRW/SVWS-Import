@@ -23,7 +23,9 @@ Neue Schuljahresabschnitte in SVWS anlegen.
 
 ![Formular zum Anlegen eines neuen Schuljahresabschnitts mit den Feldern Schuljahr und Abschnitt](../assets/schuljahresabschnitt-anlegen-formular.png)
 
----
 
-| « [Schuljahresabschnitte laden](schuljahresabschnitte-laden.md) | [Inhaltsverzeichnis](../index.md) | [Floskeln anzeigen](floskeln-anzeigen.md) » |
-|:---|:---:|---:|
+<nav style="display:flex;justify-content:space-between;margin-top:2rem;padding-top:1rem;border-top:1px solid var(--vp-c-divider)">
+  <a href="schuljahresabschnitte-laden.md">« Schuljahresabschnitte laden</a>
+  <a href="../index.md">Inhaltsverzeichnis</a>
+  <a href="floskeln-anzeigen.md">Floskeln anzeigen »</a>
+</nav>

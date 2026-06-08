@@ -71,7 +71,9 @@ Unter `examples/klassen.csv` finden Sie eine vollständige Klassenliste. Ein Aus
 - Klassenlehrkräfte korrekt zugeordnet
 - Folgeklassen sind plausibel (z. B. Klasse 5a → 6a)
 
----
 
-| « [Import-Assistent nutzen](import-assistent.md) | [Inhaltsverzeichnis](../index.md) | [Jahrgänge anlegen](jahrgaenge-anlegen.md) » |
-|:---|:---:|---:|
+<nav style="display:flex;justify-content:space-between;margin-top:2rem;padding-top:1rem;border-top:1px solid var(--vp-c-divider)">
+  <a href="import-assistent.md">« Import-Assistent nutzen</a>
+  <a href="../index.md">Inhaltsverzeichnis</a>
+  <a href="jahrgaenge-anlegen.md">Jahrgänge anlegen »</a>
+</nav>

@@ -125,7 +125,9 @@ Die Anwendung ermittelt zunächst alle **aktiven Schüler** der jeweiligen Klass
 
 ---
 
----
 
-| « [Unterricht – Übersicht](unterricht-importieren.md) | [Inhaltsverzeichnis](../index.md) | [Kursunterricht importieren](unterricht-kursunterricht.md) » |
-|:---|:---:|---:|
+<nav style="display:flex;justify-content:space-between;margin-top:2rem;padding-top:1rem;border-top:1px solid var(--vp-c-divider)">
+  <a href="unterricht-importieren.md">« Unterrichtsdaten importieren</a>
+  <a href="../index.md">Inhaltsverzeichnis</a>
+  <a href="unterricht-kursunterricht.md">Kursunterricht importieren »</a>
+</nav>

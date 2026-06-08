@@ -141,7 +141,9 @@ Wenn das Anlegen der Zusatzangaben (Note, Fehlstunden etc.) nach dem Erstellen d
 
 ---
 
----
 
-| « [Kursunterricht importieren](unterricht-kursunterricht.md) | [Inhaltsverzeichnis](../index.md) | [Kurszuweisung](unterricht-kurszuweisung.md) » |
-|:---|:---:|---:|
+<nav style="display:flex;justify-content:space-between;margin-top:2rem;padding-top:1rem;border-top:1px solid var(--vp-c-divider)">
+  <a href="unterricht-kursunterricht.md">« Kursunterricht importieren</a>
+  <a href="../index.md">Inhaltsverzeichnis</a>
+  <a href="unterricht-kurszuweisung.md">Kurszuweisung »</a>
+</nav>

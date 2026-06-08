@@ -18,7 +18,9 @@ Floskeln gezielt nach Suchkriterien eingrenzen.
 - Dubletten prüfen
 - Löschkandidaten vorbereiten
 
----
 
-| « [Floskeln anzeigen](floskeln-anzeigen.md) | [Inhaltsverzeichnis](../index.md) | [Floskeln löschen](floskeln-loeschen.md) » |
-|:---|:---:|---:|
+<nav style="display:flex;justify-content:space-between;margin-top:2rem;padding-top:1rem;border-top:1px solid var(--vp-c-divider)">
+  <a href="floskeln-anzeigen.md">« Floskeln anzeigen</a>
+  <a href="../index.md">Inhaltsverzeichnis</a>
+  <a href="floskeln-loeschen.md">Floskeln löschen »</a>
+</nav>

@@ -33,7 +33,9 @@ Wählen Sie das Szenario, das zu Ihrer Aufgabe passt:
 Laden Sie eine der fertigen Musterdateien aus dem Ordner `examples/` und importieren Sie diese direkt.
 Alle Dateien sind beschrieben unter [Beispieldateien](beispieldateien.md).
 
----
 
-| | [Inhaltsverzeichnis](../index.md) | |
-|:---|:---:|---:|
+<nav style="display:flex;justify-content:space-between;margin-top:2rem;padding-top:1rem;border-top:1px solid var(--vp-c-divider)">
+  <span></span>
+  <a href="../index.md">Inhaltsverzeichnis</a>
+  <span></span>
+</nav>

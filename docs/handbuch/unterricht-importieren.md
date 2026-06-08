@@ -83,7 +83,7 @@ Eine ausführliche Beschreibung aller Beispieldateien finden Sie unter [Beispiel
 
 
 <nav style="display:flex;justify-content:space-between;margin-top:2rem;padding-top:1rem;border-top:1px solid var(--vp-c-divider)">
-  <a href="floskeln-importieren.md">« Floskeln importieren</a>
-  <a href="../index.md">Inhaltsverzeichnis</a>
-  <a href="unterricht-klassenunterricht.md">Klassenunterricht importieren »</a>
+  <a href="floskeln-importieren.html">« Floskeln importieren</a>
+  <a href="../index.html">Inhaltsverzeichnis</a>
+  <a href="unterricht-klassenunterricht.html">Klassenunterricht importieren »</a>
 </nav>

@@ -38,6 +38,6 @@ Sie stellen eine gültige Verbindung zum SVWS-Server her, damit Importfunktionen
 
 <nav style="display:flex;justify-content:space-between;margin-top:2rem;padding-top:1rem;border-top:1px solid var(--vp-c-divider)">
   <span></span>
-  <a href="../index.md">Inhaltsverzeichnis</a>
-  <a href="schuelerdaten-anlegen.md">Schülerdaten anlegen »</a>
+  <a href="../index.html">Inhaltsverzeichnis</a>
+  <a href="schuelerdaten-anlegen.html">Schülerdaten anlegen »</a>
 </nav>

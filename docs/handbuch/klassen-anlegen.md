@@ -73,7 +73,7 @@ Unter `examples/klassen.csv` finden Sie eine vollständige Klassenliste. Ein Aus
 
 
 <nav style="display:flex;justify-content:space-between;margin-top:2rem;padding-top:1rem;border-top:1px solid var(--vp-c-divider)">
-  <a href="import-assistent.md">« Import-Assistent nutzen</a>
-  <a href="../index.md">Inhaltsverzeichnis</a>
-  <a href="jahrgaenge-anlegen.md">Jahrgänge anlegen »</a>
+  <a href="import-assistent.html">« Import-Assistent nutzen</a>
+  <a href="../index.html">Inhaltsverzeichnis</a>
+  <a href="jahrgaenge-anlegen.html">Jahrgänge anlegen »</a>
 </nav>

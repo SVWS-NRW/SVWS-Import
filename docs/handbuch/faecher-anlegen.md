@@ -67,7 +67,7 @@ Unter `examples/faecher.csv` finden Sie einen vollständigen Fächerkatalog. Ein
 
 
 <nav style="display:flex;justify-content:space-between;margin-top:2rem;padding-top:1rem;border-top:1px solid var(--vp-c-divider)">
-  <a href="jahrgaenge-anlegen.md">« Jahrgänge anlegen</a>
-  <a href="../index.md">Inhaltsverzeichnis</a>
-  <a href="schuljahresabschnitte-laden.md">Schuljahresabschnitte laden »</a>
+  <a href="jahrgaenge-anlegen.html">« Jahrgänge anlegen</a>
+  <a href="../index.html">Inhaltsverzeichnis</a>
+  <a href="schuljahresabschnitte-laden.html">Schuljahresabschnitte laden »</a>
 </nav>

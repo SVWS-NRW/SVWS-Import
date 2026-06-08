@@ -468,10 +468,15 @@ async function handleImport(): Promise<void> {
   importing.value = true
   importCancelled.value = false
   let sent = 0
-  let skipped = 0
+  let merged = 0
   let failed = 0
   const total = rows.length
   importProgress.value = `0 / ${total}`
+
+  // Lookup-Map Text → Ankreuzkompetenz; wird auch für frisch erstellte Einträge befüllt
+  const kompetenzByText = new Map(
+    kompetenzen.value.map(k => [k.floskelText.trim().toLowerCase(), k]),
+  )
 
   for (let i = 0; i < rows.length; i++) {
     if (importCancelled.value) break
@@ -491,19 +496,19 @@ async function handleImport(): Promise<void> {
       }
     }
 
-    // idsJahrgaenge auflösen
+    // idsJahrgaenge auflösen – Kürzel-Lookup hat immer Vorrang vor numerischer ID
     const jahrgangIds: number[] = []
     if (row.jahrgang) {
       for (const part of row.jahrgang.split(',').map((s: string) => s.trim()).filter(Boolean)) {
-        if (!Number.isNaN(Number(part))) {
+        const byKuerzel = jahrgaenge.value.find(
+          j =>
+            j.kuerzel?.toLowerCase() === part.toLowerCase() ||
+            j.kuerzelStatistik?.toLowerCase() === part.toLowerCase(),
+        )
+        if (byKuerzel) {
+          jahrgangIds.push(byKuerzel.id)
+        } else if (!Number.isNaN(Number(part))) {
           jahrgangIds.push(Number(part))
-        } else {
-          const found = jahrgaenge.value.find(
-            j =>
-              j.kuerzel?.toLowerCase() === part.toLowerCase() ||
-              j.kuerzelStatistik?.toLowerCase() === part.toLowerCase(),
-          )
-          if (found) jahrgangIds.push(found.id)
         }
       }
     }
@@ -520,11 +525,18 @@ async function handleImport(): Promise<void> {
       continue
     }
 
+    const floskelText = row.text.trim()
+    if (!floskelText) {
+      failed++
+      importProgress.value = `${i + 1} / ${total}`
+      continue
+    }
+
     const payload = {
       idFach,
       istASV,
       schulgliederung: row.schulgliederung || null,
-      floskelText: row.text.trim(),
+      floskelText,
       abschnitt,
       istAktiv: true,
       istSichtbar: true,
@@ -534,16 +546,34 @@ async function handleImport(): Promise<void> {
         : 32000,
     }
 
-    if (!payload.floskelText) {
-      failed++
-      importProgress.value = `${i + 1} / ${total}`
-      continue
-    }
-
     const result = await createAnkreuzkompetenz(payload)
+
     if (!result.success || result.id == null) {
-      if (result.error?.toLowerCase().includes('bereits vorhanden')) {
-        skipped++
+      if (result.errorDetail?.toLowerCase().includes('bereits vorhanden') || result.error?.toLowerCase().includes('bereits vorhanden')) {
+        // Bestehenden Eintrag suchen und fehlende Jahrgänge ergänzen
+        const existing = kompetenzByText.get(floskelText.toLowerCase())
+        if (existing && jahrgangIds.length > 0) {
+          const assignedIds = new Set(existing.jahrgaengezuordnung.map(z => z.idJahrgang))
+          const missing = jahrgangIds.filter(id => !assignedIds.has(id))
+          if (missing.length > 0) {
+            const zuordnungResult = await addAnkreuzkompetenzJahrgangszuordnungen(
+              missing.map(idJahrgang => ({ idAnkreuzkompetenz: existing.id, idJahrgang })),
+            )
+            if (zuordnungResult.success) {
+              // Lokale Map aktualisieren damit weitere Duplikate den neuen Stand sehen
+              missing.forEach(idJahrgang =>
+                existing.jahrgaengezuordnung.push({ id: 0, idAnkreuzkompetenz: existing.id, idJahrgang }),
+              )
+              merged++
+            } else {
+              failed++
+            }
+          } else {
+            merged++
+          }
+        } else {
+          merged++
+        }
       } else {
         failed++
       }
@@ -553,6 +583,20 @@ async function handleImport(): Promise<void> {
           jahrgangIds.map(idJahrgang => ({ idAnkreuzkompetenz: result.id!, idJahrgang })),
         )
       }
+      // Neu erstellten Eintrag in die Lookup-Map aufnehmen
+      kompetenzByText.set(floskelText.toLowerCase(), {
+        id: result.id,
+        idFach,
+        istASV,
+        schulgliederung: payload.schulgliederung,
+        floskelText,
+        abschnitt,
+        istAktiv: true,
+        istSichtbar: true,
+        fachSortierung: 32000,
+        sortierung: payload.sortierung,
+        jahrgaengezuordnung: jahrgangIds.map(idJahrgang => ({ id: 0, idAnkreuzkompetenz: result.id!, idJahrgang })),
+      })
       sent++
     }
 
@@ -564,17 +608,14 @@ async function handleImport(): Promise<void> {
   await loadKompetenzen()
 
   const parts: string[] = []
-  if (sent > 0) parts.push(`${sent} importiert`)
-  if (skipped > 0) parts.push(`${skipped} übersprungen (bereits vorhanden)`)
+  if (sent > 0) parts.push(`${sent} neu importiert`)
+  if (merged > 0) parts.push(`${merged} Jahrgang${merged === 1 ? '' : 'szuordnungen'} ergänzt`)
   if (failed > 0) parts.push(`${failed} fehlgeschlagen`)
 
   if (failed > 0) {
     errorMsg.value = parts.join(', ') + ' (mögliche Ursachen: Fach und istASV gleichzeitig gesetzt, Text leer, Serverfehler).'
-  } else if (skipped > 0) {
-    successMsg.value = parts.join(', ') + '.'
-    if (sent > 0) resetImport()
   } else {
-    successMsg.value = `${sent} Ankreuzkompetenz${sent === 1 ? '' : 'en'} erfolgreich importiert.`
+    successMsg.value = parts.join(', ') + '.'
     resetImport()
   }
 }

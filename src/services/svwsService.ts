@@ -87,7 +87,8 @@ export async function createAnkreuzkompetenz(payload: AnkreuzkompetenzCreatePayl
     const response = await getApiClient().post('/schule/ankreuzkompetenzen/create', payload)
     return { success: true, id: response.data?.id }
   } catch (error: unknown) {
-    return { success: false, error: toAppError(error).messageUser }
+    const appError = toAppError(error)
+    return { success: false, error: appError.messageUser, errorDetail: appError.messageTechnical }
   }
 }
 
@@ -124,6 +125,7 @@ export interface UploadResult {
   success: boolean
   id?: number
   error?: string
+  errorDetail?: string
 }
 
 interface SchuelerLernabschnitt {

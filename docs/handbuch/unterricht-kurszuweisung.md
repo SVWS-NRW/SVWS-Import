@@ -124,7 +124,9 @@ Jeder Kurs in der linken Liste zeigt:
 
 ---
 
----
 
-| « [Schülerunterricht importieren](unterricht-schuelerunterricht.md) | [Inhaltsverzeichnis](../index.md) | [Beispieldateien](beispieldateien.md) » |
-|:---|:---:|---:|
+<nav style="display:flex;justify-content:space-between;margin-top:2rem;padding-top:1rem;border-top:1px solid var(--vp-c-divider)">
+  <a href="unterricht-schuelerunterricht.md">« Schülerunterricht importieren</a>
+  <a href="../index.md">Inhaltsverzeichnis</a>
+  <a href="beispieldateien.md">Beispieldateien »</a>
+</nav>

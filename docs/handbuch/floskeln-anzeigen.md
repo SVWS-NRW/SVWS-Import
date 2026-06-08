@@ -15,7 +15,9 @@ Vorhandene Floskeln in der Übersicht anzeigen und sichten.
 
 Nutzen Sie die Anzeige als Basis für Filter, Löschung oder Import.
 
----
 
-| « [Schuljahresabschnitte anlegen](schuljahresabschnitte-anlegen.md) | [Inhaltsverzeichnis](../index.md) | [Floskeln filtern](floskeln-filtern.md) » |
-|:---|:---:|---:|
+<nav style="display:flex;justify-content:space-between;margin-top:2rem;padding-top:1rem;border-top:1px solid var(--vp-c-divider)">
+  <a href="schuljahresabschnitte-anlegen.md">« Schuljahresabschnitte anlegen</a>
+  <a href="../index.md">Inhaltsverzeichnis</a>
+  <a href="floskeln-filtern.md">Floskeln filtern »</a>
+</nav>

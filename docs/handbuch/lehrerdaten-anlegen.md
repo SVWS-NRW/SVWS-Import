@@ -80,7 +80,9 @@ Unter `examples/lehrkraefte.csv` finden Sie eine vollständige Lehrerliste. Ein 
 - Gesamtzahl der Lehrkräfte im SVWS-Server mit der Quelldatei abgleichen
 - Stichprobenartig einzelne Kürzel prüfen, da diese in allen weiteren Importen verwendet werden
 
----
 
-| « [Schülerdaten anlegen](schuelerdaten-anlegen.md) | [Inhaltsverzeichnis](../index.md) | [Import-Assistent nutzen](import-assistent.md) » |
-|:---|:---:|---:|
+<nav style="display:flex;justify-content:space-between;margin-top:2rem;padding-top:1rem;border-top:1px solid var(--vp-c-divider)">
+  <a href="schuelerdaten-anlegen.md">« Schülerdaten anlegen</a>
+  <a href="../index.md">Inhaltsverzeichnis</a>
+  <a href="import-assistent.md">Import-Assistent nutzen »</a>
+</nav>

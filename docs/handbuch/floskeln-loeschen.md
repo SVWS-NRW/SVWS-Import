@@ -21,7 +21,9 @@ Löschen Sie nur Einträge, die fachlich nicht mehr benötigt werden.
 
 ![Bestätigungsdialog beim Löschen einer Floskel](../assets/floskeln-loeschen-dialog.png)
 
----
 
-| « [Floskeln filtern](floskeln-filtern.md) | [Inhaltsverzeichnis](../index.md) | [Floskeln importieren](floskeln-importieren.md) » |
-|:---|:---:|---:|
+<nav style="display:flex;justify-content:space-between;margin-top:2rem;padding-top:1rem;border-top:1px solid var(--vp-c-divider)">
+  <a href="floskeln-filtern.md">« Floskeln filtern</a>
+  <a href="../index.md">Inhaltsverzeichnis</a>
+  <a href="floskeln-importieren.md">Floskeln importieren »</a>
+</nav>

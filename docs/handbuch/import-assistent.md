@@ -29,7 +29,9 @@ Sie führen einen geführten Import in klaren Schritten durch.
 
 ![Schritt 5 – Importergebnis mit Anzahl erfolgreicher und fehlerhafter Datensätze](../assets/assistent-schritt5-ergebnis.png)
 
----
 
-| « [Lehrerdaten anlegen](lehrerdaten-anlegen.md) | [Inhaltsverzeichnis](../index.md) | [Klassen anlegen](klassen-anlegen.md) » |
-|:---|:---:|---:|
+<nav style="display:flex;justify-content:space-between;margin-top:2rem;padding-top:1rem;border-top:1px solid var(--vp-c-divider)">
+  <a href="lehrerdaten-anlegen.md">« Lehrerdaten anlegen</a>
+  <a href="../index.md">Inhaltsverzeichnis</a>
+  <a href="klassen-anlegen.md">Klassen anlegen »</a>
+</nav>

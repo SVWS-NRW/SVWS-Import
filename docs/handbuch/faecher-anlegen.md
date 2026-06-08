@@ -65,7 +65,9 @@ Unter `examples/faecher.csv` finden Sie einen vollständigen Fächerkatalog. Ein
 - Fremdsprachen sind als `istFremdsprache: true` markiert
 - Oberstufenfächer haben `istOberstufenFach: true`
 
----
 
-| « [Jahrgänge anlegen](jahrgaenge-anlegen.md) | [Inhaltsverzeichnis](../index.md) | [Schuljahresabschnitte laden](schuljahresabschnitte-laden.md) » |
-|:---|:---:|---:|
+<nav style="display:flex;justify-content:space-between;margin-top:2rem;padding-top:1rem;border-top:1px solid var(--vp-c-divider)">
+  <a href="jahrgaenge-anlegen.md">« Jahrgänge anlegen</a>
+  <a href="../index.md">Inhaltsverzeichnis</a>
+  <a href="schuljahresabschnitte-laden.md">Schuljahresabschnitte laden »</a>
+</nav>

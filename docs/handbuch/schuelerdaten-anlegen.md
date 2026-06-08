@@ -96,7 +96,9 @@ Unter `examples/schuelerdaten.csv` finden Sie eine vollständige Schülerliste. 
 - Stichproben auf korrekte Klassenzuordnung prüfen
 - Schüler, die beim Unterrichtsimport nicht gefunden werden, sind oft auf Schreibweichenfehler im Nachnamen zurückzuführen
 
----
 
-| « [Verbindung herstellen](verbindung-herstellen.md) | [Inhaltsverzeichnis](../index.md) | [Lehrerdaten anlegen](lehrerdaten-anlegen.md) » |
-|:---|:---:|---:|
+<nav style="display:flex;justify-content:space-between;margin-top:2rem;padding-top:1rem;border-top:1px solid var(--vp-c-divider)">
+  <a href="verbindung-herstellen.md">« Verbindung Herstellen</a>
+  <a href="../index.md">Inhaltsverzeichnis</a>
+  <a href="lehrerdaten-anlegen.md">Lehrerdaten anlegen »</a>
+</nav>

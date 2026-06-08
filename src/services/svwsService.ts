@@ -16,8 +16,14 @@ import { betriebImportToApi, ansprechpartnerImportToApi, type BetriebImportRow, 
 import { ortsteilImportToApi, type OrtsteilImportRow, type OrtsteilDetails } from '@/models/Ortsteile'
 import { resolveWohnortId, resolveReligionId, resolveNationalitaet, resolveVerkehrssprache } from './katalogService'
 import type { Floskelgruppe, Floskel, FloskelApiPayload } from '@/models/Floskel'
+import type {
+  Ankreuzkompetenz,
+  AnkreuzkompetenzCreatePayload,
+  AnkreuzkompetenzJahrgangszuordnungPayload,
+} from '@/models/Ankreuzkompetenz'
 
 export type { Floskelgruppe, Floskel }
+export type { Ankreuzkompetenz }
 
 export async function fetchFloskelgruppen(): Promise<Floskelgruppe[]> {
   const response = await getApiClient().get('/schule/floskelgruppen')
@@ -66,6 +72,49 @@ export async function createFloskel(payload: FloskelApiPayload): Promise<UploadR
   try {
     const response = await getApiClient().post('/schule/floskeln/create', payload)
     return { success: true, id: response.data?.id }
+  } catch (error: unknown) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}
+
+export async function fetchAnkreuzkompetenzen(): Promise<Ankreuzkompetenz[]> {
+  const response = await getApiClient().get('/schule/ankreuzkompetenzen')
+  return Array.isArray(response.data) ? response.data : []
+}
+
+export async function createAnkreuzkompetenz(payload: AnkreuzkompetenzCreatePayload): Promise<UploadResult> {
+  try {
+    const response = await getApiClient().post('/schule/ankreuzkompetenzen/create', payload)
+    return { success: true, id: response.data?.id }
+  } catch (error: unknown) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}
+
+export async function deleteAnkreuzkompetenzen(ids: number[]): Promise<UploadResult> {
+  try {
+    await getApiClient().delete('/schule/ankreuzkompetenzen/delete/multiple', { data: ids })
+    return { success: true }
+  } catch (error: unknown) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}
+
+export async function addAnkreuzkompetenzJahrgangszuordnung(
+  payload: AnkreuzkompetenzJahrgangszuordnungPayload,
+): Promise<UploadResult> {
+  try {
+    const response = await getApiClient().post('/schule/ankreuzkompetenzen/jahrgangzuordnung', payload)
+    return { success: true, id: response.data?.id }
+  } catch (error: unknown) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}
+
+export async function deleteAnkreuzkompetenzJahrgangszuordnungen(ids: number[]): Promise<UploadResult> {
+  try {
+    await getApiClient().delete('/schule/ankreuzkompetenzen/jahrgangzuordnung/delete/multiple', { data: ids })
+    return { success: true }
   } catch (error: unknown) {
     return { success: false, error: toAppError(error).messageUser }
   }

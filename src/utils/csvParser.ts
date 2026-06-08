@@ -7,6 +7,7 @@ import { type FachImportRow } from '@/models/Faecher'
 import { type FloskelImportRow } from '@/models/Floskel'
 import type { BetriebImportRow, AnsprechpartnerImportRow } from '@/models/Betriebe'
 import type { OrtsteilImportRow } from '@/models/Ortsteile'
+import type { AnkreuzkompetenzImportRow } from '@/models/Ankreuzkompetenz'
 import { generateId } from './idHelper'
 
 // Normalisiert Spaltennamen: Leerzeichen/Groß-Klein entfernen
@@ -495,6 +496,38 @@ export async function parseOrtsteileCsv(file: File): Promise<OrtsteilImportRow[]
             ortsteil: get(m, 'ortsteil', 'stadtteil', 'bezeichnung', 'name'),
             plz:      get(m, 'plz', 'postleitzahl', 'postalcode'),
             ort:      get(m, 'ort', 'ortsname', 'stadt', 'city'),
+          }
+        })
+        resolve(rows)
+      },
+      error(err) {
+        reject(new Error(`CSV-Fehler: ${err.message}`))
+      },
+    })
+  })
+}
+
+export async function parseAnkreuzkompetenzCsv(file: File): Promise<AnkreuzkompetenzImportRow[]> {
+  return new Promise((resolve, reject) => {
+    Papa.parse<Record<string, string>>(file, {
+      header: true,
+      skipEmptyLines: true,
+      delimiter: /\.dat$/i.test(file.name) ? '|' : '',
+      complete(results) {
+        const rows: AnkreuzkompetenzImportRow[] = results.data.map(record => {
+          const m = buildLookup(record)
+          return {
+            _id: generateId(),
+            _valid: true,
+            _errors: [],
+            _sent: false,
+            text:           get(m, 'text', 'floskeltext', 'ankreuzkompetenz', 'inhalt', 'beschreibung'),
+            fach:           get(m, 'fach', 'fachkuerzel'),
+            jahrgang:       get(m, 'jahrgang', 'jg', 'jahrgangsstufe', 'stufe', 'jahrgaenge'),
+            abschnitt:      get(m, 'abschnitt', 'hj', 'halbjahr'),
+            istASV:         get(m, 'istasv', 'asv', 'arbeitsundsozialverhalten'),
+            sortierung:     get(m, 'sortierung', 'sort'),
+            schulgliederung: get(m, 'schulgliederung', 'gliederung'),
           }
         })
         resolve(rows)

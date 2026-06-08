@@ -18,7 +18,7 @@ Sie erhalten eine aktuelle Übersicht über bereits vorhandene Schuljahresabschn
 
 
 <nav style="display:flex;justify-content:space-between;margin-top:2rem;padding-top:1rem;border-top:1px solid var(--vp-c-divider)">
-  <a href="faecher-anlegen.md">« Fächer anlegen</a>
-  <a href="../index.md">Inhaltsverzeichnis</a>
-  <a href="schuljahresabschnitte-anlegen.md">Schuljahresabschnitte anlegen »</a>
+  <a href="faecher-anlegen.html">« Fächer anlegen</a>
+  <a href="../index.html">Inhaltsverzeichnis</a>
+  <a href="schuljahresabschnitte-anlegen.html">Schuljahresabschnitte anlegen »</a>
 </nav>

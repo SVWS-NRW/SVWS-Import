@@ -98,7 +98,7 @@ Unter `examples/schuelerdaten.csv` finden Sie eine vollständige Schülerliste. 
 
 
 <nav style="display:flex;justify-content:space-between;margin-top:2rem;padding-top:1rem;border-top:1px solid var(--vp-c-divider)">
-  <a href="verbindung-herstellen.md">« Verbindung Herstellen</a>
-  <a href="../index.md">Inhaltsverzeichnis</a>
-  <a href="lehrerdaten-anlegen.md">Lehrerdaten anlegen »</a>
+  <a href="verbindung-herstellen.html">« Verbindung Herstellen</a>
+  <a href="../index.html">Inhaltsverzeichnis</a>
+  <a href="lehrerdaten-anlegen.html">Lehrerdaten anlegen »</a>
 </nav>

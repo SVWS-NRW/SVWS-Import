@@ -82,7 +82,7 @@ Unter `examples/lehrkraefte.csv` finden Sie eine vollständige Lehrerliste. Ein 
 
 
 <nav style="display:flex;justify-content:space-between;margin-top:2rem;padding-top:1rem;border-top:1px solid var(--vp-c-divider)">
-  <a href="schuelerdaten-anlegen.md">« Schülerdaten anlegen</a>
-  <a href="../index.md">Inhaltsverzeichnis</a>
-  <a href="import-assistent.md">Import-Assistent nutzen »</a>
+  <a href="schuelerdaten-anlegen.html">« Schülerdaten anlegen</a>
+  <a href="../index.html">Inhaltsverzeichnis</a>
+  <a href="import-assistent.html">Import-Assistent nutzen »</a>
 </nav>

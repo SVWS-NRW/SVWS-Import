@@ -221,7 +221,7 @@ Die Musterdateien können als Vorlage für Ihre eigenen Daten verwendet werden:
 
 
 <nav style="display:flex;justify-content:space-between;margin-top:2rem;padding-top:1rem;border-top:1px solid var(--vp-c-divider)">
-  <a href="unterricht-kurszuweisung.md">« Kurszuweisung</a>
-  <a href="../index.md">Inhaltsverzeichnis</a>
+  <a href="unterricht-kurszuweisung.html">« Kurszuweisung</a>
+  <a href="../index.html">Inhaltsverzeichnis</a>
   <span></span>
 </nav>

@@ -36,6 +36,6 @@ Alle Dateien sind beschrieben unter [Beispieldateien](beispieldateien.md).
 
 <nav style="display:flex;justify-content:space-between;margin-top:2rem;padding-top:1rem;border-top:1px solid var(--vp-c-divider)">
   <span></span>
-  <a href="../index.md">Inhaltsverzeichnis</a>
+  <a href="../index.html">Inhaltsverzeichnis</a>
   <span></span>
 </nav>

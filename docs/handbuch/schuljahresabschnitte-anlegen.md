@@ -25,7 +25,7 @@ Neue Schuljahresabschnitte in SVWS anlegen.
 
 
 <nav style="display:flex;justify-content:space-between;margin-top:2rem;padding-top:1rem;border-top:1px solid var(--vp-c-divider)">
-  <a href="schuljahresabschnitte-laden.md">« Schuljahresabschnitte laden</a>
-  <a href="../index.md">Inhaltsverzeichnis</a>
-  <a href="floskeln-anzeigen.md">Floskeln anzeigen »</a>
+  <a href="schuljahresabschnitte-laden.html">« Schuljahresabschnitte laden</a>
+  <a href="../index.html">Inhaltsverzeichnis</a>
+  <a href="floskeln-anzeigen.html">Floskeln anzeigen »</a>
 </nav>

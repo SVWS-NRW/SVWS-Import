@@ -69,7 +69,7 @@ Importieren Sie Jahrgänge möglichst vor den Klassen, damit Abhängigkeiten sau
 
 
 <nav style="display:flex;justify-content:space-between;margin-top:2rem;padding-top:1rem;border-top:1px solid var(--vp-c-divider)">
-  <a href="klassen-anlegen.md">« Klassen anlegen</a>
-  <a href="../index.md">Inhaltsverzeichnis</a>
-  <a href="faecher-anlegen.md">Fächer anlegen »</a>
+  <a href="klassen-anlegen.html">« Klassen anlegen</a>
+  <a href="../index.html">Inhaltsverzeichnis</a>
+  <a href="faecher-anlegen.html">Fächer anlegen »</a>
 </nav>

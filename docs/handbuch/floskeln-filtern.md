@@ -20,7 +20,7 @@ Floskeln gezielt nach Suchkriterien eingrenzen.
 
 
 <nav style="display:flex;justify-content:space-between;margin-top:2rem;padding-top:1rem;border-top:1px solid var(--vp-c-divider)">
-  <a href="floskeln-anzeigen.md">« Floskeln anzeigen</a>
-  <a href="../index.md">Inhaltsverzeichnis</a>
-  <a href="floskeln-loeschen.md">Floskeln löschen »</a>
+  <a href="floskeln-anzeigen.html">« Floskeln anzeigen</a>
+  <a href="../index.html">Inhaltsverzeichnis</a>
+  <a href="floskeln-loeschen.html">Floskeln löschen »</a>
 </nav>

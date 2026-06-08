@@ -12,6 +12,35 @@
         />
         <h2>Floskeln verwalten</h2>
       </div>
+      <div class="header-actions">
+        <FileUpload
+          ref="fileUploadRef"
+          mode="basic"
+          :auto="false"
+          :multiple="false"
+          accept=".csv,.xlsx,.xls"
+          chooseLabel="Datei laden"
+          chooseIcon="pi pi-folder-open"
+          :maxFileSize="10000000"
+          @select="onFileSelect"
+        />
+        <Button
+          :label="importing ? importProgress : selectedImportRows.length > 0 ? `${selectedImportRows.length} senden` : 'Alles senden'"
+          icon="pi pi-upload"
+          size="small"
+          :disabled="importRows.length === 0 || importing"
+          :loading="importing"
+          @click="handleImport"
+        />
+        <Button
+          :label="importing ? 'Stoppen' : 'Leeren'"
+          :icon="importing ? 'pi pi-stop' : 'pi pi-trash'"
+          :severity="importing ? 'warn' : 'danger'"
+          size="small"
+          text
+          @click="importing ? stopImport() : resetImport()"
+        />
+      </div>
       <Button
         v-tooltip.top="'Daten neu laden'"
         icon="pi pi-refresh"
@@ -256,29 +285,6 @@
       <h3>Floskeln importieren</h3>
       <p class="panel-hint">CSV- oder Excel-Datei mit Spalten: Kürzel, Text, Gruppe, Jahrgang, Niveau</p>
 
-      <div class="upload-row">
-        <FileUpload
-          ref="fileUploadRef"
-          mode="basic"
-          :auto="false"
-          :multiple="false"
-          accept=".csv,.xlsx,.xls"
-          chooseLabel="Datei auswählen"
-          chooseIcon="pi pi-folder-open"
-          :maxFileSize="10000000"
-          @select="onFileSelect"
-        />
-        <Button
-          v-if="importFile"
-          icon="pi pi-times"
-          text
-          rounded
-          severity="secondary"
-          aria-label="Zurücksetzen"
-          @click="resetImport"
-        />
-      </div>
-
       <Message v-if="importError" severity="error" :closable="true" @close="importError = ''">
         {{ importError }}
       </Message>
@@ -287,16 +293,24 @@
         <div class="import-summary">
           <Tag :value="`${importRows.length} Zeilen`" severity="info" />
           <span class="import-summary-hint">erkannt – bereit zum Importieren</span>
+          <span v-if="importing" class="import-progress">{{ importProgress }}</span>
         </div>
 
         <DataTable
+          v-model:selection="selectedImportRows"
           :value="importRows"
+          dataKey="_id"
+          selectionMode="multiple"
+          :metaKeySelection="false"
           size="small"
           stripedRows
-          :paginator="importRows.length > 10"
-          :rows="10"
+          :paginator="importRows.length > 25"
+          :rows="25"
+          :rowsPerPageOptions="[25, 50, 100]"
+          paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown"
           class="import-table"
         >
+          <Column selectionMode="multiple" style="width: 2.5rem; flex: 0 0 2.5rem" frozen />
           <Column field="kuerzel" header="Kürzel" style="width: 110px" />
           <Column field="floskelgruppe" header="Gruppe" style="width: 95px" />
           <Column field="fach" header="Fach" style="width: 65px" />
@@ -304,25 +318,6 @@
           <Column field="niveau" header="Niveau" style="width: 80px" />
           <Column field="text" header="Text" />
         </DataTable>
-
-        <div class="import-actions">
-          <Button
-            :label="importing ? importProgress : 'Importieren'"
-            icon="pi pi-file-import"
-            size="small"
-            :loading="importing"
-            :disabled="importing"
-            @click="handleImport"
-          />
-          <Button
-            :label="importing ? 'Stoppen' : 'Abbrechen'"
-            :icon="importing ? 'pi pi-stop' : 'pi pi-times'"
-            :severity="importing ? 'warn' : 'secondary'"
-            size="small"
-            text
-            @click="importing ? stopImport() : resetImport()"
-          />
-        </div>
       </template>
     </section>
 
@@ -470,6 +465,7 @@ const filterNiveau = ref<number | null>(null)
 const fileUploadRef = ref()
 const importFile = ref<File | null>(null)
 const importRows = ref<FloskelImportRow[]>([])
+const selectedImportRows = ref<FloskelImportRow[]>([])
 const importProgress = ref('')
 const importCancelled = ref(false)
 
@@ -820,6 +816,7 @@ async function onFileSelect(event: { files: File[] }): Promise<void> {
 function resetImport(): void {
   importFile.value = null
   importRows.value = []
+  selectedImportRows.value = []
   importError.value = ''
   importProgress.value = ''
   importCancelled.value = false
@@ -889,15 +886,16 @@ function buildApiPayload(row: FloskelImportRow): FloskelApiPayload | null {
 }
 
 async function handleImport(): Promise<void> {
+  const rows = selectedImportRows.value.length > 0 ? selectedImportRows.value : importRows.value
   importing.value = true
   importCancelled.value = false
   let sent = 0
   let failed = 0
-  const total = importRows.value.length
+  const total = rows.length
   importProgress.value = `0 / ${total}`
-  for (let i = 0; i < importRows.value.length; i++) {
+  for (let i = 0; i < rows.length; i++) {
     if (importCancelled.value) break
-    const payload = buildApiPayload(importRows.value[i])
+    const payload = buildApiPayload(rows[i])
     if (!payload) {
       failed++
     } else {
@@ -934,7 +932,6 @@ onMounted(() => {
 .view-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 0.5rem;
 }
 
@@ -942,6 +939,13 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 0.25rem;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: auto;
 }
 
 h2 {

@@ -19,15 +19,17 @@ Sie führen einen geführten Import in klaren Schritten durch.
 - Kritische Felder immer manuell kontrollieren.
 - Bei großen Datenmengen mit Testausschnitt starten.
 
-## Screenshot-Platzhalter
+## Screenshots
 
-- [SCREENSHOT: Assistent Schritt 1]
-- [SCREENSHOT: Assistent Schritt 3 Mapping]
-- [SCREENSHOT: Assistent Schritt 4 Validierung]
-- [SCREENSHOT: Assistent Schritt 5 Ergebnis]
+![Schritt 1 – Modulauswahl und Datei hochladen](../assets/assistent-schritt1-modulauswahl.png)
 
-## Kapitelnavigation
+![Schritt 3 – Spalten-Mapping: Quellspalten den SVWS-Feldern zuordnen](../assets/assistent-schritt3-mapping.png)
 
-- Vorheriges Kapitel: [Lehrerdaten anlegen](lehrerdaten-anlegen.md)
-- Nächstes Kapitel: [Klassen anlegen](klassen-anlegen.md)
-- Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)
+![Schritt 4 – Validierung: fehlerhafte Zeilen sind rot markiert, Details per Tooltip](../assets/assistent-schritt4-validierung.png)
+
+![Schritt 5 – Importergebnis mit Anzahl erfolgreicher und fehlerhafter Datensätze](../assets/assistent-schritt5-ergebnis.png)
+
+---
+
+| « [Lehrerdaten anlegen](lehrerdaten-anlegen.md) | [Inhaltsverzeichnis](../index.md) | [Klassen anlegen](klassen-anlegen.md) » |
+|:---|:---:|---:|

@@ -18,13 +18,7 @@ Floskeln gezielt nach Suchkriterien eingrenzen.
 - Dubletten prüfen
 - Löschkandidaten vorbereiten
 
-## Screenshot-Platzhalter
+---
 
-- [SCREENSHOT: Floskeln Filterfeld]
-- [SCREENSHOT: Gefilterte Treffer]
-
-## Kapitelnavigation
-
-- Vorheriges Kapitel: [Floskeln anzeigen](floskeln-anzeigen.md)
-- Nächstes Kapitel: [Floskeln löschen](floskeln-loeschen.md)
-- Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)
+| « [Floskeln anzeigen](floskeln-anzeigen.md) | [Inhaltsverzeichnis](../index.md) | [Floskeln löschen](floskeln-loeschen.md) » |
+|:---|:---:|---:|

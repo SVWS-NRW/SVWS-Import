@@ -115,7 +115,8 @@ src/
       TargetFieldList.vue         # Zielfeld-Liste (Schritt 3)
 
 examples/
-  server.json                     # OpenAPI-Beschreibung des SVWS-Servers
+  openAPI/
+    server.json                   # OpenAPI-Beschreibung des SVWS-Servers
   schuelerdaten.csv               # Beispiel-Schülerdaten
   lehrkraefte.csv                 # Beispiel-Lehrerdaten
   klassen.csv                     # Beispiel-Klassendaten
@@ -135,7 +136,7 @@ docs/adr/                         # 15 Architecture Decision Records (ADR 0001�
 - `POST /db/{schema}/schueler/create` — Body: SchuelerNeu → SchuelerStammdaten
 - `POST /db/{schema}/lehrer/create`   — Body: LehrerStammdaten → LehrerStammdaten
 - Weitere Endpunkte in `services/svwsService.ts` → `ENTITY_ENDPOINTS`
-- Vollständige OpenAPI-Definition: `examples/server.json`
+- Vollständige OpenAPI-Definition: `examples/openAPI/server.json`
 
 ## Routing
 - `/#/connect` — Einstiegspunkt (requiresAuth: false)

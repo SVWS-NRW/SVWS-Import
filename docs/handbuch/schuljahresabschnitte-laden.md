@@ -16,13 +16,7 @@ Bereits vorhandene Schuljahresabschnitte aus SVWS laden und prüfen.
 
 Sie erhalten eine aktuelle Übersicht über bereits vorhandene Schuljahresabschnitte.
 
-## Screenshot-Platzhalter
+---
 
-- [SCREENSHOT: Kachel Schuljahresabschnitte]
-- [SCREENSHOT: Geladene Schuljahresabschnitte]
-
-## Kapitelnavigation
-
-- Vorheriges Kapitel: [Fächer anlegen](faecher-anlegen.md)
-- Nächstes Kapitel: [Neue Schuljahresabschnitte anlegen](schuljahresabschnitte-anlegen.md)
-- Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)
+| « [Fächer anlegen](faecher-anlegen.md) | [Inhaltsverzeichnis](../index.md) | [Schuljahresabschnitte anlegen](schuljahresabschnitte-anlegen.md) » |
+|:---|:---:|---:|

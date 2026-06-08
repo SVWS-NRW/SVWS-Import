@@ -29,13 +29,13 @@ Sie stellen eine gültige Verbindung zum SVWS-Server her, damit Importfunktionen
 - Falsche Zugangsdaten
 - Server im Netzwerk nicht erreichbar
 
-## Screenshot-Platzhalter
+## Screenshots
 
-- [SCREENSHOT: Verbindungsseite]
-- [SCREENSHOT: Erfolgreich verbunden]
+![Verbindungsseite – Eingabefelder für Server, Benutzername und Passwort](../assets/verbindung-seite.png)
 
-## Kapitelnavigation
+![Erfolgsmeldung nach hergestellter Verbindung](../assets/verbindung-erfolg.png)
 
-- Vorheriges Kapitel: Start
-- Nächstes Kapitel: [Schülerdaten anlegen](schuelerdaten-anlegen.md)
-- Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)
+---
+
+| | [Inhaltsverzeichnis](../index.md) | [Schülerdaten anlegen](schuelerdaten-anlegen.md) » |
+|:---|:---:|---:|

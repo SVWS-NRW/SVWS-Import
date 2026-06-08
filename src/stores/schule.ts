@@ -7,6 +7,7 @@ import { toAppError, reportError } from '@/services/errorService'
 export const useSchuleStore = defineStore('schule', () => {
   const abschnitte = ref<Schuljahresabschnitt[]>([])
   const aktuellerAbschnittId = ref<number | null>(null)
+  const schulform = ref<string | null>(null)
   const loaded = ref(false)
 
   const abschnitteOptions = computed(() =>
@@ -67,6 +68,9 @@ export const useSchuleStore = defineStore('schule', () => {
         aktuellerAbschnittId.value = abschnitte.value[abschnitte.value.length - 1].id
       }
 
+      const sf = raw['schulform']
+      schulform.value = typeof sf === 'string' ? sf : null
+
       loaded.value = true
     } catch (e) {
       reportError(toAppError(e, 'SchuleStore'))
@@ -81,7 +85,7 @@ export const useSchuleStore = defineStore('schule', () => {
   }
 
   return {
-    abschnitte, aktuellerAbschnittId, loaded, abschnitteOptions,
+    abschnitte, aktuellerAbschnittId, schulform, loaded, abschnitteOptions,
     labelForId, abschnittForId, fetch, reset,
   }
 })

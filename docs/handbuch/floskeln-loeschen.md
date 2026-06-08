@@ -17,13 +17,11 @@ Nicht mehr benötigte Floskeln sicher entfernen.
 
 Löschen Sie nur Einträge, die fachlich nicht mehr benötigt werden.
 
-## Screenshot-Platzhalter
+## Screenshots
 
-- [SCREENSHOT: Löschaktion an Floskel]
-- [SCREENSHOT: Bestätigungsdialog Löschen]
+![Bestätigungsdialog beim Löschen einer Floskel](../assets/floskeln-loeschen-dialog.png)
 
-## Kapitelnavigation
+---
 
-- Vorheriges Kapitel: [Floskeln filtern](floskeln-filtern.md)
-- Nächstes Kapitel: [Floskeln importieren](floskeln-importieren.md)
-- Inhaltsverzeichnis: [Anwenderhandbuch](../index.md)
+| « [Floskeln filtern](floskeln-filtern.md) | [Inhaltsverzeichnis](../index.md) | [Floskeln importieren](floskeln-importieren.md) » |
+|:---|:---:|---:|

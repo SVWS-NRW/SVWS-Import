@@ -9,12 +9,11 @@ Die Struktur orientiert sich an den Kacheln der Import-Startseite.
 
 ## Schnellstart
 
-1. [Verbindung zum SVWS-Server herstellen](handbuch/verbindung-herstellen.md)
-2. Passende Funktion in der Übersicht unten aufrufen
-3. Schrittfolge in der verlinkten Anleitung abarbeiten
+» **[Schnellstart-Anleitung öffnen](handbuch/schnellstart.md)**
 
 ## Inhaltsverzeichnis
 
+- [Schnellstart](handbuch/schnellstart.md)
 - [Verbindung zum SVWS-Server herstellen](handbuch/verbindung-herstellen.md)
 - [Schülerdaten anlegen](handbuch/schuelerdaten-anlegen.md)
 - [Lehrerdaten anlegen](handbuch/lehrerdaten-anlegen.md)
@@ -28,6 +27,18 @@ Die Struktur orientiert sich an den Kacheln der Import-Startseite.
 - [Floskeln filtern](handbuch/floskeln-filtern.md)
 - [Floskeln löschen](handbuch/floskeln-loeschen.md)
 - [Floskeln importieren](handbuch/floskeln-importieren.md)
+
+### Unterrichtsdaten
+
+- [Unterrichtsdaten importieren – Übersicht](handbuch/unterricht-importieren.md)
+  - [Klassenunterricht importieren](handbuch/unterricht-klassenunterricht.md)
+  - [Kursunterricht importieren (Kurse anlegen)](handbuch/unterricht-kursunterricht.md)
+  - [Schülerunterricht importieren](handbuch/unterricht-schuelerunterricht.md)
+  - [Kurszuweisung (interaktiv)](handbuch/unterricht-kurszuweisung.md)
+
+### Referenz
+
+- [Beispieldateien](handbuch/beispieldateien.md)
 
 ## Allgemeine Hinweise
 

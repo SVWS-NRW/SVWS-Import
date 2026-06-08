@@ -615,7 +615,9 @@ export async function enrichSchueler(
 }
 
 export async function fetchSchuelerAuswahlliste(abschnittId: number): Promise<SchuelerAuswahl[]> {
-  const response = await getApiClient().get(`/schueler/abschnitt/${abschnittId}/auswahlliste`)
+  const response = await getApiClient().get(`/schueler/abschnitt/${abschnittId}/auswahlliste`, {
+    params: { _t: Date.now() },
+  })
   const raw = response.data
 
   // Response is { schueler: [...], klassen: [...], ... }, not a plain array
@@ -632,5 +634,145 @@ export async function fetchSchuelerAuswahlliste(abschnittId: number): Promise<Sc
     ...s,
     klasse: klassenMap.get(s.idKlasse as number) ?? (s.idKlasse != null ? String(s.idKlasse) : ''),
   }))
+}
+
+export async function fetchLernabschnittId(
+  schuelerId: number,
+  idSchuljahresabschnitt: number,
+): Promise<number | null> {
+  const resp = await getApiClient().get<SchuelerLernabschnitt[]>(
+    `/schueler/lernabschnittsdaten/${schuelerId}/${idSchuljahresabschnitt}`,
+  )
+  const la = resp.data.find(l => l.wechselNr === 0) ?? resp.data[0]
+  return la?.id ?? null
+}
+
+export interface LeistungsdatenCreatePayload {
+  lernabschnittID: number
+  fachID: number
+  kursart: string           // Kursart-Kürzel, z.B. "PUK", "GK", "LK"
+  lehrerID: number | null
+  wochenstunden: number | null
+  aufZeugnis: boolean
+}
+
+export async function createLeistungsdaten(
+  payload: LeistungsdatenCreatePayload,
+): Promise<UploadResult> {
+  try {
+    // Null-Felder nicht mitsenden — Server lehnt unbekannte/leere optionale Felder ab
+    const body: Record<string, unknown> = {
+      lernabschnittID: payload.lernabschnittID,
+      fachID: payload.fachID,
+      kursart: payload.kursart,
+      aufZeugnis: payload.aufZeugnis,
+    }
+    if (payload.lehrerID !== null) body.lehrerID = payload.lehrerID
+    if (payload.wochenstunden !== null) body.wochenstunden = payload.wochenstunden
+
+    const resp = await getApiClient().post('/schueler/leistungsdaten/create', body)
+    return { success: true, id: resp.data?.id }
+  } catch (error) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}
+
+export interface KursCreatePayload {
+  idSchuljahresabschnitt: number
+  kuerzel: string
+  idJahrgaenge: number[]
+  idFach: number
+  lehrer: number | null
+  kursartAllg: string
+  sortierung: number
+  istSichtbar: boolean
+  schienen: number[]
+  wochenstunden: number
+  wochenstundenLehrer: number
+  idKursFortschreibungsart: number
+  schulnummer: number | null
+  istEpochalunterricht: boolean
+  bezeichnungZeugnis: string
+}
+
+export async function createKurs(payload: KursCreatePayload): Promise<UploadResult> {
+  try {
+    const response = await getApiClient().post('/kurse/create', payload)
+    return { success: true, id: response.data?.id }
+  } catch (error: unknown) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}
+
+export interface DbKursEintrag {
+  id: number
+  kuerzel: string
+  idFach: number | null
+  kursartAllg: string
+  idJahrgaenge: number[]
+  lehrer: number | null
+  wochenstunden?: number
+  schueler?: Array<{ id: number }>
+}
+
+export interface LeistungsdatenEintrag {
+  id: number
+  fachID: number
+  kursID?: number | null
+}
+
+export async function fetchLeistungsdatenFuerLernabschnitt(
+  lernabschnittId: number,
+): Promise<LeistungsdatenEintrag[]> {
+  try {
+    const response = await getApiClient().get(
+      `/schueler/lernabschnittsdaten/${lernabschnittId}`,
+      { params: { _t: Date.now() } },
+    )
+    const data = response.data as { leistungsdaten?: LeistungsdatenEintrag[] }
+    return Array.isArray(data?.leistungsdaten) ? data.leistungsdaten : []
+  } catch {
+    return []
+  }
+}
+
+export async function deleteSchuelerLeistungsdaten(id: number): Promise<UploadResult> {
+  try {
+    await getApiClient().delete(`/schueler/leistungsdaten/delete/multiple`, { data: [id] })
+    return { success: true }
+  } catch (error: unknown) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}
+
+export async function createSchuelerLeistungsdaten(
+  lernabschnittID: number,
+  fachID: number,
+): Promise<UploadResult> {
+  try {
+    const response = await getApiClient().post('/schueler/leistungsdaten/create', { lernabschnittID, fachID })
+    return { success: true, id: response.data?.id }
+  } catch (error: unknown) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}
+
+export async function patchSchuelerLeistungsdaten(
+  id: number,
+  patch: Record<string, unknown>,
+): Promise<UploadResult> {
+  try {
+    await getApiClient().patch(`/schueler/leistungsdaten/${id}`, patch)
+    return { success: true }
+  } catch (error: unknown) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}
+
+export async function fetchKurseFuerAbschnitt(abschnittId: number): Promise<DbKursEintrag[]> {
+  const response = await getApiClient().get(`/kurse/abschnitt/${abschnittId}`, {
+    params: { _t: Date.now() },
+  })
+  return Array.isArray(response.data) ? response.data : []
 }
 

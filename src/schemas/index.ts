@@ -4,7 +4,6 @@ import { lehrerStammdatenSchema } from './lehrerStammdatenSchema'
 import { klassenSchema } from './klassenSchema'
 import { jahrgaengeSchema } from './jahrgaengeSchema'
 import { faecherSchema } from './faecherSchema'
-import { kurseSchema } from './kurseSchema'
 import { betriebeSchema } from './betriebeSchema'
 
 export const importModules: ImportModule[] = [
@@ -13,7 +12,6 @@ export const importModules: ImportModule[] = [
   klassenSchema,
   jahrgaengeSchema,
   faecherSchema,
-  kurseSchema,
   betriebeSchema,
 ]
 
@@ -25,4 +23,4 @@ export function getModulesByEntity(entityType: EntityType): ImportModule[] {
   return importModules.filter(m => m.entityType === entityType)
 }
 
-export { schuelerStammdatenSchema, lehrerStammdatenSchema, klassenSchema, jahrgaengeSchema, faecherSchema, kurseSchema, betriebeSchema }
+export { schuelerStammdatenSchema, lehrerStammdatenSchema, klassenSchema, jahrgaengeSchema, faecherSchema, betriebeSchema }

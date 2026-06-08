@@ -7,6 +7,7 @@ export interface Schuljahresabschnitt {
 export interface SchuleStammdaten {
   schuljahresabschnitt: number           // ID des aktuellen Abschnitts
   schuljahresabschnitte: Schuljahresabschnitt[]
+  schulform?: string                     // z.B. "GE", "GY", "BK"
   [key: string]: unknown
 }
 

@@ -51,6 +51,10 @@
         <i class="pi pi-map-marker card-icon" />
         <strong>Ortsteile verwalten</strong>
       </div>
+      <div class="import-card" @click="router.push({ name: 'unterricht' })" title="Klassenunterricht und Kursunterricht importieren">
+        <i class="pi pi-book card-icon" />
+        <strong>Unterricht</strong>
+      </div>
       <div class="import-card wizard-card" @click="router.push({ name: 'wizard' })" title="Geführter Import Schritt für Schritt">
         <i class="pi pi-list-check card-icon" />
         <strong>Import-Assistent</strong>

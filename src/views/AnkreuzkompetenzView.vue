@@ -155,15 +155,19 @@
         </Column>
         <Column header="Jg." style="width: 100px">
           <template #body="{ data }">
-            <span v-if="data.jahrgaengezuordnung?.length">
+            <span
+              v-if="data.jahrgaengezuordnung?.length"
+              class="jg-cell"
+              :title="data.jahrgaengezuordnung.map((z: { idJahrgang: number }) => jahrgaengeById.get(z.idJahrgang)?.kuerzel ?? z.idJahrgang).join(', ')"
+            >
               {{ data.jahrgaengezuordnung.map((z: { idJahrgang: number }) => jahrgaengeById.get(z.idJahrgang)?.kuerzel ?? z.idJahrgang).join(', ') }}
             </span>
             <span v-else class="muted">–</span>
           </template>
         </Column>
-        <Column header="Abschnitt" style="width: 90px" sortable :sortField="(d) => d.abschnitt">
+        <Column header="Abschnitt" style="width: 110px" sortable :sortField="(d) => d.abschnitt">
           <template #body="{ data }">
-            <Tag :value="ABSCHNITT_LABELS[data.abschnitt] ?? String(data.abschnitt)" severity="secondary" />
+            <Tag :value="ABSCHNITT_LABELS[data.abschnitt] ?? String(data.abschnitt)" severity="secondary" class="abschnitt-tag" />
           </template>
         </Column>
         <Column field="floskelText" header="Text" />
@@ -224,7 +228,11 @@
           <Column selectionMode="multiple" style="width: 2.5rem; flex: 0 0 2.5rem" frozen />
           <Column field="fach" header="Fach" style="width: 65px" />
           <Column field="jahrgang" header="Jg." style="width: 80px" />
-          <Column field="abschnitt" header="Abschnitt" style="width: 80px" />
+          <Column header="Abschnitt" style="width: 110px">
+            <template #body="{ data }">
+              <Tag :value="ABSCHNITT_LABELS[Number(data.abschnitt)] ?? (data.abschnitt || '–')" severity="secondary" class="abschnitt-tag" />
+            </template>
+          </Column>
           <Column field="istASV" header="ASV" style="width: 55px" />
           <Column field="sortierung" header="Sort." style="width: 65px" />
           <Column field="text" header="Text" />
@@ -254,7 +262,7 @@ import {
   fetchAnkreuzkompetenzen,
   createAnkreuzkompetenz,
   deleteAnkreuzkompetenzen,
-  addAnkreuzkompetenzJahrgangszuordnung,
+  addAnkreuzkompetenzJahrgangszuordnungen,
   fetchJahrgaenge,
   fetchFaecher,
   type Ankreuzkompetenz,
@@ -311,7 +319,11 @@ const filteredKompetenzen = computed(() => {
     )
   }
   if (filterFach.value !== null) {
-    result = result.filter(k => k.idFach === filterFach.value)
+    if (filterFach.value === -1) {
+      result = result.filter(k => k.istASV)
+    } else {
+      result = result.filter(k => k.idFach === filterFach.value)
+    }
   }
   if (filterAbschnitt.value !== null) {
     result = result.filter(k => k.abschnitt === filterAbschnitt.value)
@@ -327,12 +339,16 @@ const jahrgangOptions = computed(() =>
   jahrgaenge.value.map(j => ({ label: j.kuerzel ?? String(j.id), value: j.id })),
 )
 
-const fachOptions = computed(() =>
-  faecher.value
+const fachOptions = computed(() => {
+  const opts = faecher.value
     .filter(f => kompetenzen.value.some(k => k.idFach === f.id))
     .sort((a, b) => (a.kuerzel ?? '').localeCompare(b.kuerzel ?? ''))
-    .map(f => ({ label: `${f.kuerzel} – ${f.beschreibung ?? f.kuerzel}`, value: f.id })),
-)
+    .map(f => ({ label: `${f.kuerzel} – ${f.beschreibung ?? f.kuerzel}`, value: f.id }))
+  if (kompetenzen.value.some(k => k.istASV)) {
+    opts.unshift({ label: 'ASV – Arbeits- und Sozialverhalten', value: -1 })
+  }
+  return opts
+})
 
 const abschnittOptions = Object.entries(ABSCHNITT_LABELS).map(([v, label]) => ({
   label,
@@ -452,6 +468,7 @@ async function handleImport(): Promise<void> {
   importing.value = true
   importCancelled.value = false
   let sent = 0
+  let skipped = 0
   let failed = 0
   const total = rows.length
   importProgress.value = `0 / ${total}`
@@ -460,13 +477,18 @@ async function handleImport(): Promise<void> {
     if (importCancelled.value) break
     const row = rows[i]
 
-    // idFach auflösen
+    // Fach "ASV" erkennen – kein echtes Fach, setzt istASV
+    const fachIsASV = row.fach?.trim().toLowerCase() === 'asv'
+
+    // idFach auflösen (bei ASV immer null)
     let idFach: number | null = null
-    if (row.fach && !Number.isNaN(Number(row.fach))) {
-      idFach = Number(row.fach)
-    } else if (row.fach) {
-      const found = faecher.value.find(f => f.kuerzel?.toLowerCase() === row.fach.toLowerCase())
-      if (found) idFach = found.id
+    if (!fachIsASV) {
+      if (row.fach && !Number.isNaN(Number(row.fach))) {
+        idFach = Number(row.fach)
+      } else if (row.fach) {
+        const found = faecher.value.find(f => f.kuerzel?.toLowerCase() === row.fach.toLowerCase())
+        if (found) idFach = found.id
+      }
     }
 
     // idsJahrgaenge auflösen
@@ -488,11 +510,19 @@ async function handleImport(): Promise<void> {
 
     const abschnitt = row.abschnitt && !Number.isNaN(Number(row.abschnitt))
       ? Number(row.abschnitt)
-      : 3
+      : 0
+
+    const istASV = fachIsASV || (row.istASV ? parseBool(row.istASV) : false)
+
+    if (idFach !== null && istASV) {
+      failed++
+      importProgress.value = `${i + 1} / ${total}`
+      continue
+    }
 
     const payload = {
       idFach,
-      istASV: row.istASV ? parseBool(row.istASV) : false,
+      istASV,
       schulgliederung: row.schulgliederung || null,
       floskelText: row.text.trim(),
       abschnitt,
@@ -502,7 +532,6 @@ async function handleImport(): Promise<void> {
       sortierung: row.sortierung && !Number.isNaN(Number(row.sortierung))
         ? Number(row.sortierung)
         : 32000,
-      jahrgaengezuordnung: [],
     }
 
     if (!payload.floskelText) {
@@ -513,14 +542,16 @@ async function handleImport(): Promise<void> {
 
     const result = await createAnkreuzkompetenz(payload)
     if (!result.success || result.id == null) {
-      failed++
+      if (result.error?.toLowerCase().includes('bereits vorhanden')) {
+        skipped++
+      } else {
+        failed++
+      }
     } else {
-      // Jahrgangszuordnungen anlegen
-      for (const idJahrgang of jahrgangIds) {
-        await addAnkreuzkompetenzJahrgangszuordnung({
-          idAnkreuzkompetenz: result.id,
-          idJahrgang,
-        })
+      if (jahrgangIds.length > 0) {
+        await addAnkreuzkompetenzJahrgangszuordnungen(
+          jahrgangIds.map(idJahrgang => ({ idAnkreuzkompetenz: result.id!, idJahrgang })),
+        )
       }
       sent++
     }
@@ -532,8 +563,16 @@ async function handleImport(): Promise<void> {
   importProgress.value = ''
   await loadKompetenzen()
 
+  const parts: string[] = []
+  if (sent > 0) parts.push(`${sent} importiert`)
+  if (skipped > 0) parts.push(`${skipped} übersprungen (bereits vorhanden)`)
+  if (failed > 0) parts.push(`${failed} fehlgeschlagen`)
+
   if (failed > 0) {
-    errorMsg.value = `${sent} importiert, ${failed} fehlgeschlagen (ggf. Pflichtfeld fehlt oder Serverfehler).`
+    errorMsg.value = parts.join(', ') + ' (mögliche Ursachen: Fach und istASV gleichzeitig gesetzt, Text leer, Serverfehler).'
+  } else if (skipped > 0) {
+    successMsg.value = parts.join(', ') + '.'
+    if (sent > 0) resetImport()
   } else {
     successMsg.value = `${sent} Ankreuzkompetenz${sent === 1 ? '' : 'en'} erfolgreich importiert.`
     resetImport()
@@ -680,6 +719,18 @@ h2 {
 
 .muted {
   color: var(--p-text-muted-color);
+}
+
+.jg-cell {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100px;
+}
+
+:deep(.abschnitt-tag) {
+  white-space: nowrap;
 }
 
 .status-ok {

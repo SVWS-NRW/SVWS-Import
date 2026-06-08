@@ -50,7 +50,6 @@ export interface AnkreuzkompetenzCreatePayload {
   istSichtbar: boolean
   fachSortierung: number
   sortierung: number
-  jahrgaengezuordnung: AnkreuzkompetenzJahrgangszuordnung[]
 }
 
 export interface AnkreuzkompetenzJahrgangszuordnungPayload {
@@ -59,7 +58,7 @@ export interface AnkreuzkompetenzJahrgangszuordnungPayload {
 }
 
 export const ABSCHNITT_LABELS: Record<number, string> = {
-  1: '1. HJ',
-  2: '2. HJ',
-  3: 'beide',
+  0: 'beide',
+  1: '1. Halbjahr',
+  2: '2. Halbjahr',
 }

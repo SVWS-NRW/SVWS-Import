@@ -100,12 +100,12 @@ export async function deleteAnkreuzkompetenzen(ids: number[]): Promise<UploadRes
   }
 }
 
-export async function addAnkreuzkompetenzJahrgangszuordnung(
-  payload: AnkreuzkompetenzJahrgangszuordnungPayload,
+export async function addAnkreuzkompetenzJahrgangszuordnungen(
+  payload: AnkreuzkompetenzJahrgangszuordnungPayload[],
 ): Promise<UploadResult> {
   try {
-    const response = await getApiClient().post('/schule/ankreuzkompetenzen/jahrgangzuordnung', payload)
-    return { success: true, id: response.data?.id }
+    await getApiClient().post('/schule/ankreuzkompetenzen/jahrgangzuordnung', payload)
+    return { success: true }
   } catch (error: unknown) {
     return { success: false, error: toAppError(error).messageUser }
   }

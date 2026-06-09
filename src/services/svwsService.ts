@@ -904,6 +904,24 @@ export interface SchulenKatalogEintrag {
   Email?: string
 }
 
+export interface KatalogEntlassgrund {
+  id: number
+  bezeichnung: string
+  sortierung?: number
+  istSichtbar?: boolean
+}
+
+export async function fetchEntlassgruende(): Promise<Set<number>> {
+  try {
+    const response = await getApiClient().get<KatalogEntlassgrund[]>('/entlassgruende')
+    const set = new Set<number>()
+    for (const e of response.data) if (e.id) set.add(e.id)
+    return set
+  } catch {
+    return new Set()
+  }
+}
+
 export async function fetchSchulKatalog(): Promise<SchulEintrag[]> {
   try {
     const response = await getApiClient().get<SchulEintrag[]>('/schule/schulen')

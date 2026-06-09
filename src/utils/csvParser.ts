@@ -556,7 +556,11 @@ export function parseSchuelerSchulbesuchCsv(file: File): Promise<import('@/model
               _schuelerId: null,
               _lookupStatus: 'pending' as const,
               _vorherigeSchuleStatus: 'empty' as const,
+              _aufnehmendeSchuleStatus: 'empty' as const,
               _vorigeEntlassJahrgangStatus: 'empty' as const,
+              _vorigeEntlassgrundStatus: 'empty' as const,
+              _entlassungGrundStatus: 'empty' as const,
+              _entlassJahrgangStatus: 'empty' as const,
               // Suchschlüssel
               nachname:     get(m, 'nachname', 'name', 'familienname'),
               vorname:      get(m, 'vorname', 'firstname', 'rufname'),
@@ -569,14 +573,14 @@ export function parseSchuelerSchulbesuchCsv(file: File): Promise<import('@/model
               vorigeArtLetzteVersetzung: get(m, 'vorigeartletzteversetzung', 'versetzungsart', 'letzteversetzung'),
               vorigeEntlassgrundID:      get(m, 'vorigeentlassgrundid', 'vorigeentlassgrund', 'entlassgrundvorher'),
               vorigeBemerkung:           get(m, 'vorigebemerkung', 'bemerkung'),
-              vorigeAbschlussartID:      get(m, 'vorigeabschlussartid', 'vorigeabschlussart', 'abschlussartvorher', 'abschlussvorher'),
+              vorigeAbschlussartID:      get(m, 'vorigeabschlussartid', 'vorigeabschlussartallgemeinbildend', 'vorigeabschlussart', 'abschlussartvorher', 'abschlussvorher'),
               // Entlassung von dieser Schule
               entlassungDatum:           normalisiereDatum(get(m, 'entlassungdatum', 'entlassdatum', 'entlassungsdatum')),
-              idEntlassjahrgang:         get(m, 'identlassjahrgang', 'entlassjahrgang', 'entlassjahrgangid'),
+              entlassjahrgang:           get(m, 'entlassjahrgang', 'identlassjahrgang', 'entlassjahrgangid'),
               entlassungGrundID:         get(m, 'entlassunggrundid', 'entlassunggrund', 'entlassungsgrund', 'entlassungsgrundid'),
               entlassungAbschlussartID:  get(m, 'entlassungabschlussartid', 'entlassungabschlussart', 'abschlussart', 'abschluss'),
               // Aufnehmende Schule
-              idAufnehmendeSchule:       get(m, 'idaufnehmendeschule', 'aufnehmendeschule', 'aufnehmendeschuleid'),
+              aufnehmendeSchule:         get(m, 'aufnehmendeschule', 'idaufnehmendeschule', 'aufnehmendeschuleid', 'aufnehmendeschulnummer'),
               aufnehmendWechseldatum:    normalisiereDatum(get(m, 'aufnehmendwechseldatum', 'wechseldatumaufnehmend', 'wechseldatum')),
               aufnehmendBestaetigt:      get(m, 'aufnehmendbestaetigt', 'wechselbestaetigt', 'aufnahmebestaetigt'),
               // Grundschule

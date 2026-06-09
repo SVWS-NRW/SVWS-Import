@@ -6,7 +6,11 @@ export interface SchuelerSchulbesuchImportRow {
   _schuelerId: number | null
   _lookupStatus: 'pending' | 'ok' | 'not_found' | 'ambiguous'
   _vorherigeSchuleStatus: 'empty' | 'found' | 'new'
+  _aufnehmendeSchuleStatus: 'empty' | 'found' | 'new'
   _vorigeEntlassJahrgangStatus: 'empty' | 'valid' | 'invalid_kuerzel' | 'invalid_for_schulform'
+  _vorigeEntlassgrundStatus: 'empty' | 'valid' | 'invalid'
+  _entlassungGrundStatus: 'empty' | 'valid' | 'invalid'
+  _entlassJahrgangStatus: 'empty' | 'valid' | 'invalid'
   // Identifikation / Suchschlüssel
   nachname: string
   vorname: string
@@ -22,11 +26,11 @@ export interface SchuelerSchulbesuchImportRow {
   vorigeAbschlussartID: string
   // Entlassung von dieser Schule
   entlassungDatum: string
-  idEntlassjahrgang: string
+  entlassjahrgang: string
   entlassungGrundID: string
   entlassungAbschlussartID: string
   // Aufnehmende Schule
-  idAufnehmendeSchule: string
+  aufnehmendeSchule: string
   aufnehmendWechseldatum: string
   aufnehmendBestaetigt: string
   // Grundschule
@@ -76,16 +80,13 @@ export function schulbesuchImportToApiPatch(row: SchuelerSchulbesuchImportRow): 
 
   // Entlassung von dieser Schule
   if (str(row.entlassungDatum))               patch.entlassdatumDieseSchule               = str(row.entlassungDatum)
-  const idEntlJg = parseId(row.idEntlassjahrgang)
-  if (idEntlJg !== null)                      patch.idEntlassjahrgangDieseSchule          = idEntlJg
+  // idEntlassjahrgangDieseSchule — Kürzel wird im Store per schulJahrgaengeMap in DB-ID aufgelöst
   const idEntlGrund = parseId(row.entlassungGrundID)
   if (idEntlGrund !== null)                   patch.idEntlassgrundDieseSchule             = idEntlGrund
   const idEntlAbs = parseId(row.entlassungAbschlussartID)
   if (idEntlAbs !== null)                     patch.idAbschlussartDieseSchule             = idEntlAbs
 
-  // Aufnehmende Schule
-  const idAufn = parseId(row.idAufnehmendeSchule)
-  if (idAufn !== null)                        patch.idAufnehmendeSchule                   = idAufn
+  // Aufnehmende Schule — idAufnehmendeSchule wird im Store per Schulnummer aufgelöst
   if (str(row.aufnehmendWechseldatum))        patch.wechseldatumAufnehmendeSchule         = str(row.aufnehmendWechseldatum)
   const bestaetigt = parseBool(row.aufnehmendBestaetigt)
   if (bestaetigt !== null)                    patch.wechselBestaetigtAufnehmendeSchule    = bestaetigt

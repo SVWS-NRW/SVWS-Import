@@ -56,6 +56,7 @@
               />
               <div class="action-buttons">
                 <FileUpload
+                  :key="fileKey"
                   mode="basic"
                   :auto="false"
                   :multiple="false"
@@ -98,6 +99,7 @@
               :rowData="store.rows"
               :columnDefs="columnDefs"
               :defaultColDef="defaultColDef"
+              :tooltipShowDelay="400"
               :rowClassRules="rowClassRules"
               :getRowId="getRowId"
               rowSelection="multiple"
@@ -140,6 +142,7 @@
                   @click="handleReloadLookup"
                 />
                 <FileUpload
+                  :key="sbFileKey"
                   mode="basic"
                   :auto="false"
                   :multiple="false"
@@ -192,6 +195,7 @@
               :rowData="sbStore.rows"
               :columnDefs="sbColumnDefs"
               :defaultColDef="defaultColDef"
+              :tooltipShowDelay="400"
               :rowClassRules="sbRowClassRules"
               :getRowId="getSbRowId"
               rowSelection="multiple"
@@ -258,6 +262,7 @@ const activeTab = ref('stammdaten')
 const uploadResult = ref<{ sent: number; failed: number } | null>(null)
 const parseError = ref('')
 const parsing = ref(false)
+const fileKey = ref(0)
 const showMappingDialog = ref(false)
 const gridApi = ref<GridApi | null>(null)
 const selectedCount = ref(0)
@@ -303,11 +308,15 @@ const defaultColDef: ColDef = {
   minWidth: 80,
 }
 
+function withHeaderTooltips<T>(defs: ColDef<T>[]): ColDef<T>[] {
+  return defs.map(c => ({ ...c, headerTooltip: c.headerTooltip ?? c.headerName }))
+}
+
 const columnDefs = computed<ColDef<SchuelerImportRow>[]>(() => {
   const has = (field: keyof SchuelerImportRow) =>
     store.rows.some(r => r[field] !== '')
 
-  return [
+  return withHeaderTooltips([
     {
       field: 'nachname',
       headerName: 'Nachname',
@@ -412,7 +421,7 @@ const columnDefs = computed<ColDef<SchuelerImportRow>[]>(() => {
       filter: true,
       valueGetter: (params: { data?: SchuelerImportRow }) => params.data?._rawData?.[header] ?? '',
     })),
-  ]
+  ])
 })
 
 const rowClassRules = {
@@ -453,10 +462,7 @@ function confirmClear(): void {
     icon: 'pi pi-exclamation-triangle',
     acceptLabel: 'Ja, leeren',
     rejectLabel: 'Abbrechen',
-    accept: () => {
-      store.clear()
-      router.push({ name: 'import' })
-    },
+    accept: () => { store.clear(); fileKey.value++ },
   })
 }
 
@@ -467,6 +473,7 @@ const sbParsing = ref(false)
 const sbLookupError = ref('')
 const sbUploadResult = ref<{ sent: number; failed: number } | null>(null)
 const sbGridApi = ref<GridApi | null>(null)
+const sbFileKey = ref(0)
 const sbSelectedCount = ref(0)
 
 function onSbGridReady(params: GridReadyEvent): void {
@@ -524,7 +531,7 @@ function confirmSbClear(): void {
     icon: 'pi pi-exclamation-triangle',
     acceptLabel: 'Ja, leeren',
     rejectLabel: 'Abbrechen',
-    accept: () => sbStore.clear(),
+    accept: () => { sbStore.clear(); sbFileKey.value++ },
   })
 }
 
@@ -551,7 +558,7 @@ const sbColumnDefs = computed<ColDef<SchuelerSchulbesuchImportRow>[]>(() => {
   const has = (field: keyof SchuelerSchulbesuchImportRow) =>
     sbStore.rows.some(r => !!r[field])
 
-  return [
+  return withHeaderTooltips([
     {
       field: 'nachname',
       headerName: 'Nachname',
@@ -624,16 +631,58 @@ const sbColumnDefs = computed<ColDef<SchuelerSchulbesuchImportRow>[]>(() => {
       },
     },
     { field: 'vorigeArtLetzteVersetzung', headerName: 'Art letzte Versetzung',   width: 160,  hide: !has('vorigeArtLetzteVersetzung') },
-    { field: 'vorigeEntlassgrundID',      headerName: 'Entlassgrund vor. Sch.',  width: 150,  hide: !has('vorigeEntlassgrundID') },
+    {
+      field: 'vorigeEntlassgrundID', headerName: 'Entlassgrund vor. Sch.', width: 160,
+      hide: !has('vorigeEntlassgrundID'),
+      cellRenderer: (params: { data: SchuelerSchulbesuchImportRow }) => {
+        const v = params.data.vorigeEntlassgrundID?.trim()
+        if (!v) return ''
+        return params.data._vorigeEntlassgrundStatus === 'invalid'
+          ? `${v} <span style='color:#ef4444' title='Keine gültige Entlassgrund-ID'>✘</span>`
+          : `${v} <span style='color:#22c55e' title='Gültige ID'>✔</span>`
+      },
+    },
     { field: 'vorigeBemerkung',           headerName: 'Bemerkung vorige Schule', width: 180,  hide: !has('vorigeBemerkung') },
     { field: 'vorigeAbschlussartID',      headerName: 'Abschluss vorige Schule', width: 170,  hide: !has('vorigeAbschlussartID') },
     // ── Entlassung von dieser Schule ──────────────────────────────────────────
     { field: 'entlassungDatum',           headerName: 'Entlassungsdatum',        width: 150,  hide: !has('entlassungDatum') },
-    { field: 'idEntlassjahrgang',         headerName: 'ID Entlassjahrgang',      width: 150,  hide: !has('idEntlassjahrgang') },
-    { field: 'entlassungGrundID',         headerName: 'Entlassungsgrund',        width: 140,  hide: !has('entlassungGrundID') },
+    {
+      field: 'entlassjahrgang', headerName: 'Entlassjahrgang', width: 150,
+      hide: !has('entlassjahrgang'),
+      cellRenderer: (params: { data: SchuelerSchulbesuchImportRow }) => {
+        const jg = params.data.entlassjahrgang?.trim()
+        if (!jg) return ''
+        return params.data._entlassJahrgangStatus === 'invalid'
+          ? `${jg} <span style='color:#ef4444' title='Kein gültiger Jahrgang für diese Schule'>✘</span>`
+          : `${jg} <span style='color:#22c55e' title='Gültiger Jahrgang'>✔</span>`
+      },
+    },
+    {
+      field: 'entlassungGrundID', headerName: 'Entlassungsgrund', width: 150,
+      hide: !has('entlassungGrundID'),
+      cellRenderer: (params: { data: SchuelerSchulbesuchImportRow }) => {
+        const v = params.data.entlassungGrundID?.trim()
+        if (!v) return ''
+        return params.data._entlassungGrundStatus === 'invalid'
+          ? `${v} <span style='color:#ef4444' title='Keine gültige Entlassgrund-ID'>✘</span>`
+          : `${v} <span style='color:#22c55e' title='Gültige ID'>✔</span>`
+      },
+    },
     { field: 'entlassungAbschlussartID',  headerName: 'Abschluss Entlassung',    width: 160,  hide: !has('entlassungAbschlussartID') },
     // ── Aufnehmende Schule ────────────────────────────────────────────────────
-    { field: 'idAufnehmendeSchule',       headerName: 'ID aufnehm. Schule',      width: 150,  hide: !has('idAufnehmendeSchule') },
+    {
+      field: 'aufnehmendeSchule', headerName: 'Aufnehmende Schule (Schulnr.)', width: 190,
+      hide: !has('aufnehmendeSchule'),
+      cellRenderer: (params: { data: SchuelerSchulbesuchImportRow }) => {
+        const nr = params.data.aufnehmendeSchule?.trim()
+        if (!nr) return ''
+        switch (params.data._aufnehmendeSchuleStatus) {
+          case 'found': return `${nr} <span style='color:#22c55e' title='Schule gefunden'>✔</span>`
+          case 'new':   return `${nr} <span style='color:#f59e0b' title='Schule wird neu angelegt'>+neu</span>`
+          default:      return nr
+        }
+      },
+    },
     { field: 'aufnehmendWechseldatum',    headerName: 'Wechseldatum aufnehm.',   width: 160,  hide: !has('aufnehmendWechseldatum') },
     { field: 'aufnehmendBestaetigt',      headerName: 'Wechsel bestätigt',       width: 140,  hide: !has('aufnehmendBestaetigt') },
     // ── Grundschule ───────────────────────────────────────────────────────────
@@ -672,7 +721,7 @@ const sbColumnDefs = computed<ColDef<SchuelerSchulbesuchImportRow>[]>(() => {
           ? ''
           : `<button onclick="window.__deleteSchulbesuch('${params.data._id}')" style="border:none;background:none;cursor:pointer;color:#ef4444;font-size:1rem" title="Zeile löschen">✕</button>`,
     },
-  ]
+  ])
 })
 </script>
 

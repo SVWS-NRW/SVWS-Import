@@ -698,8 +698,19 @@ const sbColumnDefs = computed<ColDef<SchuelerSchulbesuchImportRow>[]>(() => {
     { field: 'idDauerKindergartenbesuch', headerName: 'Dauer Kindergarten (ID)', width: 170,  hide: !has('idDauerKindergartenbesuch') },
     { field: 'idKindergarten',            headerName: 'Kindergarten (ID)',        width: 140,  hide: !has('idKindergarten') },
     // ── Sprachförderung ───────────────────────────────────────────────────────
-    { field: 'verpflichtungSprachfoerderkurs', headerName: 'Sprachförderpflicht',  width: 155, hide: !has('verpflichtungSprachfoerderkurs') },
-    { field: 'teilnahmeSprachfoerderkurs',     headerName: 'Sprachförderteilnahme', width: 165, hide: !has('teilnahmeSprachfoerderkurs') },
+    { field: 'verpflichtungSprachfoerderkurs',       headerName: 'Sprachförderpflicht',    width: 155, hide: !has('verpflichtungSprachfoerderkurs') },
+    { field: 'teilnahmeSprachfoerderkurs',           headerName: 'Sprachförderteilnahme',  width: 165, hide: !has('teilnahmeSprachfoerderkurs') },
+    {
+      field: 'schluesselHoechsterSchulabschluss', headerName: 'Höchster Abschluss', width: 150,
+      hide: !has('schluesselHoechsterSchulabschluss'),
+      cellRenderer: (params: { data: SchuelerSchulbesuchImportRow }) => {
+        const v = params.data.schluesselHoechsterSchulabschluss?.trim()
+        if (!v) return ''
+        return params.data._hoechsterAbschlussStatus === 'invalid'
+          ? `${v} <span style='color:#ef4444' title='Kein gültiger Schlüssel (SchulabschlussAllgemeinbildend)'>✘</span>`
+          : `${v} <span style='color:#22c55e' title='Gültiger Schlüssel'>✔</span>`
+      },
+    },
     {
       headerName: 'Importstatus',
       width: 110,

@@ -11,6 +11,7 @@ export interface SchuelerSchulbesuchImportRow {
   _vorigeEntlassgrundStatus: 'empty' | 'valid' | 'invalid'
   _entlassungGrundStatus: 'empty' | 'valid' | 'invalid'
   _entlassJahrgangStatus: 'empty' | 'valid' | 'invalid'
+  _hoechsterAbschlussStatus: 'empty' | 'valid' | 'invalid'
   // Identifikation / Suchschlüssel
   nachname: string
   vorname: string
@@ -24,6 +25,7 @@ export interface SchuelerSchulbesuchImportRow {
   vorigeEntlassgrundID: string
   vorigeBemerkung: string
   vorigeAbschlussartID: string
+  schluesselHoechsterSchulabschluss: string
   // Entlassung von dieser Schule
   entlassungDatum: string
   entlassjahrgang: string
@@ -76,7 +78,8 @@ export function schulbesuchImportToApiPatch(row: SchuelerSchulbesuchImportRow): 
   const idVorigeGrund = parseId(row.vorigeEntlassgrundID)
   if (idVorigeGrund !== null)                 patch.idEntlassgrundVorherigeSchule                        = idVorigeGrund
   if (str(row.vorigeBemerkung))               patch.bemerkungVorherigeSchule                             = str(row.vorigeBemerkung)
-  if (str(row.vorigeAbschlussartID))          patch.schluesselAbschlussartAllgemeinbildendVorherigeSchule = str(row.vorigeAbschlussartID)
+  if (str(row.vorigeAbschlussartID))                patch.schluesselAbschlussartAllgemeinbildendVorherigeSchule = str(row.vorigeAbschlussartID)
+  if (str(row.schluesselHoechsterSchulabschluss))   patch.schluesselHoechsterSchulabschluss                    = str(row.schluesselHoechsterSchulabschluss)
 
   // Entlassung von dieser Schule
   if (str(row.entlassungDatum))               patch.entlassdatumDieseSchule               = str(row.entlassungDatum)

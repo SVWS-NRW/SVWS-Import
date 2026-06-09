@@ -267,12 +267,15 @@ export interface AllinoneSchulenKataloge {
   schulformKuerzelMap: Map<string, string>
   /** Jahrgang-Kürzel (z.B. "04") → Katalog-Eintrag inkl. gültiger Schulformen */
   jahrgaengeMap: Map<string, JahrgangKatalogEintrag>
+  /** Gültige Schlüssel aus SchulabschlussAllgemeinbildend (z.B. "G", "K", "A") */
+  schulabschlussAllgemeinbildendSet: Set<string>
 }
 
 export async function fetchAllinoneSchulenKataloge(): Promise<AllinoneSchulenKataloge> {
   const schulformenMap    = new Map<string, number>()
   const schulformKuerzelMap = new Map<string, string>()
   const jahrgaengeMap     = new Map<string, JahrgangKatalogEintrag>()
+  const schulabschlussAllgemeinbildendSet = new Set<string>()
   try {
     const data = await fetchAllInOne()
     const raw  = data as Record<string, { version: number; daten: { bezeichner: string; idStatistik: string; historie: (AllinoneHistorie & { schulformen?: string[] })[] }[] } | undefined>
@@ -291,8 +294,14 @@ export async function fetchAllinoneSchulenKataloge(): Promise<AllinoneSchulenKat
       if (!h?.kuerzel) continue
       jahrgaengeMap.set(h.kuerzel.trim(), { kuerzel: h.kuerzel.trim(), text: h.text, schulformen: h.schulformen ?? [] })
     }
-  } catch { /* Katalog nicht verfügbar → leere Maps */ }
-  return { schulformenMap, schulformKuerzelMap, jahrgaengeMap }
+
+    // SchulabschlussAllgemeinbildend
+    for (const entry of (raw['SchulabschlussAllgemeinbildend']?.daten ?? [])) {
+      const h = entry.historie.find(x => x.gueltigBis === null) ?? entry.historie[entry.historie.length - 1]
+      if (h?.schluessel) schulabschlussAllgemeinbildendSet.add(h.schluessel.trim())
+    }
+  } catch { /* Katalog nicht verfügbar → leere Strukturen */ }
+  return { schulformenMap, schulformKuerzelMap, jahrgaengeMap, schulabschlussAllgemeinbildendSet }
 }
 
 /** @deprecated Nutze fetchAllinoneSchulenKataloge() */

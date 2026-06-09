@@ -561,6 +561,7 @@ export function parseSchuelerSchulbesuchCsv(file: File): Promise<import('@/model
               _vorigeEntlassgrundStatus: 'empty' as const,
               _entlassungGrundStatus: 'empty' as const,
               _entlassJahrgangStatus: 'empty' as const,
+              _hoechsterAbschlussStatus: 'empty' as const,
               // Suchschlüssel
               nachname:     get(m, 'nachname', 'name', 'familienname'),
               vorname:      get(m, 'vorname', 'firstname', 'rufname'),
@@ -573,7 +574,8 @@ export function parseSchuelerSchulbesuchCsv(file: File): Promise<import('@/model
               vorigeArtLetzteVersetzung: get(m, 'vorigeartletzteversetzung', 'versetzungsart', 'letzteversetzung'),
               vorigeEntlassgrundID:      get(m, 'vorigeentlassgrundid', 'vorigeentlassgrund', 'entlassgrundvorher'),
               vorigeBemerkung:           get(m, 'vorigebemerkung', 'bemerkung'),
-              vorigeAbschlussartID:      get(m, 'vorigeabschlussartid', 'vorigeabschlussartallgemeinbildend', 'vorigeabschlussart', 'abschlussartvorher', 'abschlussvorher'),
+              vorigeAbschlussartID:              get(m, 'vorigeabschlussartid', 'vorigeabschlussartallgemeinbildend', 'vorigeabschlussart', 'abschlussartvorher', 'abschlussvorher'),
+              schluesselHoechsterSchulabschluss: get(m, 'schluesselHoechsterSchulabschluss', 'schluesselhöchsterschulabschluss', 'hoechsterschulabschluss', 'höchsterschulabschluss'),
               // Entlassung von dieser Schule
               entlassungDatum:           normalisiereDatum(get(m, 'entlassungdatum', 'entlassdatum', 'entlassungsdatum')),
               entlassjahrgang:           get(m, 'entlassjahrgang', 'identlassjahrgang', 'entlassjahrgangid'),

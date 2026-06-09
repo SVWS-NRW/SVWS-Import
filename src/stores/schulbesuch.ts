@@ -33,8 +33,9 @@ export const useSchulbesuchStore = defineStore('schulbesuch', () => {
   const schulformenMap = ref<Map<string, number>>(new Map())
   const schulformKuerzelMap = ref<Map<string, string>>(new Map())
   const jahrgaengeMap = ref<Map<string, JahrgangKatalogEintrag>>(new Map())
-  const entlassgruendeSet   = ref<Set<number>>(new Set())
-  const schulJahrgaengeMap  = ref<Map<string, number>>(new Map())
+  const entlassgruendeSet              = ref<Set<number>>(new Set())
+  const schulJahrgaengeMap             = ref<Map<string, number>>(new Map())
+  const schulabschlussAllgemeinbildendSet = ref<Set<string>>(new Set())
   const lookupLoaded = ref(false)
   const lookupLoading = ref(false)
 
@@ -79,11 +80,12 @@ export const useSchulbesuchStore = defineStore('schulbesuch', () => {
         if (sk.SchulNr) verzeichnis.set(sk.SchulNr.trim(), sk)
       }
       schulenVerzeichnisMap.value = verzeichnis
-      schulformenMap.value      = allinoneKataloge.schulformenMap
-      schulformKuerzelMap.value = allinoneKataloge.schulformKuerzelMap
-      jahrgaengeMap.value       = allinoneKataloge.jahrgaengeMap
-      entlassgruendeSet.value   = entlassgruende
-      schulJahrgaengeMap.value  = buildJahrgaengeMap(jahrgaenge)
+      schulformenMap.value                    = allinoneKataloge.schulformenMap
+      schulformKuerzelMap.value               = allinoneKataloge.schulformKuerzelMap
+      jahrgaengeMap.value                     = allinoneKataloge.jahrgaengeMap
+      schulabschlussAllgemeinbildendSet.value  = allinoneKataloge.schulabschlussAllgemeinbildendSet
+      entlassgruendeSet.value                 = entlassgruende
+      schulJahrgaengeMap.value                = buildJahrgaengeMap(jahrgaenge)
 
       lookupLoaded.value = true
       return {}
@@ -155,6 +157,15 @@ export const useSchulbesuchStore = defineStore('schulbesuch', () => {
             ? 'valid'
             : 'invalid'
         }
+
+        const abschluss = row.schluesselHoechsterSchulabschluss?.trim()
+        if (!abschluss) {
+          row._hoechsterAbschlussStatus = 'empty'
+        } else {
+          row._hoechsterAbschlussStatus = schulabschlussAllgemeinbildendSet.value.size === 0 || schulabschlussAllgemeinbildendSet.value.has(abschluss)
+            ? 'valid'
+            : 'invalid'
+        }
       }
       const errors: string[] = []
       if (!row.nachname.trim())     errors.push('Nachname fehlt')
@@ -169,6 +180,8 @@ export const useSchulbesuchStore = defineStore('schulbesuch', () => {
         errors.push(`Entlassgrund diese Schule "${row.entlassungGrundID.trim()}" ist keine gültige ID`)
       if (row._entlassJahrgangStatus === 'invalid')
         errors.push(`Entlassjahrgang "${row.entlassjahrgang.trim()}" ist kein gültiges Kürzel für diese Schule`)
+      if (row._hoechsterAbschlussStatus === 'invalid')
+        errors.push(`Höchster Abschluss "${row.schluesselHoechsterSchulabschluss.trim()}" ist kein gültiger Schlüssel`)
       row._errors = errors
       row._valid = errors.length === 0
     }

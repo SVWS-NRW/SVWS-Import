@@ -562,6 +562,7 @@ export function parseSchuelerSchulbesuchCsv(file: File): Promise<import('@/model
               _entlassungGrundStatus: 'empty' as const,
               _entlassJahrgangStatus: 'empty' as const,
               _hoechsterAbschlussStatus: 'empty' as const,
+              _uebergangsempfehlungStatus: 'empty' as const,
               // Suchschlüssel
               nachname:     get(m, 'nachname', 'name', 'familienname'),
               vorname:      get(m, 'vorname', 'firstname', 'rufname'),
@@ -589,7 +590,7 @@ export function parseSchuelerSchulbesuchCsv(file: File): Promise<import('@/model
               grundschuleEinschulungsjahr:             get(m, 'grundschuleeinschulungsjahr', 'einschulungsjahr', 'einschulung'),
               grundschuleEinschulungsartID:             get(m, 'grundschuleeinschulungsartid', 'grundschuleeinschulungsart', 'einschulungsart'),
               idGrundschuleJahreEingangsphase:          get(m, 'idgrundschulejahreeingangsphase', 'grundschulejahreeingangsphase', 'jahreeingangsphase', 'eingangsphase'),
-              idKuerzelGrundschuleUebergangsempfehlung: get(m, 'idkuerzelgrundschuleuebergangsempfehlung', 'kuerzelgrundschuleuebergangsempfehlung', 'uebergangsempfehlung'),
+              kuerzelGrundschuleUebergangsempfehlung:   get(m, 'kuerzelGrundschuleUebergangsempfehlung', 'idkuerzelgrundschuleuebergangsempfehlung', 'uebergangsempfehlung'),
               // Sekundarstufe
               sekIWechsel:               get(m, 'sekiwechsel', 'wechselseki', 'sek1wechsel'),
               sekIErsteSchulform:        get(m, 'sekiersteschulform', 'ersteschulform'),

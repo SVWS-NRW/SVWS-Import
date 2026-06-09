@@ -35,7 +35,8 @@ export const useSchulbesuchStore = defineStore('schulbesuch', () => {
   const jahrgaengeMap = ref<Map<string, JahrgangKatalogEintrag>>(new Map())
   const entlassgruendeSet              = ref<Set<number>>(new Set())
   const schulJahrgaengeMap             = ref<Map<string, number>>(new Map())
-  const schulabschlussAllgemeinbildendSet = ref<Set<string>>(new Set())
+  const schulabschlussAllgemeinbildendSet  = ref<Set<string>>(new Set())
+  const uebergangsempfehlungMap            = ref<Map<string, number>>(new Map())
   const lookupLoaded = ref(false)
   const lookupLoading = ref(false)
 
@@ -84,6 +85,7 @@ export const useSchulbesuchStore = defineStore('schulbesuch', () => {
       schulformKuerzelMap.value               = allinoneKataloge.schulformKuerzelMap
       jahrgaengeMap.value                     = allinoneKataloge.jahrgaengeMap
       schulabschlussAllgemeinbildendSet.value  = allinoneKataloge.schulabschlussAllgemeinbildendSet
+      uebergangsempfehlungMap.value            = allinoneKataloge.uebergangsempfehlungMap
       entlassgruendeSet.value                 = entlassgruende
       schulJahrgaengeMap.value                = buildJahrgaengeMap(jahrgaenge)
 
@@ -166,6 +168,15 @@ export const useSchulbesuchStore = defineStore('schulbesuch', () => {
             ? 'valid'
             : 'invalid'
         }
+
+        const ueKuerzel = row.kuerzelGrundschuleUebergangsempfehlung?.trim()
+        if (!ueKuerzel) {
+          row._uebergangsempfehlungStatus = 'empty'
+        } else {
+          row._uebergangsempfehlungStatus = uebergangsempfehlungMap.value.size === 0 || uebergangsempfehlungMap.value.has(ueKuerzel)
+            ? 'valid'
+            : 'invalid'
+        }
       }
       const errors: string[] = []
       if (!row.nachname.trim())     errors.push('Nachname fehlt')
@@ -182,6 +193,8 @@ export const useSchulbesuchStore = defineStore('schulbesuch', () => {
         errors.push(`Entlassjahrgang "${row.entlassjahrgang.trim()}" ist kein gültiges Kürzel für diese Schule`)
       if (row._hoechsterAbschlussStatus === 'invalid')
         errors.push(`Höchster Abschluss "${row.schluesselHoechsterSchulabschluss.trim()}" ist kein gültiger Schlüssel`)
+      if (row._uebergangsempfehlungStatus === 'invalid')
+        errors.push(`Übergangsempfehlung "${row.kuerzelGrundschuleUebergangsempfehlung.trim()}" ist kein gültiges Kürzel`)
       row._errors = errors
       row._valid = errors.length === 0
     }
@@ -279,6 +292,11 @@ export const useSchulbesuchStore = defineStore('schulbesuch', () => {
       if (jgKuerzel) {
         const idJg = schulJahrgaengeMap.value.get(jgKuerzel.toLowerCase())
         if (idJg) patch.idEntlassjahrgangDieseSchule = idJg
+      }
+      const ueKuerzel = row.kuerzelGrundschuleUebergangsempfehlung?.trim()
+      if (ueKuerzel) {
+        const idUe = uebergangsempfehlungMap.value.get(ueKuerzel)
+        if (idUe) patch.idUebergangsempfehlungGrundschule = idUe
       }
       if (Object.keys(patch).length === 0) {
         row._errors = ['Keine Felder zum Übertragen']

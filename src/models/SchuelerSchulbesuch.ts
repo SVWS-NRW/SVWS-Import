@@ -12,6 +12,7 @@ export interface SchuelerSchulbesuchImportRow {
   _entlassungGrundStatus: 'empty' | 'valid' | 'invalid'
   _entlassJahrgangStatus: 'empty' | 'valid' | 'invalid'
   _hoechsterAbschlussStatus: 'empty' | 'valid' | 'invalid'
+  _uebergangsempfehlungStatus: 'empty' | 'valid' | 'invalid'
   // Identifikation / Suchschlüssel
   nachname: string
   vorname: string
@@ -39,7 +40,7 @@ export interface SchuelerSchulbesuchImportRow {
   grundschuleEinschulungsjahr: string
   grundschuleEinschulungsartID: string
   idGrundschuleJahreEingangsphase: string
-  idKuerzelGrundschuleUebergangsempfehlung: string
+  kuerzelGrundschuleUebergangsempfehlung: string
   // Sekundarstufe
   sekIWechsel: string
   sekIErsteSchulform: string
@@ -101,8 +102,7 @@ export function schulbesuchImportToApiPatch(row: SchuelerSchulbesuchImportRow): 
   if (gsArt !== null)                         patch.idEinschulungsartGrundschule          = gsArt
   const gsPhase = parseId(row.idGrundschuleJahreEingangsphase)
   if (gsPhase !== null)                       patch.idEingangsphaseGrundschule            = gsPhase
-  const gsUe = parseId(row.idKuerzelGrundschuleUebergangsempfehlung)
-  if (gsUe !== null)                          patch.idUebergangsempfehlungGrundschule     = gsUe
+  // idUebergangsempfehlungGrundschule — Kürzel wird im Store per uebergangsempfehlungMap in DB-ID aufgelöst
 
   // Sekundarstufe
   const sekI = parseId(row.sekIWechsel)

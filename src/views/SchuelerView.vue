@@ -689,7 +689,17 @@ const sbColumnDefs = computed<ColDef<SchuelerSchulbesuchImportRow>[]>(() => {
     { field: 'grundschuleEinschulungsjahr',             headerName: 'Einschulungsjahr GS',        width: 160,  hide: !has('grundschuleEinschulungsjahr') },
     { field: 'grundschuleEinschulungsartID',             headerName: 'Einschulungsart GS (ID)',     width: 170,  hide: !has('grundschuleEinschulungsartID') },
     { field: 'idGrundschuleJahreEingangsphase',          headerName: 'Jahre Eingangsphase (ID)',    width: 175,  hide: !has('idGrundschuleJahreEingangsphase') },
-    { field: 'idKuerzelGrundschuleUebergangsempfehlung', headerName: 'Übergangsempfehlung GS (ID)', width: 195,  hide: !has('idKuerzelGrundschuleUebergangsempfehlung') },
+    {
+      field: 'kuerzelGrundschuleUebergangsempfehlung', headerName: 'Übergangsempfehlung GS', width: 175,
+      hide: !has('kuerzelGrundschuleUebergangsempfehlung'),
+      cellRenderer: (params: { data: SchuelerSchulbesuchImportRow }) => {
+        const v = params.data.kuerzelGrundschuleUebergangsempfehlung?.trim()
+        if (!v) return ''
+        return params.data._uebergangsempfehlungStatus === 'invalid'
+          ? `${v} <span style='color:#ef4444' title='Kein gültiges Kürzel (Uebergangsempfehlung)'>✘</span>`
+          : `${v} <span style='color:#22c55e' title='Gültiges Kürzel'>✔</span>`
+      },
+    },
     // ── Sekundarstufe ─────────────────────────────────────────────────────────
     { field: 'sekIWechsel',               headerName: 'Wechsel Sek I',           width: 120,  hide: !has('sekIWechsel') },
     { field: 'sekIErsteSchulform',        headerName: 'Erste Schulform Sek I',   width: 160,  hide: !has('sekIErsteSchulform') },

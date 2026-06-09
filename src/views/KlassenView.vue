@@ -37,6 +37,7 @@
       />
       <div class="header-actions">
         <FileUpload
+          :key="fileKey"
           mode="basic"
           :auto="false"
           :multiple="false"
@@ -194,6 +195,7 @@ const uploadResult = ref<{ sent: number; failed: number } | null>(null)
 const loadError = ref('')
 const parseError = ref('')
 const parsing = ref(false)
+const fileKey = ref(0)
 
 async function onFileSelect(event: { files: File[] }): Promise<void> {
   const file = event.files[0]
@@ -363,10 +365,7 @@ function confirmClear(): void {
     icon: 'pi pi-exclamation-triangle',
     acceptLabel: 'Ja, leeren',
     rejectLabel: 'Abbrechen',
-    accept: () => {
-      store.clear()
-      router.push({ name: 'import' })
-    },
+    accept: () => { store.clear(); fileKey.value++ },
   })
 }
 </script>

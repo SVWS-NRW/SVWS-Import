@@ -221,7 +221,6 @@ export const useSchulbesuchStore = defineStore('schulbesuch', () => {
             ? schulenKatalogToSchulEintrag(schulenVerzeichnisMap.value.get(schulnr)!, schulformenMap.value)
             : undefined
           const created = await createSchuleInKatalog(schulnr, vollDaten)
-          console.log(`[schulbesuch] createSchuleInKatalog(${schulnr}) →`, created)
           if ('error' in created) {
             row._errors = [`Schule ${schulnr} konnte nicht angelegt werden: ${created.error}`]
             row._valid = false
@@ -268,7 +267,6 @@ export const useSchulbesuchStore = defineStore('schulbesuch', () => {
         const idJg = schulJahrgaengeMap.value.get(jgKuerzel.toLowerCase())
         if (idJg) patch.idEntlassjahrgangDieseSchule = idJg
       }
-      console.log(`[schulbesuch] PATCH /schueler/${row._schuelerId}/schulbesuch`, JSON.stringify(patch))
       if (Object.keys(patch).length === 0) {
         row._errors = ['Keine Felder zum Übertragen']
         row._valid = false
@@ -278,7 +276,6 @@ export const useSchulbesuchStore = defineStore('schulbesuch', () => {
       }
 
       const result = await patchSchuelerSchulbesuch(row._schuelerId, patch)
-      console.log(`[schulbesuch] PATCH result:`, result)
       if (result.success) {
         row._sent = true
         sent++

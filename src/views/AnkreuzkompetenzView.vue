@@ -14,7 +14,7 @@
       </div>
       <div class="header-actions">
         <FileUpload
-          ref="fileUploadRef"
+          :key="fileKey"
           mode="basic"
           :auto="false"
           :multiple="false"
@@ -297,7 +297,7 @@ const filterJahrgang = ref<number | null>(null)
 const filterFach = ref<number | null>(null)
 const filterAbschnitt = ref<number | null>(null)
 
-const fileUploadRef = ref()
+const fileKey = ref(0)
 const importRows = ref<AnkreuzkompetenzImportRow[]>([])
 const selectedImportRows = ref<AnkreuzkompetenzImportRow[]>([])
 const importProgress = ref('')
@@ -452,7 +452,7 @@ function resetImport(): void {
   importError.value = ''
   importProgress.value = ''
   importCancelled.value = false
-  fileUploadRef.value?.clear?.()
+  fileKey.value++
 }
 
 function stopImport(): void {

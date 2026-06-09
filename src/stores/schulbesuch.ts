@@ -9,7 +9,7 @@ import {
   schulenKatalogToSchulEintrag,
   type SchulenKatalogEintrag,
 } from '@/services/svwsService'
-import { fetchSchulformenMap } from '@/services/katalogService'
+import { fetchAllinoneSchulenKataloge, type JahrgangKatalogEintrag } from '@/services/katalogService'
 import { type SchuelerSchulbesuchImportRow, schulbesuchImportToApiPatch } from '@/models/SchuelerSchulbesuch'
 import { normalisiereDatum } from '@/utils/csvParser'
 
@@ -28,6 +28,8 @@ export const useSchulbesuchStore = defineStore('schulbesuch', () => {
   const schulenMap = ref<Map<string, number>>(new Map())
   const schulenVerzeichnisMap = ref<Map<string, SchulenKatalogEintrag>>(new Map())
   const schulformenMap = ref<Map<string, number>>(new Map())
+  const schulformKuerzelMap = ref<Map<string, string>>(new Map())
+  const jahrgaengeMap = ref<Map<string, JahrgangKatalogEintrag>>(new Map())
   const lookupLoaded = ref(false)
   const lookupLoading = ref(false)
 
@@ -40,11 +42,11 @@ export const useSchulbesuchStore = defineStore('schulbesuch', () => {
     if (lookupLoaded.value && !force) return {}
     lookupLoading.value = true
     try {
-      const [schuelerList, schulen, allgSchulen, sfMap] = await Promise.all([
+      const [schuelerList, schulen, allgSchulen, allinoneKataloge] = await Promise.all([
         fetchSchuelerAktuell(),
         fetchSchulKatalog(),
         fetchAllgemeineSchulen(),
-        fetchSchulformenMap(),
+        fetchAllinoneSchulenKataloge(),
       ])
 
       const sMap = new Map<string, number[]>()
@@ -70,7 +72,9 @@ export const useSchulbesuchStore = defineStore('schulbesuch', () => {
         if (sk.SchulNr) verzeichnis.set(sk.SchulNr.trim(), sk)
       }
       schulenVerzeichnisMap.value = verzeichnis
-      schulformenMap.value = sfMap
+      schulformenMap.value      = allinoneKataloge.schulformenMap
+      schulformKuerzelMap.value = allinoneKataloge.schulformKuerzelMap
+      jahrgaengeMap.value       = allinoneKataloge.jahrgaengeMap
 
       lookupLoaded.value = true
       return {}
@@ -104,6 +108,23 @@ export const useSchulbesuchStore = defineStore('schulbesuch', () => {
         } else {
           row._vorherigeSchuleStatus = schulenMap.value.has(schulnr) ? 'found' : 'new'
         }
+
+        const jg = row.vorigeEntlassjahrgang?.trim()
+        if (!jg) {
+          row._vorigeEntlassJahrgangStatus = 'empty'
+        } else {
+          const jahrgangEintrag = jahrgaengeMap.value.get(jg)
+          if (!jahrgangEintrag) {
+            row._vorigeEntlassJahrgangStatus = 'invalid_kuerzel'
+          } else {
+            const sfSchluessel = schulnr ? schulenVerzeichnisMap.value.get(schulnr)?.SF : undefined
+            const sfKuerzel = sfSchluessel ? schulformKuerzelMap.value.get(sfSchluessel) : undefined
+            row._vorigeEntlassJahrgangStatus =
+              sfKuerzel && !jahrgangEintrag.schulformen.includes(sfKuerzel)
+                ? 'invalid_for_schulform'
+                : 'valid'
+          }
+        }
       }
       const errors: string[] = []
       if (!row.nachname.trim())     errors.push('Nachname fehlt')
@@ -112,6 +133,8 @@ export const useSchulbesuchStore = defineStore('schulbesuch', () => {
       if (row._lookupStatus === 'not_found')  errors.push('Schüler nicht gefunden')
       if (row._lookupStatus === 'ambiguous')  errors.push('Schüler nicht eindeutig (mehrere Treffer)')
       if (row._lookupStatus === 'pending')    errors.push('Schüler noch nicht abgeglichen')
+      if (row._vorigeEntlassJahrgangStatus === 'invalid_kuerzel')
+        errors.push(`Entlassjahrgang "${row.vorigeEntlassjahrgang.trim()}" ist kein gültiges Kürzel`)
       row._errors = errors
       row._valid = errors.length === 0
     }
@@ -156,13 +179,15 @@ export const useSchulbesuchStore = defineStore('schulbesuch', () => {
       const schulnr = row.vorherigeSchule?.trim()
       let idVorherigeSchule: number | undefined
       if (schulnr) {
-        if (schulenMap.value.has(schulnr)) {
-          idVorherigeSchule = schulenMap.value.get(schulnr)
+        const cachedId = schulenMap.value.get(schulnr)
+        if (cachedId) {
+          idVorherigeSchule = cachedId
         } else {
           const vollDaten = schulenVerzeichnisMap.value.has(schulnr)
             ? schulenKatalogToSchulEintrag(schulenVerzeichnisMap.value.get(schulnr)!, schulformenMap.value)
             : undefined
           const created = await createSchuleInKatalog(schulnr, vollDaten)
+          console.log(`[schulbesuch] createSchuleInKatalog(${schulnr}) →`, created)
           if ('error' in created) {
             row._errors = [`Schule ${schulnr} konnte nicht angelegt werden: ${created.error}`]
             row._valid = false
@@ -178,6 +203,7 @@ export const useSchulbesuchStore = defineStore('schulbesuch', () => {
 
       const patch = schulbesuchImportToApiPatch(row)
       if (idVorherigeSchule !== undefined) patch.idVorherigeSchule = idVorherigeSchule
+      console.log(`[schulbesuch] PATCH /schueler/${row._schuelerId}/schulbesuch`, JSON.stringify(patch))
       if (Object.keys(patch).length === 0) {
         row._errors = ['Keine Felder zum Übertragen']
         row._valid = false
@@ -187,13 +213,14 @@ export const useSchulbesuchStore = defineStore('schulbesuch', () => {
       }
 
       const result = await patchSchuelerSchulbesuch(row._schuelerId, patch)
+      console.log(`[schulbesuch] PATCH result:`, result)
       if (result.success) {
         row._sent = true
         sent++
       } else {
         row._errors = [result.error ?? 'Unbekannter Fehler']
         row._valid = false
-        console.error(`[schulbesuch] PATCH /schueler/${row._schuelerId}/schulbesuch:`, result.error)
+        console.error(`[schulbesuch] PATCH /schueler/${row._schuelerId}/schulbesuch FEHLER:`, result.error)
         failed++
       }
       uploadProgress.value++

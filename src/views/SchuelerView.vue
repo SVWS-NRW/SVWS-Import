@@ -609,7 +609,20 @@ const sbColumnDefs = computed<ColDef<SchuelerSchulbesuchImportRow>[]>(() => {
     },
     { field: 'vorigeAllgHerkunft',        headerName: 'Herkunft vorige Schule',  width: 180,  hide: !has('vorigeAllgHerkunft') },
     { field: 'vorigeEntlassdatum',        headerName: 'Entlassung vorige Schule', width: 170, hide: !has('vorigeEntlassdatum') },
-    { field: 'vorigeEntlassjahrgang',     headerName: 'Entlassjahrgang vor. Sch.', width: 160, hide: !has('vorigeEntlassjahrgang') },
+    {
+      field: 'vorigeEntlassjahrgang', headerName: 'Entlassjahrgang vor. Sch.', width: 170,
+      hide: !has('vorigeEntlassjahrgang'),
+      cellRenderer: (params: { data: SchuelerSchulbesuchImportRow }) => {
+        const jg = params.data.vorigeEntlassjahrgang?.trim()
+        if (!jg) return ''
+        switch (params.data._vorigeEntlassJahrgangStatus) {
+          case 'valid':               return `${jg} <span style='color:#22c55e' title='Gültiger Jahrgang'>✔</span>`
+          case 'invalid_for_schulform': return `${jg} <span style='color:#f59e0b' title='Jahrgang nicht für die Schulform der Vorgängerschule gültig'>⚠</span>`
+          case 'invalid_kuerzel':     return `${jg} <span style='color:#ef4444' title='Kein gültiges Jahrgangs-Kürzel'>✘</span>`
+          default:                    return jg
+        }
+      },
+    },
     { field: 'vorigeArtLetzteVersetzung', headerName: 'Art letzte Versetzung',   width: 160,  hide: !has('vorigeArtLetzteVersetzung') },
     { field: 'vorigeEntlassgrundID',      headerName: 'Entlassgrund vor. Sch.',  width: 150,  hide: !has('vorigeEntlassgrundID') },
     { field: 'vorigeBemerkung',           headerName: 'Bemerkung vorige Schule', width: 180,  hide: !has('vorigeBemerkung') },

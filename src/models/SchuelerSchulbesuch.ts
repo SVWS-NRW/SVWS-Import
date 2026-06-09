@@ -6,6 +6,7 @@ export interface SchuelerSchulbesuchImportRow {
   _schuelerId: number | null
   _lookupStatus: 'pending' | 'ok' | 'not_found' | 'ambiguous'
   _vorherigeSchuleStatus: 'empty' | 'found' | 'new'
+  _vorigeEntlassJahrgangStatus: 'empty' | 'valid' | 'invalid_kuerzel' | 'invalid_for_schulform'
   // Identifikation / Suchschlüssel
   nachname: string
   vorname: string

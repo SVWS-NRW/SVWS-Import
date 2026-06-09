@@ -556,6 +556,7 @@ export function parseSchuelerSchulbesuchCsv(file: File): Promise<import('@/model
               _schuelerId: null,
               _lookupStatus: 'pending' as const,
               _vorherigeSchuleStatus: 'empty' as const,
+              _vorigeEntlassJahrgangStatus: 'empty' as const,
               // Suchschlüssel
               nachname:     get(m, 'nachname', 'name', 'familienname'),
               vorname:      get(m, 'vorname', 'firstname', 'rufname'),

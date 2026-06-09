@@ -84,6 +84,38 @@ export function resolveNationalitaet(
   return nationalitaeten.get(raw) ?? raw
 }
 
+// Gibt die numerische Katalog-ID zurück (für Lehrer-API: idStaatsangehoerigkeit)
+function parseNationalitaetenById(katalog: AllinoneKatalog): Map<string, number> {
+  const map = new Map<string, number>()
+  for (const entry of katalog.daten) {
+    const h = currentHistorie(entry)
+    if (!h?.id) continue
+    if (h.schluessel) map.set(h.schluessel, h.id)
+    if (h.codeDEStatis) map.set(h.codeDEStatis, h.id)
+    if (h.iso3) {
+      map.set(h.iso3, h.id)
+      map.set(h.iso3.toLowerCase(), h.id)
+    }
+    if (h.kuerzel) {
+      map.set(h.kuerzel, h.id)
+      map.set(h.kuerzel.toLowerCase(), h.id)
+    }
+    if (h.text) map.set(h.text.trim().toLowerCase(), h.id)
+  }
+  return map
+}
+
+export function resolveNationalitaetId(
+  nationalitaetenById: Map<string, number> | undefined,
+  raw: string,
+): number | null {
+  if (!raw || !nationalitaetenById) return null
+  const trimmed = raw.trim()
+  return nationalitaetenById.get(trimmed)
+    ?? nationalitaetenById.get(trimmed.toLowerCase())
+    ?? null
+}
+
 // ── Religionen ────────────────────────────────────────────────────────────────
 
 /**
@@ -220,29 +252,52 @@ export function resolveWohnortId(
   return orte.get(key)?.id ?? null
 }
 
-// ── Schulform ─────────────────────────────────────────────────────────────────
+// ── Schulform + Jahrgänge (aus allinone.json, ein einziger Fetch) ─────────────
 
-function parseSchulformen(katalog: AllinoneKatalog): Map<string, number> {
-  const map = new Map<string, number>()
-  for (const entry of katalog.daten) {
-    const h = currentHistorie(entry)
-    if (!h?.id) continue
-    // SchulenKatalogEintrag.SF enthält den Statistik-Schlüssel (z.B. "02"), nicht das Kürzel ("G")
-    if (h.schluessel) map.set(h.schluessel.trim(), h.id)
-    if (h.kuerzel)    map.set(h.kuerzel.trim(), h.id)
-  }
-  return map
+export interface JahrgangKatalogEintrag {
+  kuerzel: string
+  text: string
+  schulformen: string[]
 }
 
-/** Lädt das Schulform-Kürzel → DB-ID-Mapping aus allinone.json */
-export async function fetchSchulformenMap(): Promise<Map<string, number>> {
+export interface AllinoneSchulenKataloge {
+  /** schluessel|kuerzel → DB-ID (für schulenKatalogToSchulEintrag) */
+  schulformenMap: Map<string, number>
+  /** SF-Schlüssel (z.B. "02") → Schulform-Kürzel (z.B. "G") */
+  schulformKuerzelMap: Map<string, string>
+  /** Jahrgang-Kürzel (z.B. "04") → Katalog-Eintrag inkl. gültiger Schulformen */
+  jahrgaengeMap: Map<string, JahrgangKatalogEintrag>
+}
+
+export async function fetchAllinoneSchulenKataloge(): Promise<AllinoneSchulenKataloge> {
+  const schulformenMap    = new Map<string, number>()
+  const schulformKuerzelMap = new Map<string, string>()
+  const jahrgaengeMap     = new Map<string, JahrgangKatalogEintrag>()
   try {
     const data = await fetchAllInOne()
-    const katalog = (data as Record<string, AllinoneKatalog | undefined>)['Schulform']
-    return katalog ? parseSchulformen(katalog) : new Map()
-  } catch {
-    return new Map()
-  }
+    const raw  = data as Record<string, { version: number; daten: { bezeichner: string; idStatistik: string; historie: (AllinoneHistorie & { schulformen?: string[] })[] }[] } | undefined>
+
+    // Schulformen
+    for (const entry of (raw['Schulform']?.daten ?? [])) {
+      const h = entry.historie.find(x => x.gueltigBis === null) ?? entry.historie[entry.historie.length - 1]
+      if (!h) continue
+      if (h.id)       { if (h.schluessel) schulformenMap.set(h.schluessel.trim(), h.id); if (h.kuerzel) schulformenMap.set(h.kuerzel.trim(), h.id) }
+      if (h.schluessel && h.kuerzel) schulformKuerzelMap.set(h.schluessel.trim(), h.kuerzel.trim())
+    }
+
+    // Jahrgänge
+    for (const entry of (raw['Jahrgaenge']?.daten ?? [])) {
+      const h = entry.historie.find(x => x.gueltigBis === null) ?? entry.historie[entry.historie.length - 1]
+      if (!h?.kuerzel) continue
+      jahrgaengeMap.set(h.kuerzel.trim(), { kuerzel: h.kuerzel.trim(), text: h.text, schulformen: h.schulformen ?? [] })
+    }
+  } catch { /* Katalog nicht verfügbar → leere Maps */ }
+  return { schulformenMap, schulformKuerzelMap, jahrgaengeMap }
+}
+
+/** @deprecated Nutze fetchAllinoneSchulenKataloge() */
+export async function fetchSchulformenMap(): Promise<Map<string, number>> {
+  return (await fetchAllinoneSchulenKataloge()).schulformenMap
 }
 
 // ── ZulaessigeKursart ────────────────────────────────────────────────────────
@@ -276,7 +331,10 @@ export async function loadKataloge(): Promise<ImportKataloge> {
 
   if (allinoneResult.status === 'fulfilled') {
     const data = allinoneResult.value
-    if (data.Nationalitaeten) kataloge.nationalitaeten  = parseNationalitaeten(data.Nationalitaeten)
+    if (data.Nationalitaeten) {
+      kataloge.nationalitaeten    = parseNationalitaeten(data.Nationalitaeten)
+      kataloge.nationalitaetenById = parseNationalitaetenById(data.Nationalitaeten)
+    }
     if (data.Verkehrssprache) kataloge.verkehrssprachen = parseVerkehrssprachen(data.Verkehrssprache)
   }
   if (religionenResult.status === 'fulfilled') kataloge.religionen = religionenResult.value

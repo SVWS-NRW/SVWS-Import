@@ -14,7 +14,7 @@ import { fachImportToApi } from '@/models/Faecher'
 import type { ImportModule, MappedRow, ImportContext, EntityType, OrtKatalogEintrag } from '@/models/ImportSchema'
 import { betriebImportToApi, ansprechpartnerImportToApi, type BetriebImportRow, type BetriebDetails, type AnsprechpartnerImportRow } from '@/models/Betriebe'
 import { ortsteilImportToApi, type OrtsteilImportRow, type OrtsteilDetails } from '@/models/Ortsteile'
-import { resolveWohnortId, resolveReligionId, resolveNationalitaet, resolveVerkehrssprache } from './katalogService'
+import { resolveWohnortId, resolveReligionId, resolveNationalitaet, resolveVerkehrssprache, resolveNationalitaetId } from './katalogService'
 import type { Floskelgruppe, Floskel, FloskelApiPayload } from '@/models/Floskel'
 import type {
   Ankreuzkompetenz,
@@ -410,13 +410,14 @@ export async function createSchueler(
 
 export async function createLehrer(
   row: LehrerImportRow,
-  nationalitaetenKatalog?: Map<string, string>,
+  nationalitaetenById?: Map<string, number>,
   orteKatalog?: Map<string, OrtKatalogEintrag>,
 ): Promise<UploadResult> {
   try {
     const payload: LehrerStammdaten = lehrerImportToApi(row)
-    if (payload.staatsangehoerigkeitID) {
-      payload.staatsangehoerigkeitID = resolveNationalitaet(nationalitaetenKatalog, payload.staatsangehoerigkeitID) || null
+    if (row.staatsangehoerigkeitID) {
+      const id = resolveNationalitaetId(nationalitaetenById, row.staatsangehoerigkeitID)
+      if (id !== null) payload.idStaatsangehoerigkeit = id
     }
     if (orteKatalog) {
       payload.wohnortID = resolveWohnortId(orteKatalog, row.plz, row.ort)
@@ -965,8 +966,12 @@ export async function createSchuleInKatalog(
       sortierung: 32000,
       istSichtbar: true,
     }
-    const response = await getApiClient().post<SchulEintrag>('/schule/schulen/create', body)
-    return { id: response.data.id }
+    const response = await getApiClient().post<SchulEintrag | number>('/schule/schulen/create', body)
+    const id = typeof response.data === 'number'
+      ? response.data
+      : (response.data as SchulEintrag).id
+    if (!id) throw new Error(`Schule angelegt, aber keine gültige ID in der Antwort: ${JSON.stringify(response.data)}`)
+    return { id }
   } catch (error: unknown) {
     return { error: toAppError(error).messageUser }
   }

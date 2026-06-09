@@ -42,8 +42,10 @@ export interface ReligionKatalogEintrag {
 
 
 export interface ImportKataloge {
-  /** schluessel (codeDEStatis, z.B. "000") → kuerzel (ISO-3, z.B. "DEU") */
+  /** schluessel (codeDEStatis, z.B. "000") → kuerzel (ISO-3, z.B. "DEU") — nur für Schüler-Import */
   nationalitaeten?: Map<string, string>
+  /** diverse Schlüssel (schluessel, codeDEStatis, iso3, kuerzel, text) → numerische Katalog-ID — für Lehrer-Import */
+  nationalitaetenById?: Map<string, number>
   /** "PLZ|ortsname" (lowercase) → OrtKatalogEintrag */
   orte?: Map<string, OrtKatalogEintrag>
   /** kuerzel (uppercase) → ReligionKatalogEintrag */

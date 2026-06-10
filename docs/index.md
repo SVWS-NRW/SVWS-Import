@@ -27,6 +27,7 @@ Die Struktur orientiert sich an den Kacheln der Import-Startseite.
 - [Floskeln filtern](handbuch/floskeln-filtern.md)
 - [Floskeln löschen](handbuch/floskeln-loeschen.md)
 - [Floskeln importieren](handbuch/floskeln-importieren.md)
+- [Daten exportieren (Schüler & Lehrer)](handbuch/daten-exportieren.md)
 
 ### Unterrichtsdaten
 

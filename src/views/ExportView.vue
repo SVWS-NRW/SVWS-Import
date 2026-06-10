@@ -237,6 +237,11 @@
             </span>
           </h3>
           <div class="section-actions">
+            <InputText
+              v-model="lehrerNameSearch"
+              placeholder="Name suchen…"
+              class="schueler-name-search"
+            />
             <MultiSelect
               v-model="lehrerSichtbarFilter"
               :options="LEHRER_SICHTBAR_OPTIONS"
@@ -279,11 +284,15 @@
           v-model:selection="selectedLehrer"
           :value="filteredLehrer"
           dataKey="id"
-          scrollable
-          scrollHeight="400px"
-          :virtualScrollerOptions="{ itemSize: 36 }"
+          paginator
+          :rows="50"
+          :rowsPerPageOptions="[25, 50, 100, 200]"
+          paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown CurrentPageReport"
+          currentPageReportTemplate="{first}–{last} von {totalRecords}"
           size="small"
           sortMode="single"
+          class="compact-table"
+          :pt="{ root: { style: '--p-datatable-header-cell-background: color-mix(in srgb, var(--p-primary-color) 18%, var(--p-surface-card))' } }"
         >
           <Column selectionMode="multiple" style="width: 3rem; flex: none" />
           <Column field="kuerzel"  header="Kürzel"   sortable style="min-width: 80px" />
@@ -485,31 +494,53 @@ const TILES: ExportTile[] = [
       {
         path: id => `/lehrer/${id}/stammdaten`,
         fieldKeys: [
-          'anrede', 'amtsbezeichnung', 'geschlecht', 'geburtsdatum',
-          'staatsangehoerigkeitID', 'strassenname', 'hausnummer', 'plz', 'ort',
+          'anrede', 'titel', 'amtsbezeichnung', 'personalTyp', 'geschlecht', 'geburtsdatum',
+          'staatsangehoerigkeitID', 'strassenname', 'hausnummer', 'hausnummerZusatz',
+          'wohnortID', 'ortsteilID',
           'telefon', 'telefonMobil', 'emailPrivat', 'emailDienstlich',
+          'istSichtbar', 'istRelevantFuerStatistik',
+        ],
+      },
+      {
+        path: id => `/lehrer/${id}/personaldaten`,
+        fieldKeys: [
+          'identNrTeil1', 'identNrTeil2SerNr', 'personalaktennummer',
+          'lbvPersonalnummer', 'lbvVerguetungsschluessel',
+          'zugangsdatum', 'zugangsgrund', 'abgangsdatum', 'abgangsgrund',
         ],
       },
     ],
     fields: [
-      { key: 'kuerzel',               label: 'Kürzel'            },
-      { key: 'nachname',              label: 'Nachname'          },
-      { key: 'vorname',               label: 'Vorname'           },
-      { key: 'personTyp',             label: 'Personaltyp'       },
-      { key: 'anrede',                label: 'Anrede'            },
-      { key: 'titel',                 label: 'Titel'             },
-      { key: 'amtsbezeichnung',       label: 'Amtsbezeichnung'   },
-      { key: 'geschlecht',            label: 'Geschlecht'        },
-      { key: 'geburtsdatum',          label: 'Geburtsdatum'      },
-      { key: 'staatsangehoerigkeitID',label: 'Staatsangehörigkeit'},
-      { key: 'strassenname',          label: 'Straße'            },
-      { key: 'hausnummer',            label: 'Hausnummer'        },
-      { key: 'plz',                   label: 'PLZ'               },
-      { key: 'ort',                   label: 'Wohnort'           },
-      { key: 'telefon',               label: 'Telefon'           },
-      { key: 'telefonMobil',          label: 'Telefon (Mobil)'   },
-      { key: 'emailPrivat',           label: 'E-Mail (privat)'   },
-      { key: 'emailDienstlich',       label: 'E-Mail (dienstlich)'},
+      { key: 'kuerzel',                  label: 'Kürzel',                   section: 'Stammdaten',   group: 'Identifikation' },
+      { key: 'personalTyp',              label: 'Personaltyp',              section: 'Stammdaten',   group: 'Identifikation' },
+      { key: 'nachname',                 label: 'Nachname',                 section: 'Stammdaten',   group: 'Person' },
+      { key: 'vorname',                  label: 'Vorname',                  section: 'Stammdaten',   group: 'Person' },
+      { key: 'anrede',                   label: 'Anrede',                   section: 'Stammdaten',   group: 'Person' },
+      { key: 'titel',                    label: 'Titel',                    section: 'Stammdaten',   group: 'Person' },
+      { key: 'amtsbezeichnung',          label: 'Amtsbezeichnung',          section: 'Stammdaten',   group: 'Person' },
+      { key: 'geschlecht',               label: 'Geschlecht',               section: 'Stammdaten',   group: 'Person' },
+      { key: 'geburtsdatum',             label: 'Geburtsdatum',             section: 'Stammdaten',   group: 'Person' },
+      { key: 'staatsangehoerigkeitID',   label: 'Staatsangehörigkeit',      section: 'Stammdaten',   group: 'Person' },
+      { key: 'strassenname',             label: 'Straße',                   section: 'Stammdaten',   group: 'Adresse' },
+      { key: 'hausnummer',               label: 'Hausnummer',               section: 'Stammdaten',   group: 'Adresse' },
+      { key: 'plz',                      label: 'PLZ',                      section: 'Stammdaten',   group: 'Adresse' },
+      { key: 'ort',                      label: 'Wohnort',                  section: 'Stammdaten',   group: 'Adresse' },
+      { key: 'telefon',                  label: 'Telefon',                  section: 'Stammdaten',   group: 'Kontakt' },
+      { key: 'telefonMobil',             label: 'Telefon (Mobil)',           section: 'Stammdaten',   group: 'Kontakt' },
+      { key: 'emailPrivat',              label: 'E-Mail (privat)',           section: 'Stammdaten',   group: 'Kontakt' },
+      { key: 'emailDienstlich',          label: 'E-Mail (dienstlich)',       section: 'Stammdaten',   group: 'Kontakt' },
+      { key: 'istAktiv',                 label: 'Aktiv',                    section: 'Stammdaten',   group: 'Status' },
+      { key: 'istSichtbar',              label: 'Sichtbar',                 section: 'Stammdaten',   group: 'Status' },
+      { key: 'istRelevantFuerStatistik', label: 'Statistikrelevant',        section: 'Stammdaten',   group: 'Status' },
+      { key: 'identNrTeil1',             label: 'Ident-Nr. (Teil 1)',        section: 'Personaldaten', group: 'Identifikation' },
+      { key: 'identNrTeil2SerNr',        label: 'Ident-Nr. (Teil 2)',        section: 'Personaldaten', group: 'Identifikation' },
+      { key: 'personalaktennummer',      label: 'Personalaktennummer',       section: 'Personaldaten', group: 'Identifikation' },
+      { key: 'lbvPersonalnummer',        label: 'LBV-Personalnummer',        section: 'Personaldaten', group: 'Identifikation' },
+      { key: 'lbvVerguetungsschluessel', label: 'LBV-Vergütungsschlüssel',   section: 'Personaldaten', group: 'Identifikation' },
+      { key: 'zugangsdatum',             label: 'Zugangsdatum',              section: 'Personaldaten', group: 'Zu-/Abgang' },
+      { key: 'zugangsgrund',             label: 'Zugangsgrund',              section: 'Personaldaten', group: 'Zu-/Abgang' },
+      { key: 'abgangsdatum',             label: 'Abgangsdatum',              section: 'Personaldaten', group: 'Zu-/Abgang' },
+      { key: 'abgangsgrund',             label: 'Abgangsgrund',              section: 'Personaldaten', group: 'Zu-/Abgang' },
     ],
   },
   {
@@ -594,6 +625,17 @@ function formatSchuelerValue(key: string, value: unknown): unknown {
   return value
 }
 
+const LEHRER_BOOL_FIELDS = new Set([
+  'istAktiv', 'istSichtbar', 'istRelevantFuerStatistik',
+])
+
+function formatLehrerValue(key: string, value: unknown): unknown {
+  if (key === 'geschlecht') return GESCHLECHT_LABELS[value as number] ?? String(value ?? '')
+  if (LEHRER_BOOL_FIELDS.has(key)) return value === true ? 'Ja' : value === false ? 'Nein' : ''
+  if (Array.isArray(value)) return value.length > 0 ? JSON.stringify(value) : ''
+  return value
+}
+
 const schuleStore = useSchuleStore()
 
 const selectedTile        = ref<string | null>(null)
@@ -620,6 +662,7 @@ const lehrerListLoading       = ref(false)
 const lehrerListError         = ref('')
 const lehrerSichtbarFilter    = ref<boolean[]>([true])
 const lehrerPersonalTypFilter = ref<string[]>([])
+const lehrerNameSearch        = ref('')
 
 const activeTile = computed(() => TILES.find(t => t.id === selectedTile.value))
 
@@ -674,10 +717,12 @@ const loadBtnLabel = computed(() => {
 const filteredLehrer = computed(() => {
   const sichtbarSet = lehrerSichtbarFilter.value.length > 0 ? new Set(lehrerSichtbarFilter.value) : null
   const typSet      = lehrerPersonalTypFilter.value.length > 0 ? new Set(lehrerPersonalTypFilter.value) : null
-  if (!sichtbarSet && !typSet) return lehrerListe.value
+  const nameQ       = lehrerNameSearch.value.trim().toLowerCase()
   return lehrerListe.value.filter(l =>
     (!sichtbarSet || sichtbarSet.has(l.istSichtbar as boolean)) &&
-    (!typSet      || typSet.has(l.personTyp as string)),
+    (!typSet      || typSet.has(l.personTyp as string)) &&
+    (!nameQ       || (l.nachname as string).toLowerCase().includes(nameQ) ||
+                     (l.vorname  as string).toLowerCase().includes(nameQ)),
   )
 })
 
@@ -911,7 +956,7 @@ async function loadData(): Promise<void> {
         needsOrt ? fetchOrteById() : Promise.resolve(null as unknown as Map<number, OrtKatalogEintrag>),
       ])
 
-      const resolved = enriched.map(row => {
+      const enrichedRows = enriched.map(row => {
         const r: Record<string, unknown> = { ...row }
         if (orteById) {
           const entry = orteById.get(r.wohnortID as number)
@@ -923,11 +968,20 @@ async function loadData(): Promise<void> {
         return r
       })
 
+      const fieldLabelMap = Object.fromEntries((tile.fields ?? []).map(f => [f.key, f.label]))
+      const exportCols = selectedFields.value.map(k => fieldLabelMap[k] ?? k)
+      const exportData = enrichedRows.map(row => {
+        const r: Record<string, unknown> = {}
+        for (const k of selectedFields.value)
+          r[fieldLabelMap[k] ?? k] = formatLehrerValue(k, row[k])
+        return r
+      })
+
       const date = new Date().toISOString().slice(0, 10)
       const filename = `lehrer_export_${date}`
       format.value === 'csv'
-        ? exportAsCsv(resolved, selectedFields.value, `${filename}.csv`)
-        : exportAsJson(resolved, selectedFields.value, `${filename}.json`)
+        ? exportAsCsv(exportData, exportCols, `${filename}.csv`)
+        : exportAsJson(exportData, exportCols, `${filename}.json`)
     } catch (e) {
       loadError.value = e instanceof Error ? e.message : 'Fehler beim Exportieren'
     } finally {
@@ -1344,7 +1398,7 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
   padding: 0.1rem 0.4rem;
 }
 :global(.p-datatable.p-datatable-sm.compact-table .p-datatable-thead > tr > th) {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   padding: 0.15rem 0.4rem;
 }
 :global(.p-datatable.compact-table) {
@@ -1352,4 +1406,5 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
   --p-checkbox-height: 1rem;
   --p-checkbox-icon-size: 0.55rem;
 }
+
 </style>

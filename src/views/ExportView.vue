@@ -25,8 +25,8 @@
     <!-- Konfigurationsbereich -->
     <template v-if="activeTile">
 
-      <!-- Format + Aktionen -->
-      <div class="config-section">
+      <!-- Format + Aktionen (nur für Schüler/Lehrer und andere Tiles, nicht für Lernplattformen) -->
+      <div v-if="selectedTile !== 'lernplattformen'" class="config-section">
         <h3 class="section-title">Format</h3>
         <div class="format-row">
           <label class="format-option">
@@ -64,8 +64,8 @@
         </div>
       </div>
 
-      <!-- Felder wählen -->
-      <div class="config-section">
+      <!-- Felder wählen (nicht für Lernplattformen) -->
+      <div v-if="selectedTile !== 'lernplattformen'" class="config-section">
         <div class="section-header">
           <h3 class="section-title">Felder auswählen</h3>
           <div class="section-actions">
@@ -226,6 +226,97 @@
         </DataTable>
       </div>
 
+      <!-- Lernplattformen -->
+      <div v-if="selectedTile === 'lernplattformen'" class="config-section">
+        <h3 class="section-title">Lernplattform exportieren</h3>
+
+        <div class="lernplattform-config">
+          <!-- Abschnitt -->
+          <div class="lernplattform-row">
+            <label class="lernplattform-label">Schuljahresabschnitt</label>
+            <Select
+              v-if="schuleStore.loaded"
+              v-model="lpAbschnittId"
+              :options="schuleStore.abschnitteOptions"
+              optionLabel="label"
+              optionValue="id"
+              placeholder="Abschnitt wählen"
+              size="small"
+              style="width: 200px"
+            />
+            <InputNumber
+              v-else
+              v-model="lpAbschnittId"
+              :min="1"
+              placeholder="Abschnitt-ID"
+              size="small"
+              style="width: 120px"
+            />
+          </div>
+
+          <!-- Lernplattform -->
+          <div class="lernplattform-row">
+            <label class="lernplattform-label">Lernplattform</label>
+            <div class="lernplattform-select-row">
+              <Select
+                v-model="lpSelectedId"
+                :options="lpListe"
+                optionLabel="bezeichnung"
+                optionValue="id"
+                placeholder="Lernplattform wählen"
+                size="small"
+                style="width: 250px"
+                :loading="lpListLoading"
+                :disabled="lpListe.length === 0"
+              />
+              <Button
+                icon="pi pi-refresh"
+                severity="secondary"
+                text
+                size="small"
+                :loading="lpListLoading"
+                v-tooltip.top="'Lernplattformen neu laden'"
+                @click="reloadLernplattformen"
+              />
+            </div>
+            <span v-if="lpListError" class="list-error"><i class="pi pi-exclamation-triangle" /> {{ lpListError }}</span>
+          </div>
+
+          <!-- Format -->
+          <div class="lernplattform-row">
+            <label class="lernplattform-label">Format</label>
+            <div class="lp-format-options">
+              <label class="format-option">
+                <RadioButton v-model="lpFormat" inputId="lp-fmt-json" value="json" />
+                <i class="pi pi-code" />
+                <span>JSON</span>
+              </label>
+              <label class="format-option">
+                <RadioButton v-model="lpFormat" inputId="lp-fmt-gzip" value="gzip" />
+                <i class="pi pi-file-export" />
+                <span>GZIP (komprimiert)</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Export-Button -->
+          <div class="lernplattform-row">
+            <Button
+              label="Exportieren"
+              icon="pi pi-download"
+              size="small"
+              :loading="lpLoading"
+              :disabled="lpSelectedId === null || lpAbschnittId === null"
+              @click="doLernplattformExport"
+            />
+          </div>
+
+          <Message v-if="lpError" severity="error" :closable="true" @close="lpError = ''">
+            {{ lpError }}
+          </Message>
+        </div>
+      </div>
+
       <!-- Lehrerliste -->
       <div v-if="selectedTile === 'lehrer'" class="config-section">
         <div class="section-header">
@@ -340,10 +431,11 @@ import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
-import { fetchForExport, fetchSchuelerAuswahlliste, enrichSchueler, enrichRecords, fetchOrteById, fetchReligionenById, fetchSchulenById, fetchJahrgaengeById, fetchEinschulungsartenById, fetchUebergangsempfehlungenById, fetchKindergartenbesuchsdauerById, fetchKindergartenById, type SchuelerAuswahl } from '@/services/svwsService'
+import { fetchForExport, fetchSchuelerAuswahlliste, enrichSchueler, enrichRecords, fetchOrteById, fetchReligionenById, fetchSchulenById, fetchJahrgaengeById, fetchEinschulungsartenById, fetchUebergangsempfehlungenById, fetchKindergartenbesuchsdauerById, fetchKindergartenById, fetchLernplattformen, downloadLernplattformExport, type SchuelerAuswahl, type LernplattformEintrag } from '@/services/svwsService'
 import type { OrtKatalogEintrag, ReligionKatalogEintrag } from '@/models/ImportSchema'
 import { exportAsCsv, exportAsJson } from '@/utils/exportUtils'
 import { useSchuleStore } from '@/stores/schule'
+import { useAuthStore } from '@/stores/auth'
 
 interface FieldDef { key: string; label: string; group?: string; section?: string }
 
@@ -562,7 +654,6 @@ const TILES: ExportTile[] = [
     label: 'Lernplattformen',
     description: 'Zugangsdaten für Lernplattformen exportieren',
     icon: 'pi pi-desktop',
-    comingSoon: true,
   },
 ]
 
@@ -637,6 +728,7 @@ function formatLehrerValue(key: string, value: unknown): unknown {
 }
 
 const schuleStore = useSchuleStore()
+const authStore   = useAuthStore()
 
 const selectedTile        = ref<string | null>(null)
 const selectedFields      = ref<string[]>([])
@@ -663,6 +755,15 @@ const lehrerListError         = ref('')
 const lehrerSichtbarFilter    = ref<boolean[]>([true])
 const lehrerPersonalTypFilter = ref<string[]>([])
 const lehrerNameSearch        = ref('')
+
+const lpListe        = ref<LernplattformEintrag[]>([])
+const lpSelectedId   = ref<number | null>(null)
+const lpAbschnittId  = ref<number | null>(null)
+const lpFormat       = ref<'json' | 'gzip'>('json')
+const lpListLoading  = ref(false)
+const lpListError    = ref('')
+const lpLoading      = ref(false)
+const lpError        = ref('')
 
 const activeTile = computed(() => TILES.find(t => t.id === selectedTile.value))
 
@@ -752,6 +853,7 @@ const filteredSchueler = computed(() => {
 onMounted(() => {
   if (schuleStore.aktuellerAbschnittId !== null) {
     selectedAbschnittId.value = schuleStore.aktuellerAbschnittId
+    lpAbschnittId.value = schuleStore.aktuellerAbschnittId
   }
 })
 
@@ -776,8 +878,16 @@ function selectTile(id: string): void {
   lehrerListError.value = ''
   const tile = TILES.find(t => t.id === id)
   selectedFields.value = tile?.fields?.map(f => f.key) ?? []
-  if (id === 'schueler') reloadAuswahlliste()
-  if (id === 'lehrer')   reloadLehrerListe()
+  if (id === 'schueler')      reloadAuswahlliste()
+  if (id === 'lehrer')        reloadLehrerListe()
+  if (id === 'lernplattformen') {
+    lpListe.value = []
+    lpSelectedId.value = null
+    lpError.value = ''
+    lpListError.value = ''
+    if (schuleStore.aktuellerAbschnittId !== null) lpAbschnittId.value = schuleStore.aktuellerAbschnittId
+    reloadLernplattformen()
+  }
 }
 
 function selectAll(): void {
@@ -814,6 +924,52 @@ async function reloadLehrerListe(): Promise<void> {
     lehrerListe.value = []
   } finally {
     lehrerListLoading.value = false
+  }
+}
+
+async function reloadLernplattformen(): Promise<void> {
+  lpListLoading.value = true
+  lpListError.value = ''
+  lpSelectedId.value = null
+  try {
+    lpListe.value = await fetchLernplattformen(authStore.schema)
+    if (lpListe.value.length === 0) lpListError.value = 'Keine Lernplattformen gefunden.'
+  } catch (e) {
+    lpListError.value = e instanceof Error ? e.message : 'Fehler beim Laden der Lernplattformen'
+    lpListe.value = []
+  } finally {
+    lpListLoading.value = false
+  }
+}
+
+async function doLernplattformExport(): Promise<void> {
+  if (lpSelectedId.value === null || lpAbschnittId.value === null) return
+  lpLoading.value = true
+  lpError.value = ''
+  try {
+    const plattform = lpListe.value.find(p => p.id === lpSelectedId.value)
+    const bezeichnung   = plattform?.bezeichnung ?? String(lpSelectedId.value)
+    const abschnittLbl  = schuleStore.loaded
+      ? schuleStore.labelForId(lpAbschnittId.value)
+      : String(lpAbschnittId.value)
+    const { blob, filename } = await downloadLernplattformExport(
+      authStore.schema,
+      lpSelectedId.value,
+      lpAbschnittId.value,
+      lpFormat.value,
+      bezeichnung,
+      abschnittLbl,
+    )
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    lpError.value = e instanceof Error ? e.message : 'Fehler beim Exportieren'
+  } finally {
+    lpLoading.value = false
   }
 }
 
@@ -1405,6 +1561,41 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
   --p-checkbox-width: 1rem;
   --p-checkbox-height: 1rem;
   --p-checkbox-icon-size: 0.55rem;
+}
+
+/* ── Lernplattformen ─────────────────────────────────────────────────────── */
+
+.lernplattform-config {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding-top: 0.25rem;
+}
+
+.lernplattform-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.lernplattform-label {
+  font-size: 0.78rem;
+  font-weight: 500;
+  min-width: 160px;
+  color: var(--p-text-color);
+}
+
+.lernplattform-select-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.lp-format-options {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
 }
 
 </style>

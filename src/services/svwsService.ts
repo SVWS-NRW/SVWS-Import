@@ -1,4 +1,4 @@
-import { getApiClient } from './apiClient'
+import { getApiClient, getRootClient } from './apiClient'
 import { toAppError } from './errorService'
 import type { SchuelerNeu, SchuelerImportRow } from '@/models/Schueler'
 import type { LehrerStammdaten, LehrerImportRow } from '@/models/Lehrer'
@@ -1091,5 +1091,36 @@ export async function createSchuleInKatalog(
   } catch (error: unknown) {
     return { error: toAppError(error).messageUser }
   }
+}
+
+export interface LernplattformEintrag {
+  id: number
+  bezeichnung: string
+  [key: string]: unknown
+}
+
+export async function fetchLernplattformen(schema: string): Promise<LernplattformEintrag[]> {
+  const response = await getRootClient().get(`/api/external/${schema}/v1/lernplattformen`)
+  return Array.isArray(response.data) ? response.data : []
+}
+
+export async function downloadLernplattformExport(
+  schema: string,
+  idLernplattform: number,
+  idSchuljahresabschnitt: number,
+  format: 'json' | 'gzip',
+  bezeichnung: string,
+  abschnittLabel: string,
+): Promise<{ blob: Blob; filename: string }> {
+  const path = format === 'gzip'
+    ? `/api/external/${schema}/v1/lernplattformen/${idLernplattform}/${idSchuljahresabschnitt}/gzip`
+    : `/api/external/${schema}/v1/lernplattformen/${idLernplattform}/${idSchuljahresabschnitt}`
+  const response = await getRootClient().get(path, { responseType: 'blob' })
+  const date = new Date().toISOString().slice(0, 10)
+  const ext = format === 'gzip' ? 'json.gz' : 'json'
+  const safeName      = bezeichnung.replace(/[^a-zA-Z0-9\-äöüÄÖÜß]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '')
+  const safeAbschnitt = abschnittLabel.replace(/[^a-zA-Z0-9\-äöüÄÖÜß]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '')
+  const filename = `lernplattform_${safeName}_${safeAbschnitt}_${date}.${ext}`
+  return { blob: response.data as Blob, filename }
 }
 

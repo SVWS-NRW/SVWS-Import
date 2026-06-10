@@ -563,6 +563,7 @@ export function parseSchuelerSchulbesuchCsv(file: File): Promise<import('@/model
               _entlassJahrgangStatus: 'empty' as const,
               _hoechsterAbschlussStatus: 'empty' as const,
               _uebergangsempfehlungStatus: 'empty' as const,
+              _vorigeAbschlussartBerufsbildendStatus: 'empty' as const,
               // Suchschlüssel
               nachname:     get(m, 'nachname', 'name', 'familienname'),
               vorname:      get(m, 'vorname', 'firstname', 'rufname'),
@@ -576,6 +577,7 @@ export function parseSchuelerSchulbesuchCsv(file: File): Promise<import('@/model
               vorigeEntlassgrundID:      get(m, 'vorigeentlassgrundid', 'vorigeentlassgrund', 'entlassgrundvorher'),
               vorigeBemerkung:           get(m, 'vorigebemerkung', 'bemerkung'),
               vorigeAbschlussartID:              get(m, 'vorigeabschlussartid', 'vorigeabschlussartallgemeinbildend', 'vorigeabschlussart', 'abschlussartvorher', 'abschlussvorher'),
+              vorigeAbschlussartBerufsbildend:   get(m, 'vorigeabschlussartberufsbildend', 'abschlussberufsbildend', 'abschlussartberufsbildend'),
               schluesselHoechsterSchulabschluss: get(m, 'schluesselHoechsterSchulabschluss', 'schluesselhöchsterschulabschluss', 'hoechsterschulabschluss', 'höchsterschulabschluss'),
               // Entlassung von dieser Schule
               entlassungDatum:           normalisiereDatum(get(m, 'entlassungdatum', 'entlassdatum', 'entlassungsdatum')),
@@ -597,7 +599,8 @@ export function parseSchuelerSchulbesuchCsv(file: File): Promise<import('@/model
               sekIIWechsel:              get(m, 'sekiiwechsel', 'wechselsekii', 'sek2wechsel'),
               // Kindergarten
               idDauerKindergartenbesuch: get(m, 'iddauerkindergartenbesuch', 'dauerkindergartenbesuch', 'dauerkindergarten', 'kindergartenbesuchdauer'),
-              idKindergarten:            get(m, 'idkindergarten', 'kindergarten', 'kindergartenid'),
+              kindergartenBezeichnung:   get(m, 'kindergartenbezeichnung', 'kindergarten', 'kindergartenname', 'idkindergarten'),
+              _kindergartenStatus: 'empty' as const,
               // Sprachförderung
               verpflichtungSprachfoerderkurs: get(m, 'verpflichtungsprachfoerderkurs', 'sprachfoerderpflicht'),
               teilnahmeSprachfoerderkurs:     get(m, 'teilnahmesprachfoerderkurs', 'sprachfoerderteilnahme'),

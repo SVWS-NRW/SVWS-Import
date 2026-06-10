@@ -10,6 +10,9 @@ import {
   fetchEntlassgruende,
   fetchJahrgaenge,
   buildJahrgaengeMap,
+  fetchSchuleStammdaten,
+  fetchKindergaerten,
+  createKindergarten,
   type SchulenKatalogEintrag,
 } from '@/services/svwsService'
 import { fetchAllinoneSchulenKataloge, type JahrgangKatalogEintrag } from '@/services/katalogService'
@@ -36,7 +39,10 @@ export const useSchulbesuchStore = defineStore('schulbesuch', () => {
   const entlassgruendeSet              = ref<Set<number>>(new Set())
   const schulJahrgaengeMap             = ref<Map<string, number>>(new Map())
   const schulabschlussAllgemeinbildendSet  = ref<Set<string>>(new Set())
+  const schulabschlussBerufsbildendSet     = ref<Set<string>>(new Set())
   const uebergangsempfehlungMap            = ref<Map<string, number>>(new Map())
+  const schulformSchule                    = ref<string | null>(null)
+  const kindergaertenMap                   = ref<Map<string, number>>(new Map())
   const lookupLoaded = ref(false)
   const lookupLoading = ref(false)
 
@@ -49,13 +55,15 @@ export const useSchulbesuchStore = defineStore('schulbesuch', () => {
     if (lookupLoaded.value && !force) return {}
     lookupLoading.value = true
     try {
-      const [schuelerList, schulen, allgSchulen, allinoneKataloge, entlassgruende, jahrgaenge] = await Promise.all([
+      const [schuelerList, schulen, allgSchulen, allinoneKataloge, entlassgruende, jahrgaenge, stammdaten, kindergaerten] = await Promise.all([
         fetchSchuelerAktuell(),
         fetchSchulKatalog(),
         fetchAllgemeineSchulen(),
         fetchAllinoneSchulenKataloge(),
         fetchEntlassgruende(),
         fetchJahrgaenge(),
+        fetchSchuleStammdaten(),
+        fetchKindergaerten(),
       ])
 
       const sMap = new Map<string, number[]>()
@@ -85,7 +93,15 @@ export const useSchulbesuchStore = defineStore('schulbesuch', () => {
       schulformKuerzelMap.value               = allinoneKataloge.schulformKuerzelMap
       jahrgaengeMap.value                     = allinoneKataloge.jahrgaengeMap
       schulabschlussAllgemeinbildendSet.value  = allinoneKataloge.schulabschlussAllgemeinbildendSet
+      schulabschlussBerufsbildendSet.value     = allinoneKataloge.schulabschlussBerufsbildendSet
       uebergangsempfehlungMap.value            = allinoneKataloge.uebergangsempfehlungMap
+      schulformSchule.value                    = stammdaten?.schulform ?? null
+
+      const kgMap = new Map<string, number>()
+      for (const kg of kindergaerten) {
+        if (kg.bezeichnung) kgMap.set(kg.bezeichnung.trim().toLowerCase(), kg.id)
+      }
+      kindergaertenMap.value = kgMap
       entlassgruendeSet.value                 = entlassgruende
       schulJahrgaengeMap.value                = buildJahrgaengeMap(jahrgaenge)
 
@@ -129,17 +145,31 @@ export const useSchulbesuchStore = defineStore('schulbesuch', () => {
           row._aufnehmendeSchuleStatus = schulenMap.value.has(aufnSchulenr) ? 'found' : 'new'
         }
 
+        const sfSchluessel = schulnr ? schulenVerzeichnisMap.value.get(schulnr)?.SF : undefined
+        const sfKuerzel = sfSchluessel ? schulformKuerzelMap.value.get(sfSchluessel) : undefined
+
         const jg = row.vorigeEntlassjahrgang?.trim()
         if (!jg) {
           row._vorigeEntlassJahrgangStatus = 'empty'
         } else {
           const jahrgangEintrag = jahrgaengeMap.value.get(jg)
-          const sfSchluessel = schulnr ? schulenVerzeichnisMap.value.get(schulnr)?.SF : undefined
-          const sfKuerzel = sfSchluessel ? schulformKuerzelMap.value.get(sfSchluessel) : undefined
           row._vorigeEntlassJahrgangStatus =
             jahrgangEintrag && sfKuerzel && !jahrgangEintrag.schulformen.includes(sfKuerzel)
               ? 'invalid_for_schulform'
               : 'valid'
+        }
+
+        const isBerufsbildend = sfKuerzel === 'BK' || sfKuerzel === 'SB'
+        const bbAbschluss = row.vorigeAbschlussartBerufsbildend?.trim()
+        if (!bbAbschluss) {
+          row._vorigeAbschlussartBerufsbildendStatus = 'empty'
+        } else if (!isBerufsbildend) {
+          row._vorigeAbschlussartBerufsbildendStatus = 'ignored'
+        } else {
+          row._vorigeAbschlussartBerufsbildendStatus =
+            schulabschlussBerufsbildendSet.value.size === 0 || schulabschlussBerufsbildendSet.value.has(bbAbschluss)
+              ? 'valid'
+              : 'invalid'
         }
 
         const validateGrund = (raw: string) => {
@@ -177,6 +207,16 @@ export const useSchulbesuchStore = defineStore('schulbesuch', () => {
             ? 'valid'
             : 'invalid'
         }
+
+        const PRIMARSTUFE = new Set(['G', 'PS', 'S'])
+        const kgBez = row.kindergartenBezeichnung?.trim()
+        if (!kgBez) {
+          row._kindergartenStatus = 'empty'
+        } else if (schulformSchule.value && !PRIMARSTUFE.has(schulformSchule.value)) {
+          row._kindergartenStatus = 'invalid_schulform'
+        } else {
+          row._kindergartenStatus = kindergaertenMap.value.has(kgBez.toLowerCase()) ? 'found' : 'new'
+        }
       }
       const errors: string[] = []
       if (!row.nachname.trim())     errors.push('Nachname fehlt')
@@ -195,6 +235,8 @@ export const useSchulbesuchStore = defineStore('schulbesuch', () => {
         errors.push(`Höchster Abschluss "${row.schluesselHoechsterSchulabschluss.trim()}" ist kein gültiger Schlüssel`)
       if (row._uebergangsempfehlungStatus === 'invalid')
         errors.push(`Übergangsempfehlung "${row.kuerzelGrundschuleUebergangsempfehlung.trim()}" ist kein gültiges Kürzel`)
+      if (row._vorigeAbschlussartBerufsbildendStatus === 'invalid')
+        errors.push(`Berufsbildender Abschluss vorige Schule "${row.vorigeAbschlussartBerufsbildend.trim()}" ist kein gültiger Schlüssel`)
       row._errors = errors
       row._valid = errors.length === 0
     }
@@ -287,6 +329,12 @@ export const useSchulbesuchStore = defineStore('schulbesuch', () => {
 
       const patch = schulbesuchImportToApiPatch(row)
       if (idVorherigeSchule !== undefined) patch.idVorherigeSchule = idVorherigeSchule
+
+      const sfSchluesselUpload = schulnr ? schulenVerzeichnisMap.value.get(schulnr)?.SF : undefined
+      const sfKuerzelUpload = sfSchluesselUpload ? schulformKuerzelMap.value.get(sfSchluesselUpload) : undefined
+      const bbAbschlussUpload = row.vorigeAbschlussartBerufsbildend?.trim()
+      if ((sfKuerzelUpload === 'BK' || sfKuerzelUpload === 'SB') && bbAbschlussUpload)
+        patch.schluesselAbschlussartBerufsbildendVorherigeSchule = bbAbschlussUpload
       if (idAufnehmendeSchule !== undefined) patch.idAufnehmendeSchule = idAufnehmendeSchule
       const jgKuerzel = row.entlassjahrgang?.trim()
       if (jgKuerzel) {
@@ -298,6 +346,28 @@ export const useSchulbesuchStore = defineStore('schulbesuch', () => {
         const idUe = uebergangsempfehlungMap.value.get(ueKuerzel)
         if (idUe) patch.idUebergangsempfehlungGrundschule = idUe
       }
+
+      // Kindergarten — Bezeichnung → ID auflösen oder neu anlegen (nur für Primarstufen-Schulformen)
+      const PRIMARSTUFE_UPLOAD = new Set(['G', 'PS', 'S'])
+      const kgBez = row.kindergartenBezeichnung?.trim()
+      if (kgBez && (!schulformSchule.value || PRIMARSTUFE_UPLOAD.has(schulformSchule.value))) {
+        let kgId = kindergaertenMap.value.get(kgBez.toLowerCase())
+        if (kgId === undefined) {
+          const created = await createKindergarten(kgBez)
+          if ('error' in created) {
+            row._errors = [`Kindergarten "${kgBez}" konnte nicht angelegt werden: ${created.error}`]
+            row._valid = false
+            failed++
+            uploadProgress.value++
+            continue
+          }
+          kindergaertenMap.value.set(kgBez.toLowerCase(), created.id)
+          kgId = created.id
+          row._kindergartenStatus = 'found'
+        }
+        patch.idKindergarten = kgId
+      }
+
       if (Object.keys(patch).length === 0) {
         row._errors = ['Keine Felder zum Übertragen']
         row._valid = false

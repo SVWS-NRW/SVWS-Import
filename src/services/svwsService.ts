@@ -973,6 +973,41 @@ export function schulenKatalogToSchulEintrag(
   }
 }
 
+export interface KindergartenEintrag {
+  id: number
+  bezeichnung: string
+}
+
+export async function fetchKindergaerten(): Promise<KindergartenEintrag[]> {
+  try {
+    const resp = await getApiClient().get<KindergartenEintrag[]>('/kindergaerten')
+    return resp.data
+  } catch {
+    return []
+  }
+}
+
+export async function createKindergarten(bezeichnung: string): Promise<{ id: number } | { error: string }> {
+  try {
+    const resp = await getApiClient().post<KindergartenEintrag>('/kindergarten/create', {
+      bezeichnung,
+      bemerkung: null,
+      tel: null,
+      email: null,
+      strassenname: null,
+      hausNr: null,
+      hausNrZusatz: null,
+      plz: null,
+      ort: null,
+      sortierung: 32000,
+      istSichtbar: true,
+    })
+    return { id: resp.data.id }
+  } catch (error: unknown) {
+    return { error: toAppError(error).messageUser }
+  }
+}
+
 export async function createSchuleInKatalog(
   schulnummer: string,
   vollDaten?: Omit<SchulEintrag, 'id'>,

@@ -13,6 +13,8 @@ export interface SchuelerSchulbesuchImportRow {
   _entlassJahrgangStatus: 'empty' | 'valid' | 'invalid'
   _hoechsterAbschlussStatus: 'empty' | 'valid' | 'invalid'
   _uebergangsempfehlungStatus: 'empty' | 'valid' | 'invalid'
+  _vorigeAbschlussartBerufsbildendStatus: 'empty' | 'valid' | 'invalid' | 'ignored'
+  _kindergartenStatus: 'empty' | 'found' | 'new' | 'invalid_schulform'
   // Identifikation / Suchschlüssel
   nachname: string
   vorname: string
@@ -26,6 +28,7 @@ export interface SchuelerSchulbesuchImportRow {
   vorigeEntlassgrundID: string
   vorigeBemerkung: string
   vorigeAbschlussartID: string
+  vorigeAbschlussartBerufsbildend: string
   schluesselHoechsterSchulabschluss: string
   // Entlassung von dieser Schule
   entlassungDatum: string
@@ -47,7 +50,7 @@ export interface SchuelerSchulbesuchImportRow {
   sekIIWechsel: string
   // Kindergarten
   idDauerKindergartenbesuch: string
-  idKindergarten: string
+  kindergartenBezeichnung: string
   // Sprachförderung
   verpflichtungSprachfoerderkurs: string
   teilnahmeSprachfoerderkurs: string
@@ -111,11 +114,9 @@ export function schulbesuchImportToApiPatch(row: SchuelerSchulbesuchImportRow): 
   const sekII = parseId(row.sekIIWechsel)
   if (sekII !== null)                         patch.wechseljahrSekII                      = sekII
 
-  // Kindergarten
+  // Kindergarten — idKindergarten wird im Store per Bezeichnung aufgelöst/angelegt
   const idDauerKg = parseId(row.idDauerKindergartenbesuch)
   if (idDauerKg !== null)                     patch.idDauerKindergartenbesuch             = idDauerKg
-  const idKg = parseId(row.idKindergarten)
-  if (idKg !== null)                          patch.idKindergarten                        = idKg
 
   // Sprachförderung
   const verpfl = parseBool(row.verpflichtungSprachfoerderkurs)

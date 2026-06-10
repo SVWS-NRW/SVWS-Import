@@ -644,6 +644,19 @@ const sbColumnDefs = computed<ColDef<SchuelerSchulbesuchImportRow>[]>(() => {
     },
     { field: 'vorigeBemerkung',           headerName: 'Bemerkung vorige Schule', width: 180,  hide: !has('vorigeBemerkung') },
     { field: 'vorigeAbschlussartID',      headerName: 'Abschluss vorige Schule', width: 170,  hide: !has('vorigeAbschlussartID') },
+    {
+      field: 'vorigeAbschlussartBerufsbildend', headerName: 'Abschluss BBild. vor. Sch.', width: 195,
+      hide: !has('vorigeAbschlussartBerufsbildend'),
+      cellRenderer: (params: { data: SchuelerSchulbesuchImportRow }) => {
+        const v = params.data.vorigeAbschlussartBerufsbildend?.trim()
+        if (!v) return ''
+        switch (params.data._vorigeAbschlussartBerufsbildendStatus) {
+          case 'ignored': return `${v} <span style='color:#94a3b8' title='Schulform der vorigen Schule ist kein BK/SB – Feld wird ignoriert'>–</span>`
+          case 'invalid': return `${v} <span style='color:#ef4444' title='Kein gültiger Schlüssel (SchulabschlussBerufsbildend)'>✘</span>`
+          default:        return `${v} <span style='color:#22c55e' title='Gültiger Schlüssel'>✔</span>`
+        }
+      },
+    },
     // ── Entlassung von dieser Schule ──────────────────────────────────────────
     { field: 'entlassungDatum',           headerName: 'Entlassungsdatum',        width: 150,  hide: !has('entlassungDatum') },
     {
@@ -706,7 +719,20 @@ const sbColumnDefs = computed<ColDef<SchuelerSchulbesuchImportRow>[]>(() => {
     { field: 'sekIIWechsel',              headerName: 'Wechsel Sek II',          width: 120,  hide: !has('sekIIWechsel') },
     // ── Kindergarten ──────────────────────────────────────────────────────────
     { field: 'idDauerKindergartenbesuch', headerName: 'Dauer Kindergarten (ID)', width: 170,  hide: !has('idDauerKindergartenbesuch') },
-    { field: 'idKindergarten',            headerName: 'Kindergarten (ID)',        width: 140,  hide: !has('idKindergarten') },
+    {
+      field: 'kindergartenBezeichnung', headerName: 'Kindergarten', width: 180,
+      hide: !has('kindergartenBezeichnung'),
+      cellRenderer: (params: { data: SchuelerSchulbesuchImportRow }) => {
+        const v = params.data.kindergartenBezeichnung?.trim()
+        if (!v) return ''
+        switch (params.data._kindergartenStatus) {
+          case 'invalid_schulform': return `${v} <span style='color:#94a3b8' title='Schulform der Schule ist keine Primarstufe (G/PS/S) – Feld wird ignoriert'>–</span>`
+          case 'new':               return `${v} <span style='color:#f59e0b' title='Kindergarten wird neu angelegt'>+neu</span>`
+          case 'found':             return `${v} <span style='color:#22c55e' title='Kindergarten gefunden'>✔</span>`
+          default:                  return v
+        }
+      },
+    },
     // ── Sprachförderung ───────────────────────────────────────────────────────
     { field: 'verpflichtungSprachfoerderkurs',       headerName: 'Sprachförderpflicht',    width: 155, hide: !has('verpflichtungSprachfoerderkurs') },
     { field: 'teilnahmeSprachfoerderkurs',           headerName: 'Sprachförderteilnahme',  width: 165, hide: !has('teilnahmeSprachfoerderkurs') },

@@ -269,6 +269,8 @@ export interface AllinoneSchulenKataloge {
   jahrgaengeMap: Map<string, JahrgangKatalogEintrag>
   /** Gültige Schlüssel aus SchulabschlussAllgemeinbildend (z.B. "G", "K", "A") */
   schulabschlussAllgemeinbildendSet: Set<string>
+  /** Gültige Schlüssel aus SchulabschlussBerufsbildend (einstellige Ziffern, z.B. "1", "2") */
+  schulabschlussBerufsbildendSet: Set<string>
   /** Kürzel → DB-ID aus Uebergangsempfehlung */
   uebergangsempfehlungMap: Map<string, number>
 }
@@ -278,6 +280,7 @@ export async function fetchAllinoneSchulenKataloge(): Promise<AllinoneSchulenKat
   const schulformKuerzelMap = new Map<string, string>()
   const jahrgaengeMap     = new Map<string, JahrgangKatalogEintrag>()
   const schulabschlussAllgemeinbildendSet = new Set<string>()
+  const schulabschlussBerufsbildendSet    = new Set<string>()
   const uebergangsempfehlungMap = new Map<string, number>()
   try {
     const data = await fetchAllInOne()
@@ -304,13 +307,19 @@ export async function fetchAllinoneSchulenKataloge(): Promise<AllinoneSchulenKat
       if (h?.schluessel) schulabschlussAllgemeinbildendSet.add(h.schluessel.trim())
     }
 
+    // SchulabschlussBerufsbildend (einstellige Ziffern)
+    for (const entry of (raw['SchulabschlussBerufsbildend']?.daten ?? [])) {
+      const h = entry.historie.find(x => x.gueltigBis === null) ?? entry.historie[entry.historie.length - 1]
+      if (h?.schluessel) schulabschlussBerufsbildendSet.add(h.schluessel.trim())
+    }
+
     // Uebergangsempfehlung: kürzel → id
     for (const entry of (raw['Uebergangsempfehlung']?.daten ?? [])) {
       const h = entry.historie.find(x => x.gueltigBis === null) ?? entry.historie[entry.historie.length - 1]
       if (h?.kuerzel && h.id) uebergangsempfehlungMap.set(h.kuerzel.trim(), h.id)
     }
   } catch { /* Katalog nicht verfügbar → leere Strukturen */ }
-  return { schulformenMap, schulformKuerzelMap, jahrgaengeMap, schulabschlussAllgemeinbildendSet, uebergangsempfehlungMap }
+  return { schulformenMap, schulformKuerzelMap, jahrgaengeMap, schulabschlussAllgemeinbildendSet, schulabschlussBerufsbildendSet, uebergangsempfehlungMap }
 }
 
 /** @deprecated Nutze fetchAllinoneSchulenKataloge() */

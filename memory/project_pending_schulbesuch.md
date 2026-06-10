@@ -1,22 +1,25 @@
 ---
 name: project-pending-schulbesuch
-description: Offene Aufgaben im Schulbesuch-Import-Tab, die noch nicht implementiert sind
+description: Offene Aufgaben im Schulbesuch-Import-Tab — aktuell keine offenen TODOs
 metadata:
   type: project
 ---
 
-## `vorigeAbschlussartBerufsbildend` — API-Anbindung ausstehend
+## `vorigeAbschlussartBerufsbildend` — abgeschlossen (2026-06-10)
 
-Das Feld `vorigeAbschlussartBerufsbildend` existiert bereits in:
-- `examples/schueler-schulbesuch.csv` (Spalte vorhanden)
-- `src/models/SchuelerSchulbesuch.ts` (Feld `vorigeAbschlussartID` deckt bisher nur allgemeinbildend ab — berufsbildend fehlt noch)
+Alle 4 Punkte implementiert:
 
-**Was noch fehlt:**
-1. Eigenes Feld `vorigeAbschlussartBerufsbildend: string` ins Interface `SchuelerSchulbesuchImportRow`
-2. Alias-Mapping im `csvParser.ts`
-3. API-Feld in `schulbesuchImportToApiPatch` eintragen (Schlüssel aus SVWS-OpenAPI ermitteln)
-4. Spalte in der ag-Grid-Tabelle in `SchuelerView.vue` anzeigen
+1. Feld `vorigeAbschlussartBerufsbildend: string` + Status `_vorigeAbschlussartBerufsbildendStatus` in `SchuelerSchulbesuchImportRow`
+2. Alias-Mapping im `csvParser.ts` (Spaltenname `vorigeAbschlussartBerufsbildend` / `abschlussberufsbildend`)
+3. API-Feld `schluesselAbschlussartBerufsbildendVorherigeSchule` wird im Store in `uploadAll` gesetzt — **nur wenn** die vorherige Schule Schulform BK oder SB hat
+4. Grid-Spalte "Abschluss BBild. vor. Sch." in `SchuelerView.vue`
 
-**Why:** API-Schlüssel für den berufsbildenden Abschluss war zum Zeitpunkt der Implementierung noch nicht bekannt / nicht priorisiert.
+**Validierungslogik (Store `resolveAndValidate`):**
+- `empty` — kein Wert in der CSV
+- `ignored` — Wert vorhanden, aber vorherige Schule ist kein BK/SB → Feld wird nicht gesendet, kein Fehler
+- `valid` — Wert ist in `SchulabschlussBerufsbildend` (einstellige Ziffer aus allinone.json)
+- `invalid` — Wert nicht im Set → Validierungsfehler
 
-**How to apply:** Wenn der Nutzer sagt "jetzt vorigeAbschlussartBerufsbildend fertigstellen", alle 4 Punkte oben abarbeiten.
+**Schulformprüfung:** `schulenVerzeichnisMap` (SF-Schlüssel) + `schulformKuerzelMap` → Kürzel `BK` oder `SB`
+
+**Kein offenes TODO mehr.**

@@ -11,7 +11,7 @@ import { lehrerImportToApi } from '@/models/Lehrer'
 import { klasseImportToApi } from '@/models/Klassen'
 import { jahrgangImportToApi } from '@/models/Jahrgaenge'
 import { fachImportToApi } from '@/models/Faecher'
-import type { ImportModule, MappedRow, ImportContext, EntityType, OrtKatalogEintrag } from '@/models/ImportSchema'
+import type { ImportModule, MappedRow, ImportContext, EntityType, OrtKatalogEintrag, ReligionKatalogEintrag } from '@/models/ImportSchema'
 import { betriebImportToApi, ansprechpartnerImportToApi, type BetriebImportRow, type BetriebDetails, type AnsprechpartnerImportRow } from '@/models/Betriebe'
 import { ortsteilImportToApi, type OrtsteilImportRow, type OrtsteilDetails } from '@/models/Ortsteile'
 import { resolveWohnortId, resolveReligionId, resolveNationalitaet, resolveVerkehrssprache, resolveNationalitaetId } from './katalogService'
@@ -606,6 +606,69 @@ export async function fetchOrteById(): Promise<Map<number, OrtKatalogEintrag>> {
   const map = new Map<number, OrtKatalogEintrag>()
   for (const entry of response.data) {
     if (entry.id) map.set(entry.id, entry)
+  }
+  return map
+}
+
+export async function fetchReligionenById(): Promise<Map<number, ReligionKatalogEintrag>> {
+  const response = await getApiClient().get<ReligionKatalogEintrag[]>('/schule/religionen')
+  const map = new Map<number, ReligionKatalogEintrag>()
+  for (const entry of response.data) {
+    if (entry.id) map.set(entry.id, entry)
+  }
+  return map
+}
+
+export async function fetchSchulenById(): Promise<Map<number, string>> {
+  const response = await getApiClient().get<SchulEintrag[]>('/schule/schulen')
+  const map = new Map<number, string>()
+  for (const s of response.data) {
+    if (s.id && s.schulnummerStatistik) map.set(s.id, s.schulnummerStatistik)
+  }
+  return map
+}
+
+export async function fetchJahrgaengeById(): Promise<Map<number, string>> {
+  const response = await getApiClient().get<{ id: number; kuerzel?: string | null }[]>('/jahrgaenge')
+  const map = new Map<number, string>()
+  for (const j of response.data) {
+    if (j.id && j.kuerzel) map.set(j.id, j.kuerzel)
+  }
+  return map
+}
+
+export async function fetchEinschulungsartenById(): Promise<Map<number, string>> {
+  const response = await getApiClient().get<{ id: number; text: string }[]>('/schule/allgemein/einschulungsarten')
+  const map = new Map<number, string>()
+  for (const e of response.data) {
+    if (e.id && e.text) map.set(e.id, e.text)
+  }
+  return map
+}
+
+export async function fetchUebergangsempfehlungenById(): Promise<Map<number, string>> {
+  const response = await getApiClient().get<{ id: number; text: string }[]>('/schueler/allgemein/uebergangsempfehlung')
+  const map = new Map<number, string>()
+  for (const e of response.data) {
+    if (e.id && e.text) map.set(e.id, e.text)
+  }
+  return map
+}
+
+export async function fetchKindergartenbesuchsdauerById(): Promise<Map<number, string>> {
+  const response = await getApiClient().get<{ id: number; text: string }[]>('/schule/allgemein/kindergartenbesuch')
+  const map = new Map<number, string>()
+  for (const e of response.data) {
+    if (e.id && e.text) map.set(e.id, e.text)
+  }
+  return map
+}
+
+export async function fetchKindergartenById(): Promise<Map<number, string>> {
+  const response = await getApiClient().get<{ id: number; bezeichnung: string }[]>('/kindergaerten')
+  const map = new Map<number, string>()
+  for (const k of response.data) {
+    if (k.id && k.bezeichnung) map.set(k.id, k.bezeichnung)
   }
   return map
 }

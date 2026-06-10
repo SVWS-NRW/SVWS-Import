@@ -25,27 +25,6 @@
     <!-- Konfigurationsbereich -->
     <template v-if="activeTile">
 
-      <!-- Felder wählen -->
-      <div class="config-section">
-        <div class="section-header">
-          <h3 class="section-title">Felder auswählen</h3>
-          <div class="section-actions">
-            <Button label="Alle" size="small" severity="secondary" text @click="selectAll" />
-            <Button label="Keine" size="small" severity="secondary" text @click="selectNone" />
-          </div>
-        </div>
-        <div class="field-grid">
-          <label
-            v-for="field in activeTile.fields"
-            :key="field.key"
-            class="field-label"
-          >
-            <Checkbox v-model="selectedFields" :value="field.key" />
-            <span>{{ field.label }}</span>
-          </label>
-        </div>
-      </div>
-
       <!-- Format + Aktionen -->
       <div class="config-section">
         <h3 class="section-title">Format</h3>
@@ -64,8 +43,6 @@
             <Button
               :label="loadBtnLabel"
               :icon="selectedTile === 'schueler' ? 'pi pi-file-export' : 'pi pi-refresh'"
-              severity="secondary"
-              outlined
               size="small"
               :loading="loading"
               :disabled="selectedFields.length === 0 || (selectedTile === 'schueler' && schuelerAuswahl.length === 0) || (selectedTile === 'lehrer' && lehrerListe.length === 0)"
@@ -87,6 +64,52 @@
         </div>
       </div>
 
+      <!-- Felder wählen -->
+      <div class="config-section">
+        <div class="section-header">
+          <h3 class="section-title">Felder auswählen</h3>
+          <div class="section-actions">
+            <Button label="Alle" size="small" severity="secondary" text @click="selectAll" />
+            <Button label="Keine" size="small" severity="secondary" text @click="selectNone" />
+          </div>
+        </div>
+        <template v-if="hasSections">
+          <div v-for="(sectionGroups, sectionName) in groupedBySections" :key="sectionName" class="field-section">
+            <div class="field-section-header">{{ sectionName }}</div>
+            <div class="groups-grid">
+              <div v-for="(groupFields, groupName) in sectionGroups" :key="groupName" class="field-group-card">
+                <div class="field-group-card-header">{{ groupName }}</div>
+                <div class="field-list">
+                  <label v-for="field in groupFields" :key="field.key" class="field-label">
+                    <Checkbox v-model="selectedFields" :value="field.key" />
+                    <span>{{ field.label }}</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+        <template v-else-if="hasFieldGroups">
+          <div class="groups-grid">
+            <div v-for="(groupFields, groupName) in groupedActiveTileFields" :key="groupName" class="field-group-card">
+              <div class="field-group-card-header">{{ groupName }}</div>
+              <div class="field-list">
+                <label v-for="field in groupFields" :key="field.key" class="field-label">
+                  <Checkbox v-model="selectedFields" :value="field.key" />
+                  <span>{{ field.label }}</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </template>
+        <div v-else class="groups-grid">
+          <label v-for="field in activeTile.fields" :key="field.key" class="field-label">
+            <Checkbox v-model="selectedFields" :value="field.key" />
+            <span>{{ field.label }}</span>
+          </label>
+        </div>
+      </div>
+
       <Message v-if="loadError" severity="error" :closable="true" @close="loadError = ''">
         {{ loadError }}
       </Message>
@@ -102,6 +125,12 @@
             </span>
           </h3>
           <div class="section-actions">
+            <InputText
+              v-model="schuelerNameSearch"
+              placeholder="Name suchen…"
+              size="small"
+              class="schueler-name-search"
+            />
             <Select
               v-if="schuleStore.loaded"
               v-model="selectedAbschnittId"
@@ -168,11 +197,14 @@
           v-model:selection="selectedSchueler"
           :value="filteredSchueler"
           dataKey="id"
-          scrollable
-          scrollHeight="400px"
-          :virtualScrollerOptions="{ itemSize: 36 }"
+          paginator
+          :rows="50"
+          :rowsPerPageOptions="[25, 50, 100, 200]"
+          paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown CurrentPageReport"
+          currentPageReportTemplate="{first}–{last} von {totalRecords}"
           size="small"
           sortMode="single"
+          class="compact-table"
         >
           <Column selectionMode="multiple" style="width: 3rem; flex: none" />
           <Column field="nachname" header="Nachname" sortable style="min-width: 140px" />
@@ -295,15 +327,16 @@ import ProgressBar from 'primevue/progressbar'
 import MultiSelect from 'primevue/multiselect'
 import Select from 'primevue/select'
 import InputNumber from 'primevue/inputnumber'
+import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
-import { fetchForExport, fetchSchuelerAuswahlliste, enrichSchueler, enrichRecords, fetchOrteById, type SchuelerAuswahl } from '@/services/svwsService'
-import type { OrtKatalogEintrag } from '@/models/ImportSchema'
+import { fetchForExport, fetchSchuelerAuswahlliste, enrichSchueler, enrichRecords, fetchOrteById, fetchReligionenById, fetchSchulenById, fetchJahrgaengeById, fetchEinschulungsartenById, fetchUebergangsempfehlungenById, fetchKindergartenbesuchsdauerById, fetchKindergartenById, type SchuelerAuswahl } from '@/services/svwsService'
+import type { OrtKatalogEintrag, ReligionKatalogEintrag } from '@/models/ImportSchema'
 import { exportAsCsv, exportAsJson } from '@/utils/exportUtils'
 import { useSchuleStore } from '@/stores/schule'
 
-interface FieldDef { key: string; label: string }
+interface FieldDef { key: string; label: string; group?: string; section?: string }
 
 interface SubEndpoint {
   path: (id: number) => string
@@ -331,36 +364,116 @@ const TILES: ExportTile[] = [
       {
         path: id => `/schueler/${id}/stammdaten`,
         fieldKeys: [
-          'nachname', 'vorname', 'alleVornamen', 'geschlecht', 'geburtsdatum',
-          'status', 'anmeldedatum', 'aufnahmedatum', 'beginnBildungsgang',
-          'staatsangehoerigkeitID', 'strassenname', 'hausnummer', 'plz', 'ort',
-          'telefon', 'emailPrivat', 'emailSchule',
+          'nachname', 'vorname', 'alleVornamen', 'geschlecht', 'geburtsdatum', 'geburtsort', 'geburtsname',
+          'status', 'anmeldedatum', 'aufnahmedatum', 'beginnBildungsgang', 'dauerBildungsgang', 'beruf',
+          'externeSchulNr', 'idSchuelerausweis', 'fahrschuelerArtID', 'haltestelleID',
+          'istVolljaehrig', 'istSchulpflichtErfuellt', 'istBerufsschulpflichtErfuellt',
+          'hatMasernimpfnachweis', 'keineAuskunftAnDritte', 'erhaeltSchuelerBAFOEG', 'erhaeltMeisterBAFOEG',
+          'istDuplikat',
+          'strassenname', 'hausnummer', 'hausnummerZusatz', 'wohnortID', 'ortsteilID',
+          'telefon', 'telefonMobil', 'emailPrivat', 'emailSchule',
+          'staatsangehoerigkeitID', 'staatsangehoerigkeit2ID',
+          'hatMigrationshintergrund', 'zuzugsjahr', 'geburtsland', 'verkehrspracheFamilie',
+          'geburtslandVater', 'geburtslandMutter',
+          'religionID', 'druckeKonfessionAufZeugnisse', 'religionabmeldung', 'religionanmeldung',
         ],
       },
-      // Weitere Endpunkte hier ergänzen, z.B.:
-      // { path: id => `/schueler/${id}/schulbesuch`, fieldKeys: ['schulgliederung', ...] },
-      // { path: id => `/schueler/${id}/betriebe`,    fieldKeys: ['betrieb', ...] },
+      {
+        path: id => `/schueler/${id}/schulbesuch`,
+        fieldKeys: [
+          'idVorherigeSchule', 'vorigeAllgHerkunft', 'vorigeEntlassdatum', 'vorigeEntlassjahrgang',
+          'vorigeArtLetzteVersetzung', 'vorigeBemerkung', 'vorigeEntlassgrundID', 'vorigeAbschlussartID',
+          'entlassungDatum', 'idEntlassjahrgang', 'entlassungGrundID', 'entlassungAbschlussartID',
+          'idAufnehmendeSchule', 'aufnehmendWechseldatum', 'aufnehmendBestaetigt',
+          'grundschuleEinschulungsjahr', 'grundschuleEinschulungsartID',
+          'idGrundschuleJahreEingangsphase', 'idKuerzelGrundschuleUebergangsempfehlung',
+          'sekIWechsel', 'sekIErsteSchulform', 'sekIIWechsel',
+          'idDauerKindergartenbesuch', 'idKindergarten',
+          'verpflichtungSprachfoerderkurs', 'teilnahmeSprachfoerderkurs',
+          'alleSchulen', 'merkmale',
+        ],
+      },
     ],
     fields: [
-      { key: 'nachname',              label: 'Nachname'           },
-      { key: 'vorname',               label: 'Vorname'            },
-      { key: 'alleVornamen',          label: 'Alle Vornamen'      },
-      { key: 'geschlecht',            label: 'Geschlecht'         },
-      { key: 'geburtsdatum',          label: 'Geburtsdatum'       },
-      { key: 'status',                label: 'Status'             },
-      { key: 'klasse',                label: 'Klasse'             },
-      { key: 'jahrgang',              label: 'Jahrgang'           },
-      { key: 'anmeldedatum',          label: 'Anmeldedatum'       },
-      { key: 'aufnahmedatum',         label: 'Aufnahmedatum'      },
-      { key: 'beginnBildungsgang',    label: 'Bildungsgangbeginn' },
-      { key: 'staatsangehoerigkeitID',label: 'Staatsangehörigkeit'},
-      { key: 'strassenname',          label: 'Straße'             },
-      { key: 'hausnummer',            label: 'Hausnummer'         },
-      { key: 'plz',                   label: 'PLZ'                },
-      { key: 'ort',                   label: 'Wohnort'            },
-      { key: 'telefon',               label: 'Telefon'            },
-      { key: 'emailPrivat',           label: 'E-Mail (privat)'    },
-      { key: 'emailSchule',           label: 'E-Mail (Schule)'    },
+      // ── Stammdaten ──────────────────────────────────────────────────────────
+      { key: 'nachname',                       label: 'Nachname',                    section: 'Stammdaten', group: 'Personendaten' },
+      { key: 'vorname',                        label: 'Vorname',                     section: 'Stammdaten', group: 'Personendaten' },
+      { key: 'alleVornamen',                   label: 'Alle Vornamen',               section: 'Stammdaten', group: 'Personendaten' },
+      { key: 'geschlecht',                     label: 'Geschlecht',                  section: 'Stammdaten', group: 'Personendaten' },
+      { key: 'geburtsdatum',                   label: 'Geburtsdatum',                section: 'Stammdaten', group: 'Personendaten' },
+      { key: 'geburtsort',                     label: 'Geburtsort',                  section: 'Stammdaten', group: 'Personendaten' },
+      { key: 'geburtsname',                    label: 'Geburtsname',                 section: 'Stammdaten', group: 'Personendaten' },
+      { key: 'klasse',                         label: 'Klasse',                      section: 'Stammdaten', group: 'Schule' },
+      { key: 'jahrgang',                       label: 'Jahrgang',                    section: 'Stammdaten', group: 'Schule' },
+      { key: 'status',                         label: 'Status',                      section: 'Stammdaten', group: 'Schule' },
+      { key: 'anmeldedatum',                   label: 'Anmeldedatum',                section: 'Stammdaten', group: 'Schule' },
+      { key: 'aufnahmedatum',                  label: 'Aufnahmedatum',               section: 'Stammdaten', group: 'Schule' },
+      { key: 'beginnBildungsgang',             label: 'Bildungsgangbeginn',          section: 'Stammdaten', group: 'Schule' },
+      { key: 'dauerBildungsgang',              label: 'Dauer Bildungsgang (Jahre)',  section: 'Stammdaten', group: 'Schule' },
+      { key: 'beruf',                          label: 'Beruf',                       section: 'Stammdaten', group: 'Schule' },
+      { key: 'externeSchulNr',                 label: 'Externe Schulnummer',         section: 'Stammdaten', group: 'Schule' },
+      { key: 'idSchuelerausweis',              label: 'Schülerausweis-Nr.',          section: 'Stammdaten', group: 'Schule' },
+      { key: 'fahrschuelerArtID',              label: 'Fahrschüler-Art',             section: 'Stammdaten', group: 'Schule' },
+      { key: 'haltestelleID',                  label: 'Haltestelle-ID',              section: 'Stammdaten', group: 'Schule' },
+      { key: 'istVolljaehrig',                 label: 'Volljährig',                  section: 'Stammdaten', group: 'Schule' },
+      { key: 'istSchulpflichtErfuellt',        label: 'Schulpflicht erfüllt',        section: 'Stammdaten', group: 'Schule' },
+      { key: 'istBerufsschulpflichtErfuellt',  label: 'Berufsschulpflicht erfüllt', section: 'Stammdaten', group: 'Schule' },
+      { key: 'istDuplikat',                    label: 'Duplikat',                    section: 'Stammdaten', group: 'Schule' },
+      { key: 'strassenname',                   label: 'Straße',                      section: 'Stammdaten', group: 'Adresse & Kontakt' },
+      { key: 'hausnummer',                     label: 'Hausnummer',                  section: 'Stammdaten', group: 'Adresse & Kontakt' },
+      { key: 'plz',                            label: 'PLZ',                         section: 'Stammdaten', group: 'Adresse & Kontakt' },
+      { key: 'ort',                            label: 'Wohnort',                     section: 'Stammdaten', group: 'Adresse & Kontakt' },
+      { key: 'ortsteilID',                     label: 'Ortsteil-ID',                 section: 'Stammdaten', group: 'Adresse & Kontakt' },
+      { key: 'telefon',                        label: 'Telefon',                     section: 'Stammdaten', group: 'Adresse & Kontakt' },
+      { key: 'telefonMobil',                   label: 'Mobil',                       section: 'Stammdaten', group: 'Adresse & Kontakt' },
+      { key: 'emailPrivat',                    label: 'E-Mail (privat)',             section: 'Stammdaten', group: 'Adresse & Kontakt' },
+      { key: 'emailSchule',                    label: 'E-Mail (Schule)',             section: 'Stammdaten', group: 'Adresse & Kontakt' },
+      { key: 'staatsangehoerigkeitID',         label: 'Staatsangehörigkeit',         section: 'Stammdaten', group: 'Herkunft' },
+      { key: 'staatsangehoerigkeit2ID',        label: '2. Staatsangehörigkeit',      section: 'Stammdaten', group: 'Herkunft' },
+      { key: 'hatMigrationshintergrund',       label: 'Migrationshintergrund',       section: 'Stammdaten', group: 'Herkunft' },
+      { key: 'zuzugsjahr',                     label: 'Zuzugsjahr',                  section: 'Stammdaten', group: 'Herkunft' },
+      { key: 'geburtsland',                    label: 'Geburtsland',                 section: 'Stammdaten', group: 'Herkunft' },
+      { key: 'geburtslandVater',               label: 'Geburtsland Vater',           section: 'Stammdaten', group: 'Herkunft' },
+      { key: 'geburtslandMutter',              label: 'Geburtsland Mutter',          section: 'Stammdaten', group: 'Herkunft' },
+      { key: 'verkehrspracheFamilie',          label: 'Familiensprache',             section: 'Stammdaten', group: 'Herkunft' },
+      { key: 'religionKuerzel',                label: 'Konfessionskürzel',           section: 'Stammdaten', group: 'Religion' },
+      { key: 'religionBezeichnung',            label: 'Konfession',                  section: 'Stammdaten', group: 'Religion' },
+      { key: 'druckeKonfessionAufZeugnisse',   label: 'Konfession auf Zeugnis',      section: 'Stammdaten', group: 'Religion' },
+      { key: 'religionanmeldung',              label: 'Religionsanmeldung',          section: 'Stammdaten', group: 'Religion' },
+      { key: 'religionabmeldung',              label: 'Religionsabmeldung',          section: 'Stammdaten', group: 'Religion' },
+      { key: 'hatMasernimpfnachweis',          label: 'Masernimpfnachweis',          section: 'Stammdaten', group: 'Sonstiges' },
+      { key: 'keineAuskunftAnDritte',          label: 'Keine Auskunft an Dritte',    section: 'Stammdaten', group: 'Sonstiges' },
+      { key: 'erhaeltSchuelerBAFOEG',          label: 'Schüler-BAföG',              section: 'Stammdaten', group: 'Sonstiges' },
+      { key: 'erhaeltMeisterBAFOEG',           label: 'Meister-BAföG',              section: 'Stammdaten', group: 'Sonstiges' },
+      // ── Schulbesuchsdaten ────────────────────────────────────────────────────
+      { key: 'vorigeAllgHerkunft',             label: 'Schulform (Vorherige Schule)',           section: 'Schulbesuchsdaten', group: 'Vorherige Schule' },
+      { key: 'idVorherigeSchule',              label: 'Schulnummer (Vorherige Schule)',          section: 'Schulbesuchsdaten', group: 'Vorherige Schule' },
+      { key: 'vorigeEntlassdatum',             label: 'Entlassdatum (Vorherige Schule)',        section: 'Schulbesuchsdaten', group: 'Vorherige Schule' },
+      { key: 'vorigeEntlassjahrgang',          label: 'Entlassjahrgang (Vorherige Schule)',     section: 'Schulbesuchsdaten', group: 'Vorherige Schule' },
+      { key: 'vorigeAbschlussartID',           label: 'Abschlussart (Vorherige Schule)',        section: 'Schulbesuchsdaten', group: 'Vorherige Schule' },
+      { key: 'vorigeArtLetzteVersetzung',      label: 'Letzte Versetzungsart (Vorherige Schule)',    section: 'Schulbesuchsdaten', group: 'Vorherige Schule' },
+      { key: 'vorigeEntlassgrundID',           label: 'Entlassungsgrund-ID (Vorherige Schule)',      section: 'Schulbesuchsdaten', group: 'Vorherige Schule' },
+      { key: 'vorigeBemerkung',                label: 'Bemerkung (Vorherige Schule)',           section: 'Schulbesuchsdaten', group: 'Vorherige Schule' },
+      { key: 'entlassungDatum',                label: 'Entlassdatum (diese Schule)',          section: 'Schulbesuchsdaten', group: 'Entlassung' },
+      { key: 'idEntlassjahrgang',              label: 'Entlassjahrgang (diese Schule)',       section: 'Schulbesuchsdaten', group: 'Entlassung' },
+      { key: 'entlassungGrundID',              label: 'Entlassungsgrund-ID (diese Schule)',   section: 'Schulbesuchsdaten', group: 'Entlassung' },
+      { key: 'entlassungAbschlussartID',       label: 'Abschlussart (diese Schule)',          section: 'Schulbesuchsdaten', group: 'Entlassung' },
+      { key: 'idAufnehmendeSchule',            label: 'Schulnummer (Aufnehmende Schule)',     section: 'Schulbesuchsdaten', group: 'Aufnehmende Schule' },
+      { key: 'aufnehmendWechseldatum',         label: 'Wechseldatum Aufnehmende Schule',     section: 'Schulbesuchsdaten', group: 'Aufnehmende Schule' },
+      { key: 'aufnehmendBestaetigt',           label: 'Aufnahme bestätigt',                  section: 'Schulbesuchsdaten', group: 'Aufnehmende Schule' },
+      { key: 'grundschuleEinschulungsjahr',    label: 'Einschulungsjahr Grundschule',        section: 'Schulbesuchsdaten', group: 'Grundschule' },
+      { key: 'grundschuleEinschulungsartID',   label: 'Einschulungsart Grundschule',         section: 'Schulbesuchsdaten', group: 'Grundschule' },
+      { key: 'idGrundschuleJahreEingangsphase',     label: 'Jahre Schuleingangsphase',           section: 'Schulbesuchsdaten', group: 'Grundschule' },
+      { key: 'idKuerzelGrundschuleUebergangsempfehlung', label: 'Übergangsempfehlung Grundschule', section: 'Schulbesuchsdaten', group: 'Grundschule' },
+      { key: 'sekIWechsel',                    label: 'Wechseljahr Sekundarstufe I',         section: 'Schulbesuchsdaten', group: 'Sekundarstufen' },
+      { key: 'sekIErsteSchulform',             label: 'Erste Schulform Sekundarstufe I',     section: 'Schulbesuchsdaten', group: 'Sekundarstufen' },
+      { key: 'sekIIWechsel',                   label: 'Wechseljahr Sekundarstufe II',        section: 'Schulbesuchsdaten', group: 'Sekundarstufen' },
+      { key: 'idDauerKindergartenbesuch',      label: 'Dauer Kindergartenbesuch',            section: 'Schulbesuchsdaten', group: 'Kindergarten' },
+      { key: 'idKindergarten',                 label: 'Kindergarten',                        section: 'Schulbesuchsdaten', group: 'Kindergarten' },
+      { key: 'verpflichtungSprachfoerderkurs', label: 'Verpflichtung Sprachförderkurs',      section: 'Schulbesuchsdaten', group: 'Sprachförderung' },
+      { key: 'teilnahmeSprachfoerderkurs',     label: 'Teilnahme Sprachförderkurs',          section: 'Schulbesuchsdaten', group: 'Sprachförderung' },
+      { key: 'alleSchulen',                    label: 'Frühere Schulen (JSON)',              section: 'Schulbesuchsdaten', group: 'Schulhistorie' },
+      { key: 'merkmale',                       label: 'Statistische Merkmale (JSON)',        section: 'Schulbesuchsdaten', group: 'Schulhistorie' },
     ],
   },
   {
@@ -422,6 +535,17 @@ const TILES: ExportTile[] = [
   },
 ]
 
+const GESCHLECHT_LABELS: Record<number, string> = {
+  3: 'männlich', 4: 'weiblich', 5: 'divers', 6: 'ohne Angabe',
+}
+
+const SCHUELER_BOOL_FIELDS = new Set([
+  'druckeKonfessionAufZeugnisse', 'hatMigrationshintergrund', 'istDuplikat',
+  'istVolljaehrig', 'istSchulpflichtErfuellt', 'istBerufsschulpflichtErfuellt',
+  'hatMasernimpfnachweis', 'keineAuskunftAnDritte', 'erhaeltSchuelerBAFOEG', 'erhaeltMeisterBAFOEG',
+  'aufnehmendBestaetigt', 'verpflichtungSprachfoerderkurs', 'teilnahmeSprachfoerderkurs',
+])
+
 const SCHUELER_STATUS_OPTIONS = [
   { value: 0,  label: 'Aufnahme'   },
   { value: 1,  label: 'Warteliste' },
@@ -462,6 +586,14 @@ function lehrerPersonalTypLabel(typ: string): string {
   return LEHRER_PERSONALTYP_LABELS[typ] ?? typ
 }
 
+function formatSchuelerValue(key: string, value: unknown): unknown {
+  if (key === 'geschlecht') return GESCHLECHT_LABELS[value as number] ?? String(value ?? '')
+  if (key === 'status')     return SCHUELER_STATUS_LABELS[value as number] ?? String(value ?? '')
+  if (SCHUELER_BOOL_FIELDS.has(key)) return value === true ? 'Ja' : value === false ? 'Nein' : ''
+  if (Array.isArray(value)) return value.length > 0 ? JSON.stringify(value) : ''
+  return value
+}
+
 const schuleStore = useSchuleStore()
 
 const selectedTile        = ref<string | null>(null)
@@ -475,6 +607,7 @@ const selectedSchueler    = ref<SchuelerAuswahl[]>([])
 const statusFilter        = ref<number[]>([2])
 const jahrgangFilter      = ref<string[]>([])
 const klasseFilter        = ref<string[]>([])
+const schuelerNameSearch  = ref('')
 const selectedAbschnittId = ref<number | null>(null)
 const listLoading             = ref(false)
 const listError               = ref('')
@@ -489,6 +622,38 @@ const lehrerSichtbarFilter    = ref<boolean[]>([true])
 const lehrerPersonalTypFilter = ref<string[]>([])
 
 const activeTile = computed(() => TILES.find(t => t.id === selectedTile.value))
+
+const hasSections = computed(() =>
+  (activeTile.value?.fields ?? []).some(f => f.section),
+)
+
+const groupedBySections = computed(() => {
+  const fields = activeTile.value?.fields ?? []
+  const sections: Record<string, Record<string, FieldDef[]>> = {}
+  for (const f of fields) {
+    const s = f.section ?? ''
+    const g = f.group ?? 'Allgemein'
+    if (!sections[s]) sections[s] = {}
+    if (!sections[s][g]) sections[s][g] = []
+    sections[s][g].push(f)
+  }
+  return sections
+})
+
+const groupedActiveTileFields = computed(() => {
+  const fields = activeTile.value?.fields ?? []
+  const groups: Record<string, FieldDef[]> = {}
+  for (const f of fields) {
+    const g = f.group ?? 'Allgemein'
+    if (!groups[g]) groups[g] = []
+    groups[g].push(f)
+  }
+  return groups
+})
+
+const hasFieldGroups = computed(() =>
+  (activeTile.value?.fields ?? []).some(f => f.group),
+)
 
 const loadBtnLabel = computed(() => {
   if (selectedTile.value === 'schueler') {
@@ -528,13 +693,14 @@ const filteredSchueler = computed(() => {
   const statusSet  = statusFilter.value.length  > 0 ? new Set(statusFilter.value)  : null
   const jahrgSet   = jahrgangFilter.value.length > 0 ? new Set(jahrgangFilter.value) : null
   const klasseSet  = klasseFilter.value.length  > 0 ? new Set(klasseFilter.value)  : null
-
-  if (!statusSet && !jahrgSet && !klasseSet) return schuelerAuswahl.value
+  const nameQ      = schuelerNameSearch.value.trim().toLowerCase()
 
   return schuelerAuswahl.value.filter(s =>
     (!statusSet || statusSet.has(s.status)) &&
     (!jahrgSet  || jahrgSet.has(s.jahrgang  as string)) &&
-    (!klasseSet || klasseSet.has(s.klasse   as string)),
+    (!klasseSet || klasseSet.has(s.klasse   as string)) &&
+    (!nameQ     || (s.nachname as string).toLowerCase().includes(nameQ) ||
+                   (s.vorname  as string).toLowerCase().includes(nameQ)),
   )
 })
 
@@ -634,38 +800,80 @@ async function loadData(): Promise<void> {
     exportDone.value = 0
     exportTotal.value = students.length
     try {
-      const needsOrt = selectedFields.value.some(f => f === 'plz' || f === 'ort')
-      const [enriched, orteById] = await Promise.all([
+      const sf = selectedFields.value
+      const needsOrt                    = sf.some(f => f === 'plz' || f === 'ort')
+      const needsReligion               = sf.some(f => f === 'religionKuerzel' || f === 'religionBezeichnung')
+      const needsSchulen                = sf.some(f => f === 'idVorherigeSchule' || f === 'idAufnehmendeSchule')
+      const needsJahrgaenge             = sf.includes('idEntlassjahrgang')
+      const needsEinschulungsarten      = sf.includes('grundschuleEinschulungsartID')
+      const needsUebergangsempfehlungen = sf.includes('idKuerzelGrundschuleUebergangsempfehlung')
+      const needsKgBesuchsdauer         = sf.includes('idDauerKindergartenbesuch')
+      const needsKindergaerten          = sf.includes('idKindergarten')
+
+      const nm = <T>() => Promise.resolve(null as unknown as Map<number, T>)
+      const [enriched, orteById, religionenById, schulenById, jahrgaengeById,
+             einschulungsartenById, uebergangsempfehlungenById, kgBesuchsdauerById, kindergartenById] = await Promise.all([
         enrichSchueler(
           students,
           neededEndpoints,
           (done, total) => { exportDone.value = done; exportTotal.value = total; exportProgress.value = done / total },
         ),
-        needsOrt ? fetchOrteById() : Promise.resolve(null as unknown as Map<number, OrtKatalogEintrag>),
+        needsOrt                    ? fetchOrteById()                    : nm<OrtKatalogEintrag>(),
+        needsReligion               ? fetchReligionenById()              : nm<ReligionKatalogEintrag>(),
+        needsSchulen                ? fetchSchulenById()                 : nm<string>(),
+        needsJahrgaenge             ? fetchJahrgaengeById()              : nm<string>(),
+        needsEinschulungsarten      ? fetchEinschulungsartenById()       : nm<string>(),
+        needsUebergangsempfehlungen ? fetchUebergangsempfehlungenById()  : nm<string>(),
+        needsKgBesuchsdauer         ? fetchKindergartenbesuchsdauerById(): nm<string>(),
+        needsKindergaerten          ? fetchKindergartenById()            : nm<string>(),
       ])
 
       const resolved = enriched.map(row => {
         const r: Record<string, unknown> = { ...row }
 
-        // PLZ/Ort: SVWS stores wohnortID, resolve to text via catalog
         if (orteById) {
           const entry = orteById.get(r.wohnortID as number)
           r.plz = entry?.plz ?? ''
           r.ort = entry?.ortsname ?? ''
         }
 
-        // Hausnummer: combine with hausnummerZusatz (e.g. "12" + "a" → "12a")
         const zusatz = String(r.hausnummerZusatz ?? '').trim()
         if (zusatz) r.hausnummer = `${String(r.hausnummer ?? '').trim()}${zusatz}`
 
+        if (religionenById) {
+          const rEntry = religionenById.get(r.religionID as number)
+          r.religionKuerzel     = rEntry?.kuerzel     ?? ''
+          r.religionBezeichnung = rEntry?.bezeichnung ?? ''
+        }
+
+        if (schulenById) {
+          r.idVorherigeSchule   = schulenById.get(r.idVorherigeSchule   as number) ?? ''
+          r.idAufnehmendeSchule = schulenById.get(r.idAufnehmendeSchule as number) ?? ''
+        }
+        if (jahrgaengeById)             r.idEntlassjahrgang                        = jahrgaengeById.get(r.idEntlassjahrgang                        as number) ?? ''
+        if (einschulungsartenById)      r.grundschuleEinschulungsartID             = einschulungsartenById.get(r.grundschuleEinschulungsartID       as number) ?? ''
+        if (uebergangsempfehlungenById) r.idKuerzelGrundschuleUebergangsempfehlung = uebergangsempfehlungenById.get(r.idKuerzelGrundschuleUebergangsempfehlung as number) ?? ''
+        if (kgBesuchsdauerById)         r.idDauerKindergartenbesuch                = kgBesuchsdauerById.get(r.idDauerKindergartenbesuch            as number) ?? ''
+        if (kindergartenById)           r.idKindergarten                           = kindergartenById.get(r.idKindergarten                         as number) ?? ''
+
+        return r
+      })
+
+      const fieldLabelMap = Object.fromEntries((tile.fields ?? []).map(f => [f.key, f.label]))
+      const exportCols = selectedFields.value.map(k => fieldLabelMap[k] ?? k)
+      const exportData = resolved.map(row => {
+        const r: Record<string, unknown> = {}
+        for (const k of selectedFields.value) {
+          r[fieldLabelMap[k] ?? k] = formatSchuelerValue(k, row[k])
+        }
         return r
       })
 
       const date = new Date().toISOString().slice(0, 10)
       const filename = `schueler_export_${date}`
       format.value === 'csv'
-        ? exportAsCsv(resolved, selectedFields.value, `${filename}.csv`)
-        : exportAsJson(resolved, selectedFields.value, `${filename}.json`)
+        ? exportAsCsv(exportData, exportCols, `${filename}.csv`)
+        : exportAsJson(exportData, exportCols, `${filename}.json`)
     } catch (e) {
       loadError.value = e instanceof Error ? e.message : 'Fehler beim Exportieren'
     } finally {
@@ -759,9 +967,7 @@ function doExport(): void {
 
 <style scoped>
 .export-view {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 0.375rem 1rem;
+  padding: 0.375rem 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 0.625rem;
@@ -873,11 +1079,65 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
   flex-wrap: wrap;
 }
 
-/* Checkbox-Raster */
-.field-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 0.3rem 1rem;
+/* Feld-Sektionen (oberste Ebene: Stammdaten / Schulbesuchsdaten) */
+.field-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.field-section-header {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--p-primary-color);
+  padding: 0.25rem 0 0.15rem;
+  border-bottom: 2px solid var(--p-primary-200, #93c5fd);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+:global(.dark) .field-section-header {
+  border-bottom-color: color-mix(in srgb, var(--p-primary-color) 40%, transparent);
+}
+
+/* Karten-Gitter für Gruppen */
+.groups-grid {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  align-items: start;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+/* Einzelne Gruppen-Karte */
+.field-group-card {
+  flex: 0 0 auto;
+  min-width: 190px;
+  border: 1px solid var(--p-surface-border);
+  border-radius: 6px;
+  background: var(--p-surface-ground);
+  padding: 0.4rem 0.6rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.field-group-card-header {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--p-text-muted-color);
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid var(--p-surface-border);
+}
+
+/* Vertikale Checkbox-Liste innerhalb einer Karte */
+.field-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
 }
 
 .field-label {
@@ -994,6 +1254,29 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
   padding: 0.2rem 0.5rem;
 }
 
+:deep(.p-datatable .p-paginator) {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.72rem;
+}
+
+:deep(.p-datatable .p-paginator .p-paginator-page),
+:deep(.p-datatable .p-paginator .p-paginator-first),
+:deep(.p-datatable .p-paginator .p-paginator-prev),
+:deep(.p-datatable .p-paginator .p-paginator-next),
+:deep(.p-datatable .p-paginator .p-paginator-last) {
+  min-width: 1.6rem;
+  height: 1.6rem;
+  font-size: 0.72rem;
+}
+
+:deep(.p-datatable .p-paginator .p-paginator-current) {
+  font-size: 0.72rem;
+}
+
+:deep(.p-datatable .p-paginator .p-select) {
+  font-size: 0.72rem;
+}
+
 :deep(.p-datatable .p-checkbox) {
   width: 14px;
   height: 14px;
@@ -1038,6 +1321,13 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
   height: 0.6rem;
 }
 
+
+:deep(.schueler-name-search) {
+  width: 200px;
+  font-size: 0.72rem;
+  padding: 0.2rem 0.35rem;
+}
+
 :deep(.format-actions .p-button),
 :deep(.section-actions .p-button) {
   font-size: 0.75rem;
@@ -1046,5 +1336,20 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 :deep(.format-actions .p-button .p-button-icon),
 :deep(.section-actions .p-button .p-button-icon) {
   font-size: 0.75rem;
+}
+
+/* Extra-kompakte Schülertabelle — Spezifität muss >= .p-datatable.p-datatable-sm .p-datatable-tbody > tr > td sein */
+:global(.p-datatable.p-datatable-sm.compact-table .p-datatable-tbody > tr > td) {
+  font-size: 0.75rem;
+  padding: 0.1rem 0.4rem;
+}
+:global(.p-datatable.p-datatable-sm.compact-table .p-datatable-thead > tr > th) {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.4rem;
+}
+:global(.p-datatable.compact-table) {
+  --p-checkbox-width: 1rem;
+  --p-checkbox-height: 1rem;
+  --p-checkbox-icon-size: 0.55rem;
 }
 </style>

@@ -12,6 +12,7 @@ import FaecherView from '@/views/FaecherView.vue'
 import BetriebeView from '@/views/BetriebeView.vue'
 import SchuljahresabschnitteView from '@/views/SchuljahresabschnitteView.vue'
 import FloskelView from '@/views/FloskelView.vue'
+import AnkreuzkompetenzView from '@/views/AnkreuzkompetenzView.vue'
 import OrtsteileView from '@/views/OrtsteileView.vue'
 import UnterrichtView from '@/views/UnterrichtView.vue'
 import HelpView from '@/views/HelpView.vue'
@@ -92,6 +93,12 @@ const router = createRouter({
       path: '/floskeln',
       name: 'floskeln',
       component: FloskelView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/ankreuzkompetenzen',
+      name: 'ankreuzkompetenzen',
+      component: AnkreuzkompetenzView,
       meta: { requiresAuth: true },
     },
     {

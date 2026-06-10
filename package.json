@@ -1,6 +1,6 @@
 {
   "name": "svws-import",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": true,
   "type": "module",
   "main": "electron/main.cjs",
@@ -11,7 +11,7 @@
     "electron:dev": "npm run build && GSETTINGS_SCHEMA_DIR=$HOME/.local/share/electron-schemas electron . --no-sandbox --ozone-platform=x11",
     "electron:build": "npm run build && electron-builder",
     "electron:build:win": "npm run build && electron-builder --win nsis",
-    "release": "rm -rf release && npm run build && electron-builder --linux AppImage --win nsis"
+    "release": "rm -rf release && npm run build && electron-builder --linux AppImage --win nsis; mkdir -p release && cd dist && zip -r ../release/SVWS-Import-$npm_package_version-webserver.zip ."
   },
   "build": {
     "appId": "de.skinwalker.svws-import",

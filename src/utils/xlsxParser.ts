@@ -2,6 +2,7 @@ import readXlsxFile from 'read-excel-file/browser'
 import { type SchuelerImportRow } from '@/models/Schueler'
 import { type LehrerImportRow } from '@/models/Lehrer'
 import { type FloskelImportRow } from '@/models/Floskel'
+import type { AnkreuzkompetenzImportRow } from '@/models/Ankreuzkompetenz'
 import { generateId } from './idHelper'
 import { normalisiereDatum, SCHUELER_KNOWN_KEYS, LEHRER_KNOWN_KEYS, splitStrasseHausnummer } from './csvParser'
 
@@ -177,4 +178,23 @@ export async function parseLehrerXlsx(file: File): Promise<{ rows: LehrerImportR
   })
   const unmappedHeaders = originalHeaders.filter(h => h && !LEHRER_KNOWN_KEYS.has(normalizeAlias(h)))
   return { rows, unmappedHeaders }
+}
+
+export async function parseAnkreuzkompetenzXlsx(file: File): Promise<AnkreuzkompetenzImportRow[]> {
+  const rows = extractRows(await readXlsxFile(file) as unknown)
+  if (rows.length < 2) return []
+  const headerMap = buildHeaderMap(rows[0])
+  return rows.slice(1).map(row => ({
+    _id: generateId(),
+    _valid: true,
+    _errors: [],
+    _sent: false,
+    text:            col(row, headerMap, 'text', 'floskeltext', 'ankreuzkompetenz', 'inhalt', 'beschreibung'),
+    fach:            col(row, headerMap, 'fach', 'fachkuerzel'),
+    jahrgang:        col(row, headerMap, 'jahrgang', 'jg', 'jahrgangsstufe', 'stufe', 'jahrgaenge'),
+    abschnitt:       col(row, headerMap, 'abschnitt', 'hj', 'halbjahr'),
+    istASV:          col(row, headerMap, 'istasv', 'asv', 'arbeitsundsozialverhalten'),
+    sortierung:      col(row, headerMap, 'sortierung', 'sort'),
+    schulgliederung: col(row, headerMap, 'schulgliederung', 'gliederung'),
+  }))
 }

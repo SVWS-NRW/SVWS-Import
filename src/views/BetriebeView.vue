@@ -54,6 +54,7 @@
               />
               <div class="action-buttons">
                 <FileUpload
+                  :key="betriebeFileKey"
                   mode="basic"
                   :auto="false"
                   :multiple="false"
@@ -139,6 +140,7 @@
               />
               <div class="action-buttons">
                 <FileUpload
+                  :key="apFileKey"
                   mode="basic"
                   :auto="false"
                   :multiple="false"
@@ -275,6 +277,7 @@ const existingBetriebeGridApi = ref<GridApi | null>(null)
 // Betriebe
 const betriebeParseError = ref('')
 const betriebeParsing = ref(false)
+const betriebeFileKey = ref(0)
 const betriebeUploadResult = ref<{ sent: number; failed: number } | null>(null)
 const betriebeGridApi = ref<GridApi | null>(null)
 const betriebeSelectedCount = ref(0)
@@ -282,6 +285,7 @@ const betriebeSelectedCount = ref(0)
 // Ansprechpartner
 const apParseError = ref('')
 const apParsing = ref(false)
+const apFileKey = ref(0)
 const apUploadResult = ref<{ sent: number; failed: number; unresolved: number; fallback: number; skipped: number } | null>(null)
 const apGridApi = ref<GridApi | null>(null)
 const apSelectedCount = ref(0)
@@ -436,7 +440,7 @@ function confirmClearBetriebe(): void {
     icon: 'pi pi-exclamation-triangle',
     acceptLabel: 'Ja, leeren',
     rejectLabel: 'Abbrechen',
-    accept: () => store.clearBetriebe(),
+    accept: () => { store.clearBetriebe(); betriebeFileKey.value++ },
   })
 }
 
@@ -447,7 +451,7 @@ function confirmClearAp(): void {
     icon: 'pi pi-exclamation-triangle',
     acceptLabel: 'Ja, leeren',
     rejectLabel: 'Abbrechen',
-    accept: () => store.clearAnsprechpartner(),
+    accept: () => { store.clearAnsprechpartner(); apFileKey.value++ },
   })
 }
 

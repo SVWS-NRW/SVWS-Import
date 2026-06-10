@@ -20,6 +20,7 @@
       />
       <div class="header-actions">
         <FileUpload
+          :key="fileKey"
           mode="basic"
           :auto="false"
           :multiple="false"
@@ -114,6 +115,7 @@ const { isDark } = useDarkMode()
 const uploadResult = ref<{ sent: number; failed: number } | null>(null)
 const parseError = ref('')
 const parsing = ref(false)
+const fileKey = ref(0)
 const showMappingDialog = ref(false)
 const gridApi = ref<GridApi | null>(null)
 const selectedCount = ref(0)
@@ -253,10 +255,7 @@ function confirmClear(): void {
     icon: 'pi pi-exclamation-triangle',
     acceptLabel: 'Ja, leeren',
     rejectLabel: 'Abbrechen',
-    accept: () => {
-      store.clear()
-      router.push({ name: 'import' })
-    },
+    accept: () => { store.clear(); fileKey.value++ },
   })
 }
 </script>

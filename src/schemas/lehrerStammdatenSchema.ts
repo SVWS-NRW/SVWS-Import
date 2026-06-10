@@ -1,7 +1,7 @@
 import type { ImportModule, MappedRow, ImportContext } from '@/models/ImportSchema'
 import type { LehrerStammdaten, PersonalTyp } from '@/models/Lehrer'
 import { normalisiereDatum, splitStrasseHausnummer } from '@/utils/csvParser'
-import { resolveWohnortId, resolveNationalitaet } from '@/services/katalogService'
+import { resolveWohnortId, resolveNationalitaetId } from '@/services/katalogService'
 
 const dateValidate = (v: string): string | null => {
   if (!v) return null
@@ -101,7 +101,7 @@ export const lehrerStammdatenSchema: ImportModule = {
       required: false,
       type: 'string',
       aliases: ['staatsangehoerigkeit', 'staatsangehörigkeit', 'nationalität', 'nationality', 'staatsang'],
-      hint: 'Numerischer Schlüssel (z.B. 000) oder ISO-3-Kürzel (z.B. DEU)',
+      hint: 'Numerischer Schlüssel (z.B. 000), ISO-3-Kürzel (z.B. DEU) oder Bezeichnung (z.B. deutsch)',
     },
     // ── Beschäftigung ─────────────────────────────────────────────────────────
     {
@@ -249,7 +249,7 @@ export const lehrerStammdatenSchema: ImportModule = {
       vorname: str('vorname'),
       geschlecht: geschlechtMap[rawGeschlecht] ?? null,
       geburtsdatum: normalisiereDatum(str('geburtsdatum')) || null,
-      staatsangehoerigkeitID: resolveNationalitaet(context.kataloge?.nationalitaeten, str('staatsangehoerigkeitID')) || null,
+      idStaatsangehoerigkeit: resolveNationalitaetId(context.kataloge?.nationalitaetenById, str('staatsangehoerigkeitID')) ?? null,
       ...(() => {
         const [strassenname, hausnummer] = str('hausnummer')
           ? [str('strassenname'), str('hausnummer')]

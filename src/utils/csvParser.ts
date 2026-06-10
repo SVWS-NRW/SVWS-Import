@@ -7,6 +7,7 @@ import { type FachImportRow } from '@/models/Faecher'
 import { type FloskelImportRow } from '@/models/Floskel'
 import type { BetriebImportRow, AnsprechpartnerImportRow } from '@/models/Betriebe'
 import type { OrtsteilImportRow } from '@/models/Ortsteile'
+import type { AnkreuzkompetenzImportRow } from '@/models/Ankreuzkompetenz'
 import { generateId } from './idHelper'
 
 // Normalisiert Spaltennamen: Leerzeichen/Groß-Klein entfernen
@@ -498,6 +499,117 @@ export async function parseOrtsteileCsv(file: File): Promise<OrtsteilImportRow[]
           }
         })
         resolve(rows)
+      },
+      error(err) {
+        reject(new Error(`CSV-Fehler: ${err.message}`))
+      },
+    })
+  })
+}
+
+export async function parseAnkreuzkompetenzCsv(file: File): Promise<AnkreuzkompetenzImportRow[]> {
+  return new Promise((resolve, reject) => {
+    Papa.parse<Record<string, string>>(file, {
+      header: true,
+      skipEmptyLines: true,
+      delimiter: /\.dat$/i.test(file.name) ? '|' : '',
+      complete(results) {
+        const rows: AnkreuzkompetenzImportRow[] = results.data.map(record => {
+          const m = buildLookup(record)
+          return {
+            _id: generateId(),
+            _valid: true,
+            _errors: [],
+            _sent: false,
+            text:           get(m, 'text', 'floskeltext', 'ankreuzkompetenz', 'inhalt', 'beschreibung'),
+            fach:           get(m, 'fach', 'fachkuerzel'),
+            jahrgang:       get(m, 'jahrgang', 'jg', 'jahrgangsstufe', 'stufe', 'jahrgaenge'),
+            abschnitt:      get(m, 'abschnitt', 'hj', 'halbjahr'),
+            istASV:         get(m, 'istasv', 'asv', 'arbeitsundsozialverhalten'),
+            sortierung:     get(m, 'sortierung', 'sort'),
+            schulgliederung: get(m, 'schulgliederung', 'gliederung'),
+          }
+        })
+        resolve(rows)
+      },
+      error(err) {
+        reject(new Error(`CSV-Fehler: ${err.message}`))
+      },
+    })
+  })
+}
+
+export function parseSchuelerSchulbesuchCsv(file: File): Promise<import('@/models/SchuelerSchulbesuch').SchuelerSchulbesuchImportRow[]> {
+  return new Promise((resolve, reject) => {
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete(results) {
+        try {
+          const rows = (results.data as Record<string, string>[]).map((record) => {
+            const m = buildLookup(record)
+            return {
+              _id: generateId(),
+              _valid: false,
+              _errors: [] as string[],
+              _sent: false,
+              _schuelerId: null,
+              _lookupStatus: 'pending' as const,
+              _vorherigeSchuleStatus: 'empty' as const,
+              _aufnehmendeSchuleStatus: 'empty' as const,
+              _vorigeEntlassJahrgangStatus: 'empty' as const,
+              _vorigeEntlassgrundStatus: 'empty' as const,
+              _entlassungGrundStatus: 'empty' as const,
+              _entlassJahrgangStatus: 'empty' as const,
+              _hoechsterAbschlussStatus: 'empty' as const,
+              _uebergangsempfehlungStatus: 'empty' as const,
+              _vorigeAbschlussartBerufsbildendStatus: 'empty' as const,
+              // Suchschlüssel
+              nachname:     get(m, 'nachname', 'name', 'familienname'),
+              vorname:      get(m, 'vorname', 'firstname', 'rufname'),
+              geburtsdatum: normalisiereDatum(get(m, 'geburtsdatum', 'geburtstag', 'birthdate', 'birthday', 'geb')),
+              // Vorige Schule — enthält Schulnummer, wird vor dem Upload in DB-ID aufgelöst
+              vorherigeSchule:           get(m, 'vorherigeschule', 'idvorherigeschule', 'vorherigeschuleid', 'vorherige schule'),
+              vorigeAllgHerkunft:        get(m, 'vorigeallgherkunft', 'herkunft', 'herkunftsart', 'schulformvorher'),
+              vorigeEntlassdatum:        normalisiereDatum(get(m, 'vorigeentlassdatum', 'entlassdatumvorher')),
+              vorigeEntlassjahrgang:     get(m, 'vorigeentlassjahrgang', 'jahrgangvorher'),
+              vorigeArtLetzteVersetzung: get(m, 'vorigeartletzteversetzung', 'versetzungsart', 'letzteversetzung'),
+              vorigeEntlassgrundID:      get(m, 'vorigeentlassgrundid', 'vorigeentlassgrund', 'entlassgrundvorher'),
+              vorigeBemerkung:           get(m, 'vorigebemerkung', 'bemerkung'),
+              vorigeAbschlussartID:              get(m, 'vorigeabschlussartid', 'vorigeabschlussartallgemeinbildend', 'vorigeabschlussart', 'abschlussartvorher', 'abschlussvorher'),
+              vorigeAbschlussartBerufsbildend:   get(m, 'vorigeabschlussartberufsbildend', 'abschlussberufsbildend', 'abschlussartberufsbildend'),
+              schluesselHoechsterSchulabschluss: get(m, 'schluesselHoechsterSchulabschluss', 'schluesselhöchsterschulabschluss', 'hoechsterschulabschluss', 'höchsterschulabschluss'),
+              // Entlassung von dieser Schule
+              entlassungDatum:           normalisiereDatum(get(m, 'entlassungdatum', 'entlassdatum', 'entlassungsdatum')),
+              entlassjahrgang:           get(m, 'entlassjahrgang', 'identlassjahrgang', 'entlassjahrgangid'),
+              entlassungGrundID:         get(m, 'entlassunggrundid', 'entlassunggrund', 'entlassungsgrund', 'entlassungsgrundid'),
+              entlassungAbschlussartID:  get(m, 'entlassungabschlussartid', 'entlassungabschlussart', 'abschlussart', 'abschluss'),
+              // Aufnehmende Schule
+              aufnehmendeSchule:         get(m, 'aufnehmendeschule', 'idaufnehmendeschule', 'aufnehmendeschuleid', 'aufnehmendeschulnummer'),
+              aufnehmendWechseldatum:    normalisiereDatum(get(m, 'aufnehmendwechseldatum', 'wechseldatumaufnehmend', 'wechseldatum')),
+              aufnehmendBestaetigt:      get(m, 'aufnehmendbestaetigt', 'wechselbestaetigt', 'aufnahmebestaetigt'),
+              // Grundschule
+              grundschuleEinschulungsjahr:             get(m, 'grundschuleeinschulungsjahr', 'einschulungsjahr', 'einschulung'),
+              grundschuleEinschulungsartID:             get(m, 'grundschuleeinschulungsartid', 'grundschuleeinschulungsart', 'einschulungsart'),
+              idGrundschuleJahreEingangsphase:          get(m, 'idgrundschulejahreeingangsphase', 'grundschulejahreeingangsphase', 'jahreeingangsphase', 'eingangsphase'),
+              kuerzelGrundschuleUebergangsempfehlung:   get(m, 'kuerzelGrundschuleUebergangsempfehlung', 'idkuerzelgrundschuleuebergangsempfehlung', 'uebergangsempfehlung'),
+              // Sekundarstufe
+              sekIWechsel:               get(m, 'sekiwechsel', 'wechselseki', 'sek1wechsel'),
+              sekIErsteSchulform:        get(m, 'sekiersteschulform', 'ersteschulform'),
+              sekIIWechsel:              get(m, 'sekiiwechsel', 'wechselsekii', 'sek2wechsel'),
+              // Kindergarten
+              idDauerKindergartenbesuch: get(m, 'iddauerkindergartenbesuch', 'dauerkindergartenbesuch', 'dauerkindergarten', 'kindergartenbesuchdauer'),
+              kindergartenBezeichnung:   get(m, 'kindergartenbezeichnung', 'kindergarten', 'kindergartenname', 'idkindergarten'),
+              _kindergartenStatus: 'empty' as const,
+              // Sprachförderung
+              verpflichtungSprachfoerderkurs: get(m, 'verpflichtungsprachfoerderkurs', 'sprachfoerderpflicht'),
+              teilnahmeSprachfoerderkurs:     get(m, 'teilnahmesprachfoerderkurs', 'sprachfoerderteilnahme'),
+            }
+          })
+          resolve(rows)
+        } catch (e) {
+          reject(e)
+        }
       },
       error(err) {
         reject(new Error(`CSV-Fehler: ${err.message}`))

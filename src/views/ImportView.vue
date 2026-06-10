@@ -37,11 +37,15 @@
       </div>
       <div class="import-card" @click="router.push({ name: 'schuljahresabschnitte' })" title="Bestehende Abschnitte laden und neue anlegen">
         <i class="pi pi-calendar-plus card-icon" />
-        <strong>Schuljahresabschnitte</strong>
+        <strong>Schuljahres-<br>abschnitte</strong>
       </div>
       <div class="import-card" @click="router.push({ name: 'floskeln' })" title="Floskeln anzeigen, filtern, löschen und importieren">
         <i class="pi pi-comment card-icon" />
         <strong>Floskeln verwalten</strong>
+      </div>
+      <div class="import-card" @click="router.push({ name: 'ankreuzkompetenzen' })" title="Ankreuzkompetenzen verwalten und importieren">
+        <i class="pi pi-check-square card-icon" />
+        <strong>Ankreuz-<br>kompetenzen</strong>
       </div>
       <div class="import-card" @click="router.push({ name: 'betriebe' })" title="Betriebe und Ansprechpartner anlegen">
         <i class="pi pi-building card-icon" />
@@ -49,7 +53,7 @@
       </div>
       <div class="import-card" @click="router.push({ name: 'ortsteile' })" title="Ortsteile anlegen und verwalten">
         <i class="pi pi-map-marker card-icon" />
-        <strong>Ortsteile verwalten</strong>
+        <strong>Ortsteile<br>verwalten</strong>
       </div>
       <div class="import-card" @click="router.push({ name: 'unterricht' })" title="Klassenunterricht und Kursunterricht importieren">
         <i class="pi pi-book card-icon" />
@@ -57,7 +61,7 @@
       </div>
       <div class="import-card wizard-card" @click="router.push({ name: 'wizard' })" title="Geführter Import Schritt für Schritt">
         <i class="pi pi-list-check card-icon" />
-        <strong>Import-Assistent</strong>
+        <strong>Import-<br>Assistent</strong>
       </div>
     </div>
 

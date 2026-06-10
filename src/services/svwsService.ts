@@ -1,4 +1,4 @@
-import { getApiClient } from './apiClient'
+import { getApiClient, getRootClient } from './apiClient'
 import { toAppError } from './errorService'
 import type { SchuelerNeu, SchuelerImportRow } from '@/models/Schueler'
 import type { LehrerStammdaten, LehrerImportRow } from '@/models/Lehrer'
@@ -11,13 +11,19 @@ import { lehrerImportToApi } from '@/models/Lehrer'
 import { klasseImportToApi } from '@/models/Klassen'
 import { jahrgangImportToApi } from '@/models/Jahrgaenge'
 import { fachImportToApi } from '@/models/Faecher'
-import type { ImportModule, MappedRow, ImportContext, EntityType, OrtKatalogEintrag } from '@/models/ImportSchema'
+import type { ImportModule, MappedRow, ImportContext, EntityType, OrtKatalogEintrag, ReligionKatalogEintrag } from '@/models/ImportSchema'
 import { betriebImportToApi, ansprechpartnerImportToApi, type BetriebImportRow, type BetriebDetails, type AnsprechpartnerImportRow } from '@/models/Betriebe'
 import { ortsteilImportToApi, type OrtsteilImportRow, type OrtsteilDetails } from '@/models/Ortsteile'
-import { resolveWohnortId, resolveReligionId, resolveNationalitaet, resolveVerkehrssprache } from './katalogService'
+import { resolveWohnortId, resolveReligionId, resolveNationalitaet, resolveVerkehrssprache, resolveNationalitaetId } from './katalogService'
 import type { Floskelgruppe, Floskel, FloskelApiPayload } from '@/models/Floskel'
+import type {
+  Ankreuzkompetenz,
+  AnkreuzkompetenzCreatePayload,
+  AnkreuzkompetenzJahrgangszuordnungPayload,
+} from '@/models/Ankreuzkompetenz'
 
 export type { Floskelgruppe, Floskel }
+export type { Ankreuzkompetenz }
 
 export async function fetchFloskelgruppen(): Promise<Floskelgruppe[]> {
   const response = await getApiClient().get('/schule/floskelgruppen')
@@ -71,10 +77,55 @@ export async function createFloskel(payload: FloskelApiPayload): Promise<UploadR
   }
 }
 
+export async function fetchAnkreuzkompetenzen(): Promise<Ankreuzkompetenz[]> {
+  const response = await getApiClient().get('/schule/ankreuzkompetenzen')
+  return Array.isArray(response.data) ? response.data : []
+}
+
+export async function createAnkreuzkompetenz(payload: AnkreuzkompetenzCreatePayload): Promise<UploadResult> {
+  try {
+    const response = await getApiClient().post('/schule/ankreuzkompetenzen/create', payload)
+    return { success: true, id: response.data?.id }
+  } catch (error: unknown) {
+    const appError = toAppError(error)
+    return { success: false, error: appError.messageUser, errorDetail: appError.messageTechnical }
+  }
+}
+
+export async function deleteAnkreuzkompetenzen(ids: number[]): Promise<UploadResult> {
+  try {
+    await getApiClient().delete('/schule/ankreuzkompetenzen/delete/multiple', { data: ids })
+    return { success: true }
+  } catch (error: unknown) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}
+
+export async function addAnkreuzkompetenzJahrgangszuordnungen(
+  payload: AnkreuzkompetenzJahrgangszuordnungPayload[],
+): Promise<UploadResult> {
+  try {
+    await getApiClient().post('/schule/ankreuzkompetenzen/jahrgangzuordnung', payload)
+    return { success: true }
+  } catch (error: unknown) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}
+
+export async function deleteAnkreuzkompetenzJahrgangszuordnungen(ids: number[]): Promise<UploadResult> {
+  try {
+    await getApiClient().delete('/schule/ankreuzkompetenzen/jahrgangzuordnung/delete/multiple', { data: ids })
+    return { success: true }
+  } catch (error: unknown) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}
+
 export interface UploadResult {
   success: boolean
   id?: number
   error?: string
+  errorDetail?: string
 }
 
 interface SchuelerLernabschnitt {
@@ -359,13 +410,14 @@ export async function createSchueler(
 
 export async function createLehrer(
   row: LehrerImportRow,
-  nationalitaetenKatalog?: Map<string, string>,
+  nationalitaetenById?: Map<string, number>,
   orteKatalog?: Map<string, OrtKatalogEintrag>,
 ): Promise<UploadResult> {
   try {
     const payload: LehrerStammdaten = lehrerImportToApi(row)
-    if (payload.staatsangehoerigkeitID) {
-      payload.staatsangehoerigkeitID = resolveNationalitaet(nationalitaetenKatalog, payload.staatsangehoerigkeitID) || null
+    if (row.staatsangehoerigkeitID) {
+      const id = resolveNationalitaetId(nationalitaetenById, row.staatsangehoerigkeitID)
+      if (id !== null) payload.idStaatsangehoerigkeit = id
     }
     if (orteKatalog) {
       payload.wohnortID = resolveWohnortId(orteKatalog, row.plz, row.ort)
@@ -554,6 +606,69 @@ export async function fetchOrteById(): Promise<Map<number, OrtKatalogEintrag>> {
   const map = new Map<number, OrtKatalogEintrag>()
   for (const entry of response.data) {
     if (entry.id) map.set(entry.id, entry)
+  }
+  return map
+}
+
+export async function fetchReligionenById(): Promise<Map<number, ReligionKatalogEintrag>> {
+  const response = await getApiClient().get<ReligionKatalogEintrag[]>('/schule/religionen')
+  const map = new Map<number, ReligionKatalogEintrag>()
+  for (const entry of response.data) {
+    if (entry.id) map.set(entry.id, entry)
+  }
+  return map
+}
+
+export async function fetchSchulenById(): Promise<Map<number, string>> {
+  const response = await getApiClient().get<SchulEintrag[]>('/schule/schulen')
+  const map = new Map<number, string>()
+  for (const s of response.data) {
+    if (s.id && s.schulnummerStatistik) map.set(s.id, s.schulnummerStatistik)
+  }
+  return map
+}
+
+export async function fetchJahrgaengeById(): Promise<Map<number, string>> {
+  const response = await getApiClient().get<{ id: number; kuerzel?: string | null }[]>('/jahrgaenge')
+  const map = new Map<number, string>()
+  for (const j of response.data) {
+    if (j.id && j.kuerzel) map.set(j.id, j.kuerzel)
+  }
+  return map
+}
+
+export async function fetchEinschulungsartenById(): Promise<Map<number, string>> {
+  const response = await getApiClient().get<{ id: number; text: string }[]>('/schule/allgemein/einschulungsarten')
+  const map = new Map<number, string>()
+  for (const e of response.data) {
+    if (e.id && e.text) map.set(e.id, e.text)
+  }
+  return map
+}
+
+export async function fetchUebergangsempfehlungenById(): Promise<Map<number, string>> {
+  const response = await getApiClient().get<{ id: number; text: string }[]>('/schueler/allgemein/uebergangsempfehlung')
+  const map = new Map<number, string>()
+  for (const e of response.data) {
+    if (e.id && e.text) map.set(e.id, e.text)
+  }
+  return map
+}
+
+export async function fetchKindergartenbesuchsdauerById(): Promise<Map<number, string>> {
+  const response = await getApiClient().get<{ id: number; text: string }[]>('/schule/allgemein/kindergartenbesuch')
+  const map = new Map<number, string>()
+  for (const e of response.data) {
+    if (e.id && e.text) map.set(e.id, e.text)
+  }
+  return map
+}
+
+export async function fetchKindergartenById(): Promise<Map<number, string>> {
+  const response = await getApiClient().get<{ id: number; bezeichnung: string }[]>('/kindergaerten')
+  const map = new Map<number, string>()
+  for (const k of response.data) {
+    if (k.id && k.bezeichnung) map.set(k.id, k.bezeichnung)
   }
   return map
 }
@@ -774,5 +889,238 @@ export async function fetchKurseFuerAbschnitt(abschnittId: number): Promise<DbKu
     params: { _t: Date.now() },
   })
   return Array.isArray(response.data) ? response.data : []
+}
+
+export interface SchuelerListeEintrag {
+  id: number
+  nachname: string
+  vorname: string
+  geburtsdatum?: string | null
+  status?: number
+}
+
+export async function fetchSchuelerAktuell(): Promise<SchuelerListeEintrag[]> {
+  try {
+    const response = await getApiClient().get<SchuelerListeEintrag[]>('/schueler/aktuell')
+    return Array.isArray(response.data) ? response.data : []
+  } catch {
+    return []
+  }
+}
+
+export async function fetchSchuelerSchulbesuch(id: number): Promise<Record<string, unknown> | null> {
+  try {
+    const response = await getApiClient().get<Record<string, unknown>>(`/schueler/${id}/schulbesuch`)
+    return response.data ?? null
+  } catch {
+    return null
+  }
+}
+
+export async function patchSchuelerSchulbesuch(
+  id: number,
+  patch: Record<string, unknown>,
+): Promise<UploadResult> {
+  try {
+    await getApiClient().patch(`/schueler/${id}/schulbesuch`, patch)
+    return { success: true }
+  } catch (error: unknown) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}
+
+export interface SchulEintrag {
+  id: number
+  kuerzel?: string | null
+  kurzbezeichnung?: string | null
+  schulnummerStatistik?: string | null
+  name: string
+  idSchulform?: number | null
+  strassenname?: string | null
+  hausnummer?: string | null
+  zusatzHausnummer?: string | null
+  plz?: string | null
+  ort?: string | null
+  telefon?: string | null
+  fax?: string | null
+  email?: string | null
+  schulleiter?: string | null
+  sortierung: number
+  istSichtbar: boolean
+}
+
+/** Eintrag aus dem allgemeinen NRW-Schulverzeichnis (GET /schule/allgemein/schulen) */
+export interface SchulenKatalogEintrag {
+  SchulNr: string
+  ABez1?: string
+  ABez2?: string
+  ABez3?: string
+  KurzBez?: string
+  SF?: string
+  Strasse?: string
+  PLZ?: string
+  Ort?: string
+  TelVorw?: string
+  Telefon?: string
+  FaxVorw?: string
+  Fax?: string
+  Email?: string
+}
+
+export interface KatalogEntlassgrund {
+  id: number
+  bezeichnung: string
+  sortierung?: number
+  istSichtbar?: boolean
+}
+
+export async function fetchEntlassgruende(): Promise<Set<number>> {
+  try {
+    const response = await getApiClient().get<KatalogEntlassgrund[]>('/entlassgruende')
+    const set = new Set<number>()
+    for (const e of response.data) if (e.id) set.add(e.id)
+    return set
+  } catch {
+    return new Set()
+  }
+}
+
+export async function fetchSchulKatalog(): Promise<SchulEintrag[]> {
+  try {
+    const response = await getApiClient().get<SchulEintrag[]>('/schule/schulen')
+    return Array.isArray(response.data) ? response.data : []
+  } catch {
+    return []
+  }
+}
+
+export async function fetchAllgemeineSchulen(): Promise<SchulenKatalogEintrag[]> {
+  try {
+    const response = await getApiClient().get<SchulenKatalogEintrag[]>('/schule/allgemein/schulen')
+    return Array.isArray(response.data) ? response.data : []
+  } catch {
+    return []
+  }
+}
+
+function splitStrasse(strasse: string): { name: string; nr: string; zusatz: string } {
+  const match = strasse.trim().match(/^(.*?)\s+(\d+\w*)(\s+\S+)?$/)
+  if (!match) return { name: strasse.trim(), nr: '', zusatz: '' }
+  return { name: match[1].trim(), nr: match[2].trim(), zusatz: match[3]?.trim() ?? '' }
+}
+
+export function schulenKatalogToSchulEintrag(
+  sk: SchulenKatalogEintrag,
+  schulformenMap: Map<string, number>,
+): Omit<SchulEintrag, 'id'> {
+  const idSchulform = sk.SF ? (schulformenMap.get(sk.SF.trim()) ?? null) : null
+  const strasse = splitStrasse(sk.Strasse ?? '')
+  const name = [sk.ABez1, sk.ABez2, sk.ABez3].filter(Boolean).join(' ') || `Schule ${sk.SchulNr}`
+  return {
+    schulnummerStatistik: sk.SchulNr,
+    kuerzel: null,
+    kurzbezeichnung: sk.KurzBez ?? null,
+    name,
+    idSchulform,
+    strassenname: strasse.name || null,
+    hausnummer: strasse.nr || null,
+    zusatzHausnummer: strasse.zusatz || null,
+    plz: sk.PLZ ?? null,
+    ort: sk.Ort ?? null,
+    telefon: sk.Telefon ?? null,
+    fax: sk.Fax ?? null,
+    email: sk.Email ?? null,
+    schulleiter: null,
+    sortierung: 32000,
+    istSichtbar: true,
+  }
+}
+
+export interface KindergartenEintrag {
+  id: number
+  bezeichnung: string
+}
+
+export async function fetchKindergaerten(): Promise<KindergartenEintrag[]> {
+  try {
+    const resp = await getApiClient().get<KindergartenEintrag[]>('/kindergaerten')
+    return resp.data
+  } catch {
+    return []
+  }
+}
+
+export async function createKindergarten(bezeichnung: string): Promise<{ id: number } | { error: string }> {
+  try {
+    const resp = await getApiClient().post<KindergartenEintrag>('/kindergarten/create', {
+      bezeichnung,
+      bemerkung: null,
+      tel: null,
+      email: null,
+      strassenname: null,
+      hausNr: null,
+      hausNrZusatz: null,
+      plz: null,
+      ort: null,
+      sortierung: 32000,
+      istSichtbar: true,
+    })
+    return { id: resp.data.id }
+  } catch (error: unknown) {
+    return { error: toAppError(error).messageUser }
+  }
+}
+
+export async function createSchuleInKatalog(
+  schulnummer: string,
+  vollDaten?: Omit<SchulEintrag, 'id'>,
+): Promise<{ id: number } | { error: string }> {
+  try {
+    const body = vollDaten ?? {
+      name: `Schule ${schulnummer}`,
+      schulnummerStatistik: schulnummer,
+      sortierung: 32000,
+      istSichtbar: true,
+    }
+    const response = await getApiClient().post<SchulEintrag | number>('/schule/schulen/create', body)
+    const id = typeof response.data === 'number'
+      ? response.data
+      : (response.data as SchulEintrag).id
+    if (!id) throw new Error(`Schule angelegt, aber keine gültige ID in der Antwort: ${JSON.stringify(response.data)}`)
+    return { id }
+  } catch (error: unknown) {
+    return { error: toAppError(error).messageUser }
+  }
+}
+
+export interface LernplattformEintrag {
+  id: number
+  bezeichnung: string
+  [key: string]: unknown
+}
+
+export async function fetchLernplattformen(schema: string): Promise<LernplattformEintrag[]> {
+  const response = await getRootClient().get(`/api/external/${schema}/v1/lernplattformen`)
+  return Array.isArray(response.data) ? response.data : []
+}
+
+export async function downloadLernplattformExport(
+  schema: string,
+  idLernplattform: number,
+  idSchuljahresabschnitt: number,
+  format: 'json' | 'gzip',
+  bezeichnung: string,
+  abschnittLabel: string,
+): Promise<{ blob: Blob; filename: string }> {
+  const path = format === 'gzip'
+    ? `/api/external/${schema}/v1/lernplattformen/${idLernplattform}/${idSchuljahresabschnitt}/gzip`
+    : `/api/external/${schema}/v1/lernplattformen/${idLernplattform}/${idSchuljahresabschnitt}`
+  const response = await getRootClient().get(path, { responseType: 'blob' })
+  const date = new Date().toISOString().slice(0, 10)
+  const ext = format === 'gzip' ? 'json.gz' : 'json'
+  const safeName      = bezeichnung.replace(/[^a-zA-Z0-9\-äöüÄÖÜß]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '')
+  const safeAbschnitt = abschnittLabel.replace(/[^a-zA-Z0-9\-äöüÄÖÜß]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '')
+  const filename = `lernplattform_${safeName}_${safeAbschnitt}_${date}.${ext}`
+  return { blob: response.data as Blob, filename }
 }
 

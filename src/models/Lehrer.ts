@@ -11,7 +11,7 @@ export interface LehrerStammdaten {
   vorname: string
   geschlecht: number | null          // 3=männlich, 4=weiblich, 5=divers, 6=ohne Angabe
   geburtsdatum: string | null        // ISO 8601: YYYY-MM-DD
-  staatsangehoerigkeitID: string | null
+  idStaatsangehoerigkeit: number | null
   strassenname: string | null
   hausnummer: string | null
   hausnummerZusatz: string | null
@@ -68,7 +68,7 @@ export function lehrerImportToApi(row: LehrerImportRow): LehrerStammdaten {
     vorname: row.vorname,
     geschlecht: parseGeschlecht(row.geschlecht),
     geburtsdatum: row.geburtsdatum || null,
-    staatsangehoerigkeitID: row.staatsangehoerigkeitID || null,
+    idStaatsangehoerigkeit: null,
     strassenname: row.strassenname || null,
     hausnummer: row.hausnummer || null,
     hausnummerZusatz: row.hausnummerZusatz || null,

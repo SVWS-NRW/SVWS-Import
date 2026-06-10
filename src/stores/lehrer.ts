@@ -86,11 +86,11 @@ export const useLehrerStore = defineStore('lehrer', () => {
 
     const useSelection = selectedIds !== undefined && selectedIds.size > 0
 
-    let nationalitaetenKatalog: Map<string, string> | undefined
+    let nationalitaetenById: Map<string, number> | undefined
     let orteKatalog: Map<string, import('@/models/ImportSchema').OrtKatalogEintrag> | undefined
     try {
       const kataloge = await loadKataloge()
-      nationalitaetenKatalog = kataloge.nationalitaeten
+      nationalitaetenById = kataloge.nationalitaetenById
       orteKatalog = kataloge.orte
     } catch {
       // Katalog nicht verfügbar — Lookups werden übersprungen
@@ -105,7 +105,7 @@ export const useLehrerStore = defineStore('lehrer', () => {
       const row = updated[i]
       if (!row._valid || row._sent) continue
       if (useSelection && !selectedIds!.has(row._id)) continue
-      const result = await createLehrer(row, nationalitaetenKatalog, orteKatalog)
+      const result = await createLehrer(row, nationalitaetenById, orteKatalog)
       if (result.success) {
         updated[i] = { ...row, _sent: true, _errors: [] }
         sent++

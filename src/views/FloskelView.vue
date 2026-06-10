@@ -14,7 +14,7 @@
       </div>
       <div class="header-actions">
         <FileUpload
-          ref="fileUploadRef"
+          :key="fileKey"
           mode="basic"
           :auto="false"
           :multiple="false"
@@ -462,7 +462,7 @@ const filterGruppe = ref<number | null>(null)
 const filterFach = ref<number | null>(null)
 const filterNiveau = ref<number | null>(null)
 
-const fileUploadRef = ref()
+const fileKey = ref(0)
 const importFile = ref<File | null>(null)
 const importRows = ref<FloskelImportRow[]>([])
 const selectedImportRows = ref<FloskelImportRow[]>([])
@@ -820,7 +820,7 @@ function resetImport(): void {
   importError.value = ''
   importProgress.value = ''
   importCancelled.value = false
-  fileUploadRef.value?.clear?.()
+  fileKey.value++
 }
 
 function stopImport(): void {

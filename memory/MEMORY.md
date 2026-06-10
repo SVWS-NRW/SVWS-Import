@@ -50,6 +50,8 @@ Beide Pfade werden aktiv weiterentwickelt. Der Wizard ist kein Ersatz für den I
 
 ---
 
+- [Offene Schulbesuch-Aufgaben](project_pending_schulbesuch.md) — vorigeAbschlussartBerufsbildend noch nicht ans API angebunden
+
 ## Externe Referenzen
 - OpenAPI SVWS-Server: `examples/openAPI/server.json` (lokal) oder [SVWS-NRW GitHub](https://github.com/SVWS-NRW/SVWS-Server)
 - ADR-Dateien: `docs/adr/0001-*.md` bis `docs/adr/0015-*.md`

@@ -70,11 +70,44 @@
         />
       </form>
     </div>
+
+    <div class="footer-links">
+      <a
+        class="footer-link"
+        href="https://svws-nrw.github.io/SVWS-Import/"
+        target="_blank"
+        rel="noopener noreferrer"
+      >Hilfe</a>
+      <button class="footer-link" type="button" @click="openImpressumModal()">Impressum</button>
+      <button class="footer-link" type="button" @click="datenschutzOpen = true">Datenschutzhinweise</button>
+    </div>
   </div>
+
+  <Dialog
+    v-model:visible="impressumOpen"
+    header="Impressum"
+    :modal="true"
+    :draggable="false"
+    :style="{ width: 'min(700px, calc(100vw - 2rem))' }"
+  >
+    <p v-if="impressumLoading" class="modal-status">Impressum wird geladen...</p>
+    <p v-else-if="impressumError" class="modal-error">{{ impressumError }}</p>
+    <div v-else class="modal-content" v-html="impressumHtml" />
+  </Dialog>
+
+  <Dialog
+    v-model:visible="datenschutzOpen"
+    header="Datenschutzhinweise"
+    :modal="true"
+    :draggable="false"
+    :style="{ width: 'min(700px, calc(100vw - 2rem))' }"
+  >
+    <div class="modal-content" v-html="datenschutzHtml" />
+  </Dialog>
 </template>
 
 <script setup lang="ts">
-import { reactive, computed } from 'vue'
+import { reactive, computed, ref } from 'vue'
 import { version } from '../../package.json'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -83,10 +116,78 @@ import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
+import Dialog from 'primevue/dialog'
+import DOMPurify from 'dompurify'
+import { marked } from 'marked'
+import datenschutzRawMd from '../../docs/datenschutz.md?raw'
 
 const auth = useAuthStore()
 const schuleStore = useSchuleStore()
 const router = useRouter()
+
+type ImpressumWindow = Window & { __IMPRESSUM_MARKDOWN__?: string }
+
+const impressumOpen = ref(false)
+const impressumLoading = ref(false)
+const impressumHtml = ref('')
+const impressumError = ref('')
+
+const datenschutzOpen = ref(false)
+const datenschutzHtml = DOMPurify.sanitize(marked.parse(datenschutzRawMd, { async: false }))
+
+async function loadImpressumScript(): Promise<string> {
+  const existing = (window as ImpressumWindow).__IMPRESSUM_MARKDOWN__
+  if (existing != null) return existing
+
+  await new Promise<void>((resolve, reject) => {
+    function loadScript(src: string, onError: () => void) {
+      const script = document.createElement('script')
+      script.src = src
+      script.async = true
+      script.onload = () => resolve()
+      script.onerror = onError
+      document.head.appendChild(script)
+    }
+    const primary = new URL('impressum.js', window.location.href).toString()
+    const fallback = new URL('impressum.example.js', window.location.href).toString()
+    loadScript(primary, () => {
+      loadScript(fallback, () => {
+        reject(new Error(
+          'Weder "impressum.js" noch "impressum.example.js" wurden gefunden. ' +
+          'Bitte benennen Sie "impressum.example.js" in "impressum.js" um und tragen Sie dort Ihre Schuldaten ein.'
+        ))
+      })
+    })
+  })
+
+  const loaded = (window as ImpressumWindow).__IMPRESSUM_MARKDOWN__
+  if (loaded == null) throw new Error('Die Datei "impressum.js" enthält keinen Impressumstext.')
+  return loaded
+}
+
+async function openImpressumModal() {
+  impressumOpen.value = true
+  if (impressumLoading.value || impressumHtml.value) return
+
+  impressumLoading.value = true
+  impressumError.value = ''
+  try {
+    let content: string
+    if (import.meta.env.DEV) {
+      const targetUrl = new URL('impressum.md', window.location.href).toString()
+      const response = await fetch(targetUrl, { cache: 'no-store' })
+      if (!response.ok) throw new Error(`Datei konnte nicht geladen werden (${response.status}).`)
+      content = await response.text()
+    } else {
+      content = await loadImpressumScript()
+    }
+    impressumHtml.value = DOMPurify.sanitize(marked.parse(content, { async: false }))
+  } catch (error) {
+    impressumError.value = `Impressum konnte nicht geladen werden: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`
+  } finally {
+    impressumLoading.value = false
+  }
+}
 
 const form = reactive({
   baseUrl: import.meta.env.VITE_SVWS_URL ?? '',
@@ -119,6 +220,7 @@ async function handleConnect(): Promise<void> {
 .connect-wrapper {
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   background: var(--p-surface-ground);
@@ -206,5 +308,79 @@ async function handleConnect(): Promise<void> {
 
 .w-full {
   width: 100%;
+}
+
+.footer-links {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.footer-link {
+  border: none;
+  background: transparent;
+  color: var(--p-primary-color);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 0.15rem 0.3rem;
+}
+
+.footer-link:hover {
+  opacity: 0.75;
+}
+
+.modal-status {
+  margin: 0;
+  padding: 0.5rem 0;
+  color: var(--p-text-muted-color);
+}
+
+.modal-error {
+  margin: 0;
+  padding: 0.5rem 0;
+  color: var(--p-red-500, #ef4444);
+}
+
+.modal-content {
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--p-text-color);
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.modal-content :deep(h1),
+.modal-content :deep(h2),
+.modal-content :deep(h3) {
+  margin: 0.8rem 0 0.35rem;
+  line-height: 1.25;
+}
+
+.modal-content :deep(h2) { font-size: 1rem; }
+.modal-content :deep(h3) { font-size: 0.9rem; }
+
+.modal-content :deep(p),
+.modal-content :deep(ul),
+.modal-content :deep(ol) {
+  margin: 0.4rem 0;
+}
+
+.modal-content :deep(ul),
+.modal-content :deep(ol) {
+  padding-left: 1.2rem;
+}
+
+.modal-content :deep(a) {
+  color: var(--p-primary-color);
+  word-break: break-word;
+}
+
+.modal-content :deep(strong) {
+  font-weight: 700;
 }
 </style>

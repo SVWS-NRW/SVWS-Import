@@ -190,10 +190,10 @@ async function openImpressumModal() {
 }
 
 const form = reactive({
-  baseUrl: import.meta.env.VITE_SVWS_URL ?? '',
-  schema: import.meta.env.VITE_SVWS_SCHEMA ?? '',
-  username: import.meta.env.VITE_SVWS_USERNAME ?? '',
-  password: import.meta.env.VITE_SVWS_PASSWORD ?? '',
+  baseUrl: import.meta.env.DEV ? (import.meta.env.VITE_SVWS_URL ?? '') : '',
+  schema: import.meta.env.DEV ? (import.meta.env.VITE_SVWS_SCHEMA ?? '') : '',
+  username: import.meta.env.DEV ? (import.meta.env.VITE_SVWS_USERNAME ?? '') : '',
+  password: import.meta.env.DEV ? (import.meta.env.VITE_SVWS_PASSWORD ?? '') : '',
 })
 
 const isFormValid = computed(() =>

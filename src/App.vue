@@ -24,11 +24,11 @@
           {{ auth.schema }}@{{ shortUrl }}
         </span>
         <Button
-          :icon="isDark ? 'pi pi-sun' : 'pi pi-moon'"
+          :icon="themeIcon"
           severity="secondary"
           text
           size="small"
-          :aria-label="isDark ? 'Hell-Modus aktivieren' : 'Dunkel-Modus aktivieren'"
+          :aria-label="themeAriaLabel"
           @click="toggleDark"
         />
         <Button
@@ -44,12 +44,12 @@
 
     <Button
       v-if="!auth.isConnected"
-      :icon="isDark ? 'pi pi-sun' : 'pi pi-moon'"
+      :icon="themeIcon"
       size="small"
       severity="secondary"
       text
       class="dark-mode-fab"
-      :aria-label="isDark ? 'Hell-Modus aktivieren' : 'Dunkel-Modus aktivieren'"
+      :aria-label="themeAriaLabel"
       @click="toggleDark"
     />
 
@@ -63,6 +63,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+
 import { useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Badge from 'primevue/badge'
@@ -75,11 +76,23 @@ import { useDarkMode } from '@/composables/useDarkMode'
 import { setToastService } from '@/services/errorService'
 
 setToastService(useToast())
-const { isDark, toggle: toggleDark } = useDarkMode()
+const { mode, toggle: toggleDark } = useDarkMode()
 const auth = useAuthStore()
 const schuelerStore = useSchuelerStore()
 const lehrerStore = useLehrerStore()
 const router = useRouter()
+
+const themeIcon = computed(() => {
+  if (mode.value === 'dark') return 'pi pi-moon'
+  if (mode.value === 'light') return 'pi pi-sun'
+  return 'pi pi-desktop'
+})
+
+const themeAriaLabel = computed(() => {
+  if (mode.value === 'dark') return 'Dunkel-Modus aktiv – klicken für System-Modus'
+  if (mode.value === 'light') return 'Hell-Modus aktiv – klicken für Dunkel-Modus'
+  return 'System-Modus aktiv – klicken für Hell-Modus'
+})
 
 const shortUrl = computed(() => {
   try {

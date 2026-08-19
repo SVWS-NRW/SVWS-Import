@@ -55,7 +55,7 @@
     "dompurify": "^3.4.11",
     "marked": "^18.0.5",
     "papaparse": "^5.5.0",
-    "pinia": "^3.0.0",
+    "pinia": "^4.0.0",
     "primeicons": "^7.0.0",
     "primevue": "^4.3.0",
     "read-excel-file": "^9.0.9",

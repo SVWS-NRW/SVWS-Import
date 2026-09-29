@@ -42,16 +42,14 @@ export interface ReligionKatalogEintrag {
 
 
 export interface ImportKataloge {
-  /** schluessel (codeDEStatis, z.B. "000") → kuerzel (ISO-3, z.B. "DEU") — nur für Schüler-Import */
-  nationalitaeten?: Map<string, string>
-  /** diverse Schlüssel (schluessel, codeDEStatis, iso3, kuerzel, text) → numerische Katalog-ID — für Lehrer-Import */
+  /** diverse Schlüssel (schluessel, codeDEStatis, iso3, kuerzel, text, bezeichnung, staatsangehoerigkeit) → numerische Katalog-ID */
   nationalitaetenById?: Map<string, number>
   /** "PLZ|ortsname" (lowercase) → OrtKatalogEintrag */
   orte?: Map<string, OrtKatalogEintrag>
-  /** kuerzel (uppercase) → ReligionKatalogEintrag */
+  /** Statistik-kuerzel (uppercase, über idReligion aus allinone.json) → ReligionKatalogEintrag; ohne Kürzel: "#<id>" */
   religionen?: Map<string, ReligionKatalogEintrag>
-  /** text.toLowerCase() → kuerzel */
-  verkehrssprachen?: Map<string, string>
+  /** text / kuerzel / iso3 (lowercase) → numerische Katalog-ID */
+  verkehrssprachenById?: Map<string, number>
   /** kuerzel.toLowerCase() → id */
   klassen?: Map<string, number>
   /** kuerzel.toLowerCase() → id */

@@ -11,14 +11,9 @@ export interface ConnectionConfig {
 }
 
 function applyInterceptors(instance: AxiosInstance, config: ConnectionConfig): void {
+  if (!import.meta.env.DEV) return
   instance.interceptors.request.use(cfg => {
-    if (!cfg.method || cfg.method.toLowerCase() === 'get') {
-      cfg.headers['Cache-Control'] = 'no-cache'
-      cfg.headers['Pragma'] = 'no-cache'
-    }
-    if (import.meta.env.DEV) {
-      cfg.headers['X-Proxy-Target'] = config.baseUrl
-    }
+    cfg.headers['X-Proxy-Target'] = config.baseUrl
     return cfg
   })
 }

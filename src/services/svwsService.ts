@@ -14,7 +14,7 @@ import { fachImportToApi } from '@/models/Faecher'
 import type { ImportModule, MappedRow, ImportContext, EntityType, OrtKatalogEintrag, ReligionKatalogEintrag } from '@/models/ImportSchema'
 import { betriebImportToApi, ansprechpartnerImportToApi, type BetriebImportRow, type BetriebDetails, type AnsprechpartnerImportRow } from '@/models/Betriebe'
 import { ortsteilImportToApi, type OrtsteilImportRow, type OrtsteilDetails } from '@/models/Ortsteile'
-import { resolveWohnortId, resolveReligionId, resolveNationalitaet, resolveVerkehrssprache, resolveNationalitaetId } from './katalogService'
+import { resolveWohnortId, resolveReligionId, resolveNationalitaetId, resolveVerkehrsspracheId, fetchSchulReligionen } from './katalogService'
 import type { Floskelgruppe, Floskel, FloskelApiPayload } from '@/models/Floskel'
 import type {
   Ankreuzkompetenz,
@@ -214,6 +214,27 @@ export async function sendMappedRow(
   }
 }
 
+/**
+ * Baut die ID-Felder für Staatsangehörigkeit, Geburtsländer und Verkehrssprache
+ * des SchuelerStammdaten-Patches. Felder ohne Katalog-Treffer fehlen im Ergebnis.
+ */
+function herkunftIdPatch(
+  str: (key: string) => string,
+  nationalitaetenById: Map<string, number> | undefined,
+  verkehrssprachenById: Map<string, number> | undefined,
+): Record<string, number> {
+  const patch: Record<string, number> = {}
+  const setId = (field: string, id: number | null) => { if (id !== null) patch[field] = id }
+  const natId = (key: string) => resolveNationalitaetId(nationalitaetenById, str(key))
+  setId('idStaatsangehoerigkeit',  natId('staatsangehoerigkeitID'))
+  setId('idStaatsangehoerigkeit2', natId('staatsangehoerigkeit2ID'))
+  setId('idGeburtsland',           natId('geburtsland'))
+  setId('idGeburtslandVater',      natId('geburtslandVater'))
+  setId('idGeburtslandMutter',     natId('geburtslandMutter'))
+  setId('idVerkehrspracheFamilie', resolveVerkehrsspracheId(verkehrssprachenById, str('verkehrspracheFamilie')))
+  return patch
+}
+
 async function patchSchuelerAfterCreate(
   newId: number,
   row: MappedRow,
@@ -230,15 +251,16 @@ async function patchSchuelerAfterCreate(
   if (str('telefon'))      stammdatenPatch.telefon      = str('telefon')
   if (str('email'))        stammdatenPatch.emailPrivat  = str('email')
 
-  const resolvedNat = resolveNationalitaet(context.kataloge?.nationalitaeten, str('staatsangehoerigkeitID'))
-  if (resolvedNat) stammdatenPatch.staatsangehoerigkeitID = resolvedNat
+  // Staatsangehörigkeit, Geburtsland und Verkehrssprache erwartet die API als Katalog-IDs;
+  // nicht auflösbare Werte werden weggelassen (ein String würde mit 400 abgelehnt)
+  Object.assign(stammdatenPatch, herkunftIdPatch(
+    str,
+    context.kataloge?.nationalitaetenById,
+    context.kataloge?.verkehrssprachenById,
+  ))
 
   // Herkunft / Migration
   if (str('zuzugsjahr'))         stammdatenPatch.zuzugsjahr         = parseInt(str('zuzugsjahr'), 10) || null
-  if (str('verkehrspracheFamilie')) stammdatenPatch.verkehrspracheFamilie = resolveVerkehrssprache(context.kataloge?.verkehrssprachen, str('verkehrspracheFamilie'))
-  if (str('geburtsland'))        stammdatenPatch.geburtsland        = resolveNationalitaet(context.kataloge?.nationalitaeten, str('geburtsland'))
-  if (str('geburtslandVater'))   stammdatenPatch.geburtslandVater   = resolveNationalitaet(context.kataloge?.nationalitaeten, str('geburtslandVater'))
-  if (str('geburtslandMutter'))  stammdatenPatch.geburtslandMutter  = resolveNationalitaet(context.kataloge?.nationalitaeten, str('geburtslandMutter'))
 
   const hasMigrationData = !!(str('zuzugsjahr') || str('geburtsland') || str('verkehrspracheFamilie') || str('geburtslandVater') || str('geburtslandMutter'))
   if (hasMigrationData) {
@@ -305,8 +327,8 @@ export async function createSchueler(
   religionenKatalog?: Map<string, import('@/models/ImportSchema').ReligionKatalogEintrag>,
   klassenMap?: Map<string, number>,
   jahrgaengeMap?: Map<string, number>,
-  nationalitaetenKatalog?: Map<string, string>,
-  verkehrssprachen?: Map<string, string>,
+  nationalitaetenById?: Map<string, number>,
+  verkehrssprachenById?: Map<string, number>,
 ): Promise<UploadResult> {
   try {
     const payload: SchuelerNeu = schuelerImportToApi(row, idSchuljahresabschnitt)
@@ -318,19 +340,15 @@ export async function createSchueler(
     // Personaldaten
     if (row.geburtsname)              stammdatenPatch.geburtsname             = row.geburtsname
     if (row.geburtsort)               stammdatenPatch.geburtsort              = row.geburtsort
-    const resolvedNat1 = resolveNationalitaet(nationalitaetenKatalog, row.staatsangehoerigkeitID)
-    if (resolvedNat1)                 stammdatenPatch.staatsangehoerigkeitID  = resolvedNat1
-    if (row.geburtsland)              stammdatenPatch.geburtsland             = resolveNationalitaet(nationalitaetenKatalog, row.geburtsland)
-    if (row.staatsangehoerigkeit2ID)  stammdatenPatch.staatsangehoerigkeit2ID = resolveNationalitaet(nationalitaetenKatalog, row.staatsangehoerigkeit2ID)
+    // Staatsangehörigkeit, Geburtsländer, Verkehrssprache als Katalog-IDs
+    const rowStr = (key: string) => String(row[key as keyof SchuelerImportRow] ?? '').trim()
+    Object.assign(stammdatenPatch, herkunftIdPatch(rowStr, nationalitaetenById, verkehrssprachenById))
     const drucke = parseBoolean(row.druckeKonfessionAufZeugnisse)
     if (drucke !== null)              stammdatenPatch.druckeKonfessionAufZeugnisse = drucke
     if (row.religionanmeldung)        stammdatenPatch.religionanmeldung       = row.religionanmeldung
     if (row.religionabmeldung)        stammdatenPatch.religionabmeldung       = row.religionabmeldung
     // Herkunft / Migration
     if (row.zuzugsjahr)               stammdatenPatch.zuzugsjahr              = parseInt(row.zuzugsjahr, 10) || null
-    if (row.verkehrspracheFamilie)    stammdatenPatch.verkehrspracheFamilie   = resolveVerkehrssprache(verkehrssprachen, row.verkehrspracheFamilie)
-    if (row.geburtslandVater)         stammdatenPatch.geburtslandVater        = resolveNationalitaet(nationalitaetenKatalog, row.geburtslandVater)
-    if (row.geburtslandMutter)        stammdatenPatch.geburtslandMutter       = resolveNationalitaet(nationalitaetenKatalog, row.geburtslandMutter)
     // hatMigrationshintergrund: true wenn Herkunftsfelder gesetzt, sonst expliziten Wert nehmen
     const hasMigrationData = !!(row.zuzugsjahr || row.geburtsland || row.verkehrspracheFamilie || row.geburtslandVater || row.geburtslandMutter)
     if (hasMigrationData) {
@@ -611,9 +629,8 @@ export async function fetchOrteById(): Promise<Map<number, OrtKatalogEintrag>> {
 }
 
 export async function fetchReligionenById(): Promise<Map<number, ReligionKatalogEintrag>> {
-  const response = await getApiClient().get<ReligionKatalogEintrag[]>('/schule/religionen')
   const map = new Map<number, ReligionKatalogEintrag>()
-  for (const entry of response.data) {
+  for (const entry of await fetchSchulReligionen()) {
     if (entry.id) map.set(entry.id, entry)
   }
   return map

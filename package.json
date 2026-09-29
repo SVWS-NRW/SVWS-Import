@@ -1,6 +1,6 @@
 {
   "name": "svws-import",
-  "version": "0.3.1",
+  "version": "0.3.3",
   "private": true,
   "type": "module",
   "main": "electron/main.cjs",
@@ -11,11 +11,13 @@
     "electron:dev": "npm run build && GSETTINGS_SCHEMA_DIR=$HOME/.local/share/electron-schemas electron . --no-sandbox --ozone-platform=x11",
     "electron:build": "npm run build && electron-builder",
     "electron:build:win": "npm run build && electron-builder --win nsis",
-    "release": "rm -rf release && npm run build && electron-builder --linux AppImage --win nsis; mkdir -p release && cd dist && zip -r ../release/SVWS-Import-$npm_package_version-webserver.zip ."
+    "release": "rm -rf release && npm run build && electron-builder --linux AppImage --win nsis --publish never && mkdir -p release && (cd dist && zip -r ../release/SVWS-Import-$npm_package_version-webserver.zip .) && npm run release:github",
+    "release:github": "gh release create v$npm_package_version --draft --title \"Release $npm_package_version\" --notes \"\" release/SVWS-Import-$npm_package_version.AppImage release/SVWS-Import-Setup-$npm_package_version.exe release/SVWS-Import-$npm_package_version-webserver.zip"
   },
   "build": {
     "appId": "de.skinwalker.svws-import",
     "productName": "SVWS Import",
+    "artifactName": "SVWS-Import-${version}.${ext}",
     "directories": {
       "output": "release"
     },
@@ -33,7 +35,7 @@
       "icon": "build/icon.png"
     },
     "nsis": {
-      "artifactName": "${productName}-Setup-${version}.${ext}",
+      "artifactName": "SVWS-Import-Setup-${version}.${ext}",
       "oneClick": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
@@ -55,7 +57,7 @@
     "dompurify": "^3.4.11",
     "marked": "^18.0.5",
     "papaparse": "^5.5.0",
-    "pinia": "^3.0.0",
+    "pinia": "^4.0.0",
     "primeicons": "^7.0.0",
     "primevue": "^4.3.0",
     "read-excel-file": "^9.0.9",

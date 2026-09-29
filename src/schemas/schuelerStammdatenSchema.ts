@@ -1,6 +1,6 @@
 import type { ImportModule, MappedRow, ImportContext } from '@/models/ImportSchema'
 import type { SchuelerNeu, Geschlecht, SchuelerStatus } from '@/models/Schueler'
-import { resolveNationalitaet, resolveReligionId } from '@/services/katalogService'
+import { resolveReligionId } from '@/services/katalogService'
 import { normalisiereDatum } from '@/utils/csvParser'
 
 const dateValidate = (v: string): string | null => {
@@ -334,7 +334,6 @@ export const schuelerStammdatenSchema: ImportModule = {
       aufnahmedatum: normalisiereDatum(str('aufnahmedatum')) || null,
       beginnBildungsgang: normalisiereDatum(str('beginnBildungsgang')) || null,
       dauerBildungsgang: null,
-      staatsangehoerigkeitID: resolveNationalitaet(context.kataloge?.nationalitaeten, str('staatsangehoerigkeitID')) || null,
       idReligion: context.kataloge?.religionen && (str('religionKuerzel') || str('religionID'))
         ? resolveReligionId(
             context.kataloge.religionen,

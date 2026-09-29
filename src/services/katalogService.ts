@@ -12,6 +12,8 @@ interface AllinoneHistorie {
   gueltigBis: number | null
   iso3?: string
   codeDEStatis?: string
+  bezeichnung?: string
+  staatsangehoerigkeit?: string
 }
 
 interface KursartHistorie {
@@ -60,31 +62,7 @@ async function fetchAllInOne(): Promise<AllinoneResponse> {
 
 // ── Nationalitaeten ──────────────────────────────────────────────────────────
 
-function parseNationalitaeten(katalog: AllinoneKatalog): Map<string, string> {
-  const map = new Map<string, string>()
-  for (const entry of katalog.daten) {
-    const h = currentHistorie(entry)
-    if (!h) continue
-    if (h.schluessel && h.kuerzel) {
-      map.set(h.schluessel, h.kuerzel)
-    }
-    // codeDEStatis → iso3 zuletzt, damit Schild-NRW-Codes (.dat) immer gewinnen
-    if (h.codeDEStatis && h.iso3) {
-      map.set(h.codeDEStatis, h.iso3)
-    }
-  }
-  return map
-}
-
-export function resolveNationalitaet(
-  nationalitaeten: Map<string, string> | undefined,
-  raw: string,
-): string {
-  if (!raw || !nationalitaeten) return raw
-  return nationalitaeten.get(raw) ?? raw
-}
-
-// Gibt die numerische Katalog-ID zurück (für Lehrer-API: idStaatsangehoerigkeit)
+// Gibt die numerische Katalog-ID zurück (für idStaatsangehoerigkeit, idGeburtsland usw.)
 function parseNationalitaetenById(katalog: AllinoneKatalog): Map<string, number> {
   const map = new Map<string, number>()
   for (const entry of katalog.daten) {
@@ -101,6 +79,9 @@ function parseNationalitaetenById(katalog: AllinoneKatalog): Map<string, number>
       map.set(h.kuerzel.toLowerCase(), h.id)
     }
     if (h.text) map.set(h.text.trim().toLowerCase(), h.id)
+    // Ländername ("Deutschland") und Adjektiv ("deutsch") als Freitext-Lookup
+    if (h.bezeichnung) map.set(h.bezeichnung.trim().toLowerCase(), h.id)
+    if (h.staatsangehoerigkeit) map.set(h.staatsangehoerigkeit.trim().toLowerCase(), h.id)
   }
   return map
 }
@@ -151,13 +132,54 @@ const RELIGION_ALIAS: Record<string, string> = {
   'zeug.jeh.': 'XR', 'zeugen jehovas': 'XR',
 }
 
-async function fetchReligionen(): Promise<Map<string, ReligionKatalogEintrag>> {
+/** Eintrag aus /schule/religionen — seit SVWS 1.5 ohne kuerzel, stattdessen idReligion (Statistik-Katalog) */
+interface ReligionApiEintrag {
+  id: number
+  bezeichnung: string | null
+  idReligion?: number | null
+  kuerzel?: string | null
+}
+
+async function fetchReligionenRaw(): Promise<ReligionApiEintrag[]> {
   // Eigener Endpunkt nötig: allinone.json liefert Typ-Katalog-IDs (1000, 2000…),
   // der Server erwartet aber die echten DB-IDs als Fremdschlüssel.
-  const resp = await getApiClient().get<ReligionKatalogEintrag[]>('/schule/religionen')
+  const resp = await getApiClient().get<ReligionApiEintrag[]>('/schule/religionen')
+  return resp.data
+}
+
+/**
+ * Ergänzt die Schul-Religionen um das Statistik-Kürzel (KR, ER, …),
+ * indem idReligion gegen den Religion-Katalog aus allinone.json aufgelöst wird.
+ */
+function withReligionKuerzel(
+  entries: ReligionApiEintrag[],
+  katalog: AllinoneKatalog | undefined,
+): ReligionKatalogEintrag[] {
+  const kuerzelById = new Map<number, string>()
+  for (const entry of katalog?.daten ?? []) {
+    for (const h of entry.historie) {
+      if (h.id && h.kuerzel) kuerzelById.set(h.id, h.kuerzel)
+    }
+  }
+  return entries.map(e => ({
+    id: e.id,
+    bezeichnung: e.bezeichnung,
+    // Fallback auf kuerzel für ältere Server-Versionen
+    kuerzel: (e.idReligion != null ? kuerzelById.get(e.idReligion) : undefined) ?? e.kuerzel ?? null,
+  }))
+}
+
+export async function fetchSchulReligionen(): Promise<ReligionKatalogEintrag[]> {
+  const [entries, allinone] = await Promise.all([fetchReligionenRaw(), fetchAllInOne()])
+  return withReligionKuerzel(entries, allinone.Religion)
+}
+
+function buildReligionMap(entries: ReligionKatalogEintrag[]): Map<string, ReligionKatalogEintrag> {
   const map = new Map<string, ReligionKatalogEintrag>()
-  for (const entry of resp.data) {
-    if (entry.kuerzel) map.set(entry.kuerzel.toUpperCase(), entry)
+  for (const entry of entries) {
+    // Einträge ohne Kürzel trotzdem aufnehmen, damit der Bezeichnungs-Match (Stufe 2) sie findet
+    const key = entry.kuerzel ? entry.kuerzel.toUpperCase() : `#${entry.id}`
+    if (!map.has(key)) map.set(key, entry)
   }
   return map
 }
@@ -199,29 +221,29 @@ export function resolveReligionId(
 
 // ── Verkehrssprachen ──────────────────────────────────────────────────────────
 
-function parseVerkehrssprachen(katalog: AllinoneKatalog): Map<string, string> {
-  const map = new Map<string, string>()
+function parseVerkehrssprachenById(katalog: AllinoneKatalog): Map<string, number> {
+  const map = new Map<string, number>()
   for (const entry of katalog.daten) {
     const h = currentHistorie(entry)
-    if (!h || !h.kuerzel) continue
-    if (h.text) map.set(h.text.trim().toLowerCase(), h.kuerzel)
-    map.set(h.kuerzel.trim().toLowerCase(), h.kuerzel)
+    if (!h?.id) continue
+    if (h.text) map.set(h.text.trim().toLowerCase(), h.id)
+    if (h.kuerzel) map.set(h.kuerzel.trim().toLowerCase(), h.id)
     // iso3 als zusätzlicher Lookup (3-Buchstaben-Code, z.B. "deu")
-    if (h.iso3) map.set(h.iso3.trim().toLowerCase(), h.kuerzel)
+    if (h.iso3) map.set(h.iso3.trim().toLowerCase(), h.id)
   }
   return map
 }
 
 /**
  * Löst einen Freitext-Sprachname (z.B. "Polnisch") oder ein Kürzel/ISO-Code
- * gegen den Verkehrssprachen-Katalog auf und gibt das Server-Kürzel zurück.
+ * gegen den Verkehrssprachen-Katalog auf und gibt die numerische Katalog-ID zurück.
  */
-export function resolveVerkehrssprache(
-  verkehrssprachen: Map<string, string> | undefined,
+export function resolveVerkehrsspracheId(
+  verkehrssprachenById: Map<string, number> | undefined,
   raw: string,
-): string {
-  if (!raw || !verkehrssprachen) return raw
-  return verkehrssprachen.get(raw.trim().toLowerCase()) ?? raw
+): number | null {
+  if (!raw || !verkehrssprachenById) return null
+  return verkehrssprachenById.get(raw.trim().toLowerCase()) ?? null
 }
 
 // ── Orte (separater Endpunkt — nicht in allinone.json) ───────────────────────
@@ -352,19 +374,16 @@ export async function loadKataloge(): Promise<ImportKataloge> {
   const kataloge: ImportKataloge = {}
   const [allinoneResult, religionenResult, orteResult] = await Promise.allSettled([
     fetchAllInOne(),
-    fetchReligionen(),
+    fetchReligionenRaw(),
     fetchOrte(),
   ])
 
-  if (allinoneResult.status === 'fulfilled') {
-    const data = allinoneResult.value
-    if (data.Nationalitaeten) {
-      kataloge.nationalitaeten    = parseNationalitaeten(data.Nationalitaeten)
-      kataloge.nationalitaetenById = parseNationalitaetenById(data.Nationalitaeten)
-    }
-    if (data.Verkehrssprache) kataloge.verkehrssprachen = parseVerkehrssprachen(data.Verkehrssprache)
+  const allinone = allinoneResult.status === 'fulfilled' ? allinoneResult.value : undefined
+  if (allinone?.Nationalitaeten) kataloge.nationalitaetenById  = parseNationalitaetenById(allinone.Nationalitaeten)
+  if (allinone?.Verkehrssprache) kataloge.verkehrssprachenById = parseVerkehrssprachenById(allinone.Verkehrssprache)
+  if (religionenResult.status === 'fulfilled') {
+    kataloge.religionen = buildReligionMap(withReligionKuerzel(religionenResult.value, allinone?.Religion))
   }
-  if (religionenResult.status === 'fulfilled') kataloge.religionen = religionenResult.value
   if (orteResult.status === 'fulfilled')       kataloge.orte       = orteResult.value
 
   return kataloge

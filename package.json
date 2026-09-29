@@ -12,7 +12,7 @@
     "electron:build": "npm run build && electron-builder",
     "electron:build:win": "npm run build && electron-builder --win nsis",
     "release": "rm -rf release && npm run build && electron-builder --linux AppImage --win nsis --publish never && mkdir -p release && (cd dist && zip -r ../release/SVWS-Import-$npm_package_version-webserver.zip .) && npm run release:github",
-    "release:github": "gh release create v$npm_package_version --draft --title \"Release $npm_package_version\" release/SVWS-Import-$npm_package_version.AppImage release/SVWS-Import-Setup-$npm_package_version.exe release/SVWS-Import-$npm_package_version-webserver.zip"
+    "release:github": "gh release create v$npm_package_version --draft --title \"Release $npm_package_version\" --notes \"\" release/SVWS-Import-$npm_package_version.AppImage release/SVWS-Import-Setup-$npm_package_version.exe release/SVWS-Import-$npm_package_version-webserver.zip"
   },
   "build": {
     "appId": "de.skinwalker.svws-import",

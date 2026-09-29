@@ -62,7 +62,8 @@ Die App läuft dann im Vite-Dev-Server (Standard: `http://localhost:5173`).
 - `npm run electron:dev` startet die App als Electron-Desktop-App im Entwicklungsmodus (nur Linux)
 - `npm run electron:build` baut die Electron-App für die aktuelle Plattform (Linux → AppImage)
 - `npm run electron:build:win` baut den Windows-Installer (`.exe` via NSIS) – erfordert `wine` auf Linux
-- `npm run release` baut Linux (AppImage) und Windows (NSIS-Installer) in einem Durchgang – erfordert `wine` auf Linux
+- `npm run release` baut Linux (AppImage), Windows (NSIS-Installer) und das Webserver-ZIP in einem Durchgang und legt daraus einen GitHub-Release-Entwurf an – erfordert `wine` und eine angemeldete `gh`-CLI
+- `npm run release:github` legt nur den GitHub-Release-Entwurf `v<version>` aus den vorhandenen Dateien in `release/` an
 
 ## Electron Desktop-App
 
@@ -97,11 +98,17 @@ npm run electron:build
 # Nur Windows
 npm run electron:build:win
 
-# Linux + Windows in einem Durchgang
+# Linux + Windows + Webserver-ZIP, anschließend GitHub-Release-Entwurf
 npm run release
 ```
 
-Die fertigen Pakete landen im Verzeichnis `release/`.
+Die fertigen Pakete landen im Verzeichnis `release/`:
+
+- `SVWS-Import-<version>.AppImage`
+- `SVWS-Import-Setup-<version>.exe`
+- `SVWS-Import-<version>-webserver.zip`
+
+`npm run release` lädt diese Dateien per `gh release create` als **Entwurf** (Tag `v<version>` aus der `package.json`) auf GitHub hoch. Der Entwurf kann dann auf GitHub geprüft und veröffentlicht werden. Voraussetzung ist eine angemeldete [GitHub CLI](https://cli.github.com/) (`gh auth login`). Vor einem Release die Version in der `package.json` erhöhen, da `gh` abbricht, wenn es für diese Version bereits ein Release gibt.
 
 ## Build und Auslieferung
 

@@ -20,14 +20,13 @@
       </div>
       <div class="nav-conn">
         <span class="conn-info">
-          <i class="pi pi-circle-fill" style="color: #22c55e; font-size: 0.75rem;" />
+          <i class="pi pi-circle-fill" style="color: #22c55e; font-size: 0.8rem;" />
           {{ auth.schema }}@{{ shortUrl }}
         </span>
         <Button
           :icon="themeIcon"
           severity="secondary"
           text
-          size="small"
           :aria-label="themeAriaLabel"
           @click="toggleDark"
         />
@@ -36,7 +35,6 @@
           icon="pi pi-power-off"
           severity="secondary"
           text
-          size="small"
           @click="handleDisconnect"
         />
       </div>
@@ -45,7 +43,6 @@
     <Button
       v-if="!auth.isConnected"
       :icon="themeIcon"
-      size="small"
       severity="secondary"
       text
       class="dark-mode-fab"
@@ -146,9 +143,9 @@ html, body {
 .app-nav {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 0 1.25rem;
-  height: 48px;
+  gap: 1.5rem;
+  padding: 0 1.5rem;
+  height: 60px;
   background: var(--p-surface-card);
   border-bottom: 1px solid var(--p-surface-border);
   flex-shrink: 0;
@@ -156,25 +153,25 @@ html, body {
 
 .nav-brand {
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 1.35rem;
   color: var(--p-primary-color);
   white-space: nowrap;
 }
 
 .nav-links {
   display: flex;
-  gap: 0.2rem;
+  gap: 0.35rem;
 }
 
 .nav-link {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.3rem 0.75rem;
-  border-radius: 6px;
+  gap: 0.5rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
   text-decoration: none;
   color: var(--p-text-color);
-  font-size: 0.875rem;
+  font-size: 1rem;
   transition: background 0.15s;
 }
 
@@ -192,11 +189,11 @@ html, body {
 }
 
 .conn-info {
-  font-size: 0.8rem;
+  font-size: 0.95rem;
   color: var(--p-text-muted-color);
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.5rem;
 }
 
 .app-main {
@@ -208,8 +205,8 @@ html, body {
 
 .dark-mode-fab {
   position: fixed;
-  top: 0.75rem;
-  right: 0.75rem;
+  top: 1rem;
+  right: 1rem;
   z-index: 100;
 }
 </style>

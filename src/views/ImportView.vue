@@ -93,12 +93,12 @@ const comingSoonModules = importModules.filter(m => m.comingSoon)
 
 <style scoped>
 .import-view {
-  max-width: 780px;
+  max-width: 1040px;
   margin: 0 auto;
-  padding: 1.25rem 1rem;
+  padding: 2rem 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.5rem;
 }
 
 .view-header {
@@ -110,18 +110,25 @@ const comingSoonModules = importModules.filter(m => m.comingSoon)
 
 h2 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.6rem;
 }
 
 .subtitle {
-  margin: 0.25rem 0 0;
+  margin: 0.35rem 0 0;
+  font-size: 1rem;
   color: var(--p-text-muted-color);
 }
 
 .import-cards {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 0.625rem;
+  gap: 1rem;
+}
+
+@media (max-width: 900px) {
+  .import-cards {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 @media (max-width: 640px) {
@@ -135,7 +142,7 @@ h2 {
 }
 
 .coming-soon-cards {
-  margin-top: -0.25rem;
+  margin-top: -0.5rem;
 }
 
 .import-card.coming-soon {
@@ -150,13 +157,13 @@ h2 {
 
 .coming-soon-badge {
   display: inline-block;
-  margin-top: 0.25rem;
-  font-size: 0.72rem;
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
   font-weight: 600;
   color: var(--p-text-muted-color);
   background: var(--p-surface-200, #e5e7eb);
   border-radius: 4px;
-  padding: 0.1rem 0.4rem;
+  padding: 0.15rem 0.5rem;
 }
 
 :global(.dark) .coming-soon-badge {
@@ -169,10 +176,11 @@ h2 {
   align-items: center;
   justify-content: center;
   text-align: center;
-  gap: 0.25rem;
-  padding: 0.75rem 0.5rem;
+  gap: 0.6rem;
+  min-height: 8rem;
+  padding: 1.25rem 0.75rem;
   border: 2px solid var(--p-surface-border);
-  border-radius: 10px;
+  border-radius: 12px;
   cursor: pointer;
   transition: border-color 0.2s, background 0.2s;
   background: var(--p-surface-card);
@@ -192,7 +200,7 @@ h2 {
 }
 
 .card-icon {
-  font-size: 1.5rem;
+  font-size: 2.25rem;
   color: var(--p-primary-color);
 }
 
@@ -210,14 +218,14 @@ h2 {
 
 .import-card strong {
   display: block;
-  font-size: 0.85rem;
-  line-height: 1.2;
+  font-size: 1.05rem;
+  line-height: 1.25;
 }
 
 .import-card small {
   color: var(--p-text-muted-color);
   display: block;
-  font-size: 0.72rem;
+  font-size: 0.85rem;
   line-height: 1.3;
 }
 </style>

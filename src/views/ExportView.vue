@@ -139,7 +139,7 @@
               optionValue="id"
               placeholder="Abschnitt wählen"
               size="small"
-              style="width: 160px"
+              style="width: 190px"
             />
             <InputNumber
               v-else
@@ -147,21 +147,21 @@
               :min="1"
               placeholder="Abschnitt-ID"
               size="small"
-              style="width: 100px"
+              style="width: 120px"
             />
             <MultiSelect
               v-model="jahrgangFilter"
               :options="jahrgaengeOptions"
               placeholder="Jahrgang"
               size="small"
-              style="width: 110px"
+              style="width: 135px"
             />
             <MultiSelect
               v-model="klasseFilter"
               :options="klassenOptions"
               placeholder="Klasse"
               size="small"
-              style="width: 110px"
+              style="width: 135px"
             />
             <MultiSelect
               v-model="statusFilter"
@@ -170,7 +170,7 @@
               optionValue="value"
               placeholder="Status"
               size="small"
-              style="width: 110px"
+              style="width: 135px"
             />
             <Button
               icon="pi pi-refresh"
@@ -242,7 +242,7 @@
               optionValue="id"
               placeholder="Abschnitt wählen"
               size="small"
-              style="width: 200px"
+              style="width: 240px"
             />
             <InputNumber
               v-else
@@ -250,7 +250,7 @@
               :min="1"
               placeholder="Abschnitt-ID"
               size="small"
-              style="width: 120px"
+              style="width: 140px"
             />
           </div>
 
@@ -265,7 +265,7 @@
                 optionValue="id"
                 placeholder="Lernplattform wählen"
                 size="small"
-                style="width: 250px"
+                style="width: 300px"
                 :loading="lpListLoading"
                 :disabled="lpListe.length === 0"
               />
@@ -340,7 +340,7 @@
               optionValue="value"
               placeholder="Sichtbarkeit"
               size="small"
-              style="width: 130px"
+              style="width: 160px"
             />
             <MultiSelect
               v-model="lehrerPersonalTypFilter"
@@ -349,7 +349,7 @@
               optionValue="value"
               placeholder="Personaltyp"
               size="small"
-              style="width: 130px"
+              style="width: 160px"
             />
             <Button
               icon="pi pi-refresh"
@@ -1177,17 +1177,28 @@ function doExport(): void {
 
 <style scoped>
 .export-view {
-  padding: 0.375rem 1.25rem;
+  padding: 2rem 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.625rem;
+  gap: 1rem;
 }
 
-h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
+/* Kopf und Kacheln in derselben zentrierten Spalte wie in ImportView (max-width 1040px abzüglich Padding) */
+h2,
+.subtitle,
+.export-cards {
+  max-width: calc(1040px - 3rem);
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+h2 { margin-top: 0; margin-bottom: 0; font-size: 1.6rem; font-weight: 600; }
 
 .subtitle {
-  margin: 0;
-  font-size: 0.75rem;
+  margin-top: -0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
   color: var(--p-text-muted-color);
 }
 
@@ -1196,7 +1207,15 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 .export-cards {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 0.625rem;
+  gap: 1rem;
+}
+
+@media (max-width: 900px) {
+  .export-cards { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 640px) {
+  .export-cards { grid-template-columns: repeat(2, 1fr); }
 }
 
 .export-card {
@@ -1205,10 +1224,11 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
   align-items: center;
   justify-content: center;
   text-align: center;
-  gap: 0.25rem;
-  padding: 0.75rem 0.5rem;
+  gap: 0.6rem;
+  min-height: 8rem;
+  padding: 1.25rem 0.75rem;
   border: 2px solid var(--p-surface-border);
-  border-radius: 10px;
+  border-radius: 12px;
   cursor: pointer;
   background: var(--p-surface-card);
   transition: border-color 0.15s, background 0.15s;
@@ -1234,23 +1254,23 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 }
 
 .card-icon {
-  font-size: 1.5rem;
+  font-size: 2.25rem;
   color: var(--p-primary-color);
 }
 
 .export-card.active .card-icon { color: var(--p-primary-700); }
 
-.export-card strong { display: block; font-size: 0.85rem; line-height: 1.2; }
+.export-card strong { display: block; font-size: 1.05rem; line-height: 1.25; }
 
 .coming-soon-badge {
   display: inline-block;
-  margin-top: 0.25rem;
-  font-size: 0.72rem;
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
   font-weight: 600;
   color: var(--p-text-muted-color);
   background: var(--p-surface-200, #e5e7eb);
   border-radius: 4px;
-  padding: 0.1rem 0.4rem;
+  padding: 0.15rem 0.5rem;
 }
 
 :global(.dark) .coming-soon-badge {
@@ -1262,11 +1282,11 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 .config-section {
   background: var(--p-surface-card);
   border: 1px solid var(--p-surface-border);
-  border-radius: 8px;
-  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.75rem;
 }
 
 .section-header {
@@ -1278,13 +1298,13 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 
 .section-title {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: 1.1rem;
   font-weight: 600;
 }
 
 .section-actions {
   display: flex;
-  gap: 0.35rem;
+  gap: 0.5rem;
   align-items: center;
   flex-wrap: wrap;
 }
@@ -1293,11 +1313,11 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 .field-section {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 .field-section-header {
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: var(--p-primary-color);
   padding: 0.25rem 0 0.15rem;
@@ -1314,7 +1334,7 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 .groups-grid {
   display: flex;
   flex-wrap: nowrap;
-  gap: 0.5rem;
+  gap: 0.75rem;
   align-items: start;
   overflow-x: auto;
   padding-bottom: 0.25rem;
@@ -1323,18 +1343,18 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 /* Einzelne Gruppen-Karte */
 .field-group-card {
   flex: 0 0 auto;
-  min-width: 190px;
+  min-width: 230px;
   border: 1px solid var(--p-surface-border);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--p-surface-ground);
-  padding: 0.4rem 0.6rem 0.5rem;
+  padding: 0.6rem 0.85rem 0.75rem;
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 0.45rem;
 }
 
 .field-group-card-header {
-  font-size: 0.68rem;
+  font-size: 0.8rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -1347,14 +1367,14 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 .field-list {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.35rem;
 }
 
 .field-label {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  font-size: 0.75rem;
+  gap: 0.5rem;
+  font-size: 0.9rem;
   cursor: pointer;
   user-select: none;
 }
@@ -1363,25 +1383,25 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 .format-row {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 1.5rem;
   flex-wrap: wrap;
 }
 
 .format-option {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.5rem;
   cursor: pointer;
-  font-size: 0.78rem;
+  font-size: 0.95rem;
   font-weight: 500;
 }
 
-.format-option i { color: var(--p-primary-color); font-size: 0.78rem; }
+.format-option i { color: var(--p-primary-color); font-size: 0.95rem; }
 
 .format-actions {
   margin-left: auto;
   display: flex;
-  gap: 0.375rem;
+  gap: 0.5rem;
   align-items: center;
 }
 
@@ -1389,8 +1409,8 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 .export-progress {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.72rem;
+  gap: 0.75rem;
+  font-size: 0.875rem;
   color: var(--p-text-muted-color);
 }
 
@@ -1401,16 +1421,16 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 .list-error {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
-  font-size: 0.75rem;
-  padding: 0.25rem 0;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  padding: 0.35rem 0;
 }
 
 .list-empty { color: var(--p-text-muted-color); }
 .list-error { color: var(--p-red-500, #ef4444); }
 
 .count-badge {
-  font-size: 0.72rem;
+  font-size: 0.875rem;
   font-weight: 400;
   color: var(--p-text-muted-color);
   margin-left: 0.35rem;
@@ -1418,9 +1438,9 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 
 .status-badge {
   display: inline-block;
-  padding: 0.1rem 0.35rem;
+  padding: 0.15rem 0.45rem;
   border-radius: 4px;
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   font-weight: 600;
 }
 
@@ -1460,13 +1480,13 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 
 :deep(.p-datatable thead th),
 :deep(.p-datatable tbody td) {
-  font-size: 0.72rem;
-  padding: 0.2rem 0.5rem;
+  font-size: 0.875rem;
+  padding: 0.35rem 0.6rem;
 }
 
 :deep(.p-datatable .p-paginator) {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.72rem;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.875rem;
 }
 
 :deep(.p-datatable .p-paginator .p-paginator-page),
@@ -1474,40 +1494,40 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 :deep(.p-datatable .p-paginator .p-paginator-prev),
 :deep(.p-datatable .p-paginator .p-paginator-next),
 :deep(.p-datatable .p-paginator .p-paginator-last) {
-  min-width: 1.6rem;
-  height: 1.6rem;
-  font-size: 0.72rem;
+  min-width: 2rem;
+  height: 2rem;
+  font-size: 0.875rem;
 }
 
 :deep(.p-datatable .p-paginator .p-paginator-current) {
-  font-size: 0.72rem;
+  font-size: 0.875rem;
 }
 
 :deep(.p-datatable .p-paginator .p-select) {
-  font-size: 0.72rem;
+  font-size: 0.875rem;
 }
 
 :deep(.p-datatable .p-checkbox) {
-  width: 14px;
-  height: 14px;
+  width: 17px;
+  height: 17px;
 }
 :deep(.p-datatable .p-checkbox .p-checkbox-box) {
-  width: 14px;
-  height: 14px;
+  width: 17px;
+  height: 17px;
 }
 :deep(.p-datatable .p-checkbox .p-checkbox-icon) {
-  font-size: 0.6rem;
-  width: 0.6rem;
-  height: 0.6rem;
+  font-size: 0.7rem;
+  width: 0.7rem;
+  height: 0.7rem;
 }
 
 :deep(.p-checkbox) {
-  width: 13px;
-  height: 13px;
+  width: 16px;
+  height: 16px;
 }
 :deep(.p-checkbox .p-checkbox-box) {
-  width: 13px;
-  height: 13px;
+  width: 16px;
+  height: 16px;
 }
 :deep(.p-checkbox .p-checkbox-icon) {
   display: none;
@@ -1518,49 +1538,49 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 
 :deep(.section-actions .p-select .p-select-label),
 :deep(.section-actions .p-multiselect .p-multiselect-label) {
-  font-size: 0.72rem;
-  padding: 0.2rem 0.25rem;
+  font-size: 0.875rem;
+  padding: 0.3rem 0.4rem;
 }
 :deep(.section-actions .p-select .p-select-dropdown),
 :deep(.section-actions .p-multiselect .p-multiselect-dropdown) {
-  width: 1.25rem;
+  width: 1.75rem;
 }
 :deep(.section-actions .p-select .p-select-dropdown .p-icon),
 :deep(.section-actions .p-multiselect .p-multiselect-dropdown .p-icon) {
-  width: 0.6rem;
-  height: 0.6rem;
+  width: 0.75rem;
+  height: 0.75rem;
 }
 
 
 :deep(.schueler-name-search) {
-  width: 200px;
-  font-size: 0.72rem;
-  padding: 0.2rem 0.35rem;
+  width: 240px;
+  font-size: 0.875rem;
+  padding: 0.3rem 0.5rem;
 }
 
 :deep(.format-actions .p-button),
 :deep(.section-actions .p-button) {
-  font-size: 0.75rem;
-  padding: 0.2rem 0.5rem;
+  font-size: 0.9rem;
+  padding: 0.35rem 0.75rem;
 }
 :deep(.format-actions .p-button .p-button-icon),
 :deep(.section-actions .p-button .p-button-icon) {
-  font-size: 0.75rem;
+  font-size: 0.9rem;
 }
 
 /* Extra-kompakte Schülertabelle — Spezifität muss >= .p-datatable.p-datatable-sm .p-datatable-tbody > tr > td sein */
 :global(.p-datatable.p-datatable-sm.compact-table .p-datatable-tbody > tr > td) {
-  font-size: 0.75rem;
-  padding: 0.1rem 0.4rem;
+  font-size: 0.875rem;
+  padding: 0.25rem 0.5rem;
 }
 :global(.p-datatable.p-datatable-sm.compact-table .p-datatable-thead > tr > th) {
-  font-size: 0.75rem;
-  padding: 0.15rem 0.4rem;
+  font-size: 0.875rem;
+  padding: 0.35rem 0.5rem;
 }
 :global(.p-datatable.compact-table) {
-  --p-checkbox-width: 1rem;
-  --p-checkbox-height: 1rem;
-  --p-checkbox-icon-size: 0.55rem;
+  --p-checkbox-width: 1.1rem;
+  --p-checkbox-height: 1.1rem;
+  --p-checkbox-icon-size: 0.7rem;
 }
 
 /* ── Lernplattformen ─────────────────────────────────────────────────────── */
@@ -1568,7 +1588,7 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 .lernplattform-config {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.85rem;
   padding-top: 0.25rem;
 }
 
@@ -1580,16 +1600,16 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 }
 
 .lernplattform-label {
-  font-size: 0.78rem;
+  font-size: 0.95rem;
   font-weight: 500;
-  min-width: 160px;
+  min-width: 190px;
   color: var(--p-text-color);
 }
 
 .lernplattform-select-row {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.5rem;
 }
 
 .lp-format-options {

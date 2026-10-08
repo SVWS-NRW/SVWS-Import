@@ -57,6 +57,13 @@
 
         <Message v-if="auth.error" severity="error" :closable="false">
           {{ auth.error }}
+          <a
+            v-if="auth.certCheckUrl"
+            class="cert-link"
+            :href="auth.certCheckUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+          >Server-Zertifikat im neuen Tab prüfen</a>
         </Message>
 
         <Button
@@ -280,6 +287,15 @@ async function handleConnect(): Promise<void> {
 
 .connect-btn {
   margin-top: 0.25rem;
+}
+
+.cert-link {
+  display: block;
+  margin-top: 0.4rem;
+  font-weight: 600;
+  color: inherit;
+  text-decoration: underline;
+  word-break: break-all;
 }
 
 :deep(.p-inputtext),

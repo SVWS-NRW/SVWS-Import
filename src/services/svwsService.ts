@@ -174,13 +174,60 @@ const ENTITY_ENDPOINTS: Partial<Record<EntityType, string>> = {
   faecher: '/faecher/create',
 }
 
-export async function testConnection(): Promise<boolean> {
-  try {
-    await getApiClient().get('/lehrer')
-    return true
-  } catch {
-    return false
+/** Wirft bei Fehlern, damit der Aufrufer die Ursache (401, Netzwerk, …) unterscheiden kann. */
+export async function testConnection(): Promise<void> {
+  await getApiClient().get('/lehrer')
+}
+
+export interface ConnectionDiagnosis {
+  message: string
+  /** URL, die der Nutzer im Browser öffnen kann, um das Server-Zertifikat zu prüfen bzw. zu akzeptieren */
+  certCheckUrl?: string
+}
+
+/**
+ * Grenzt einen Netzwerkfehler ohne HTTP-Antwort (axios ERR_NETWORK) weiter ein.
+ * Browser verraten JavaScript nicht, ob ein TLS-Fehler vorlag. Ein no-cors-Request
+ * scheitert aber nur, wenn keine Verbindung zustande kommt (Server nicht erreichbar
+ * oder Zertifikat nicht vertrauenswürdig) – nicht bei CORS-Problemen.
+ */
+export async function diagnoseConnectionError(baseUrl: string): Promise<ConnectionDiagnosis> {
+  const isHttps = baseUrl.toLowerCase().startsWith('https://')
+
+  if (window.location.protocol === 'https:' && !isHttps) {
+    return {
+      message: 'Die App läuft über HTTPS, der SVWS-Server aber über HTTP. Der Browser blockiert solche Verbindungen. ' +
+        'Bitte die Server-URL mit https:// angeben.',
+    }
   }
+
+  const statusUrl = `${baseUrl}/status/alive`
+  let reachable: boolean
+  try {
+    await fetch(statusUrl, { mode: 'no-cors', cache: 'no-store', signal: AbortSignal.timeout(10000) })
+    reachable = true
+  } catch {
+    reachable = false
+  }
+
+  if (reachable) {
+    return {
+      message: 'Der SVWS-Server ist erreichbar, der Browser hat die Anfrage aber blockiert (z. B. CORS). ' +
+        'Details stehen in der Browser-Konsole (F12).',
+    }
+  }
+
+  if (isHttps) {
+    return {
+      message: 'Keine Verbindung zum SVWS-Server. Häufigste Ursache: Der Browser vertraut dem Zertifikat des Servers nicht ' +
+        '(z. B. selbstsigniertes Zertifikat). Öffnen Sie den folgenden Link, bestätigen Sie die Sicherheitswarnung ' +
+        '(„Erweitert“ → „Weiter zu … (unsicher)“) und verbinden Sie sich danach erneut. ' +
+        'Erscheint keine Warnung und keine Seite, ist der Server unter dieser Adresse nicht erreichbar.',
+      certCheckUrl: statusUrl,
+    }
+  }
+
+  return { message: 'Server nicht erreichbar – Adresse, Port und Netzwerkverbindung prüfen' }
 }
 
 /**

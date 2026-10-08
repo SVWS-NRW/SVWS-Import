@@ -158,9 +158,9 @@
             <span
               v-if="data.jahrgaengezuordnung?.length"
               class="jg-cell"
-              :title="data.jahrgaengezuordnung.map((z: { idJahrgang: number }) => jahrgaengeById.get(z.idJahrgang)?.kuerzel ?? z.idJahrgang).join(', ')"
+              :title="jahrgangKuerzel(data)"
             >
-              {{ data.jahrgaengezuordnung.map((z: { idJahrgang: number }) => jahrgaengeById.get(z.idJahrgang)?.kuerzel ?? z.idJahrgang).join(', ') }}
+              {{ jahrgangKuerzel(data) }}
             </span>
             <span v-else class="muted">–</span>
           </template>
@@ -305,6 +305,12 @@ const importCancelled = ref(false)
 
 const faecherById = computed(() => new Map(faecher.value.map(f => [f.id, f])))
 const jahrgaengeById = computed(() => new Map(jahrgaenge.value.map(j => [j.id, j])))
+
+function jahrgangKuerzel(k: Ankreuzkompetenz): string {
+  return k.jahrgaengezuordnung
+    .map(z => jahrgaengeById.value.get(z.idJahrgang)?.kuerzel ?? z.idJahrgang)
+    .join(', ')
+}
 
 // ── Filter ───────────────────────────────────────────────────────────────────
 const filteredKompetenzen = computed(() => {

@@ -11,7 +11,7 @@ export interface SchuelerErzieherImportRow {
   _lookupStatus: 'pending' | 'ok' | 'not_found' | 'ambiguous'
   _erzieherartStatus: 'empty' | 'found' | 'new'
   _wohnortStatus: 'empty' | 'found' | 'not_found'
-  _result?: 'angelegt' | 'uebersprungen'
+  _result?: 'angelegt' | 'ueberschrieben' | 'uebersprungen'
   // Identifikation des Schülers
   nachname: string
   vorname: string
@@ -24,12 +24,15 @@ export interface SchuelerErzieherImportRow {
   nachname1: string
   vorname1: string
   email1: string
+  /** ISO-3-Code, DEStatis-Schlüssel oder Bezeichnung, z. B. DEU / 000 / deutsch */
+  staatsangehoerigkeit1: string
   // 2. Person (optional)
   anrede2: string
   titel2: string
   nachname2: string
   vorname2: string
   email2: string
+  staatsangehoerigkeit2: string
   // gemeinsame Adresse
   strassenname: string
   hausnummer: string
@@ -50,6 +53,7 @@ export interface ErzieherStammdatenPayload {
   nachname: string | null
   vorname: string | null
   eMail: string | null
+  idStaatsangehoerigkeit: number | null
   strassenname?: string | null
   hausnummer?: string | null
   hausnummerZusatz?: string | null
@@ -74,7 +78,13 @@ export function hatZweitePerson(row: SchuelerErzieherImportRow): boolean {
 /** 1. Person inkl. Erzieherart und gemeinsamer Adresse */
 export function erzieherPerson1Payload(
   row: SchuelerErzieherImportRow,
-  ids: { idSchueler: number; idErzieherArt: number | null; wohnortID: number | null; ortsteilID: number | null },
+  ids: {
+    idSchueler: number
+    idErzieherArt: number | null
+    wohnortID: number | null
+    ortsteilID: number | null
+    idStaatsangehoerigkeit: number | null
+  },
 ): ErzieherStammdatenPayload {
   return {
     idSchueler: ids.idSchueler,
@@ -84,6 +94,7 @@ export function erzieherPerson1Payload(
     nachname: orNull(row.nachname1),
     vorname: orNull(row.vorname1),
     eMail: orNull(row.email1),
+    idStaatsangehoerigkeit: ids.idStaatsangehoerigkeit,
     strassenname: orNull(row.strassenname),
     hausnummer: orNull(row.hausnummer),
     hausnummerZusatz: orNull(row.hausnummerZusatz),
@@ -95,12 +106,16 @@ export function erzieherPerson1Payload(
 }
 
 /** 2. Person — Adresse und Erzieherart gelten für den gesamten Eintrag */
-export function erzieherPerson2Payload(row: SchuelerErzieherImportRow): ErzieherStammdatenPayload {
+export function erzieherPerson2Payload(
+  row: SchuelerErzieherImportRow,
+  idStaatsangehoerigkeit: number | null,
+): ErzieherStammdatenPayload {
   return {
     anrede: orNull(row.anrede2),
     titel: orNull(row.titel2),
     nachname: orNull(row.nachname2),
     vorname: orNull(row.vorname2),
     eMail: orNull(row.email2),
+    idStaatsangehoerigkeit,
   }
 }

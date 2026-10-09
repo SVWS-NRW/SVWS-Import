@@ -1265,3 +1265,13 @@ export async function patchErzieherZweitePerson(idErzieher: number, payload: Erz
     return { success: false, error: toAppError(error).messageUser }
   }
 }
+
+/** Überschreibt die Stammdaten eines vorhandenen Erziehers (id aus GET /schueler/{id}/erzieher) */
+export async function patchErzieher(idErzieher: number, payload: Partial<ErzieherStammdatenPayload>): Promise<UploadResult> {
+  try {
+    await getApiClient().patch(`/erzieher/${idErzieher}/stammdaten`, payload)
+    return { success: true }
+  } catch (error: unknown) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}

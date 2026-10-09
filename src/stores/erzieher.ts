@@ -7,13 +7,15 @@ import {
   fetchSchuelerErzieher,
   createErzieher,
   patchErzieherZweitePerson,
+  patchErzieher,
   fetchOrtsteile,
   type ErzieherVorhanden,
 } from '@/services/svwsService'
-import { fetchOrteKatalog, resolveWohnortId } from '@/services/katalogService'
+import { loadKataloge, resolveWohnortId, resolveNationalitaetId } from '@/services/katalogService'
 import type { OrtKatalogEintrag } from '@/models/ImportSchema'
 import {
   type SchuelerErzieherImportRow,
+  type ErzieherStammdatenPayload,
   erzieherPerson1Payload,
   erzieherPerson2Payload,
   hatZweitePerson,
@@ -26,6 +28,21 @@ function lookupKey(nachname: string, vorname: string, geburtsdatum: string): str
 
 const norm = (v: string | null | undefined) => (v ?? '').trim().toLowerCase()
 
+/** Umgang mit Erziehern, die beim Schüler bereits vorhanden sind (gleicher Name der 1. Person) */
+export type DuplikatModus = 'ueberspringen' | 'ueberschreiben' | 'zusaetzlich'
+
+/**
+ * Für das Überschreiben: leere Werte nicht senden, damit vorhandene Daten erhalten bleiben.
+ * wohnortID und ortsteilID werden nur gemeinsam gesendet (API-Anforderung).
+ */
+function ohneLeereFelder(payload: ErzieherStammdatenPayload): Partial<ErzieherStammdatenPayload> {
+  const { idSchueler: _idSchueler, wohnortID, ortsteilID, ...rest } = payload
+  const result: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(rest)) if (v !== null && v !== undefined) result[k] = v
+  if (wohnortID !== null && wohnortID !== undefined) { result.wohnortID = wohnortID; result.ortsteilID = ortsteilID ?? null }
+  return result as Partial<ErzieherStammdatenPayload>
+}
+
 export const useErzieherStore = defineStore('erzieher', () => {
   const rows = ref<SchuelerErzieherImportRow[]>([])
   const uploading = ref(false)
@@ -37,6 +54,8 @@ export const useErzieherStore = defineStore('erzieher', () => {
   /** Bezeichnung (lowercase) → ID */
   const erzieherartenMap = ref<Map<string, number>>(new Map())
   const orteKatalog = ref<Map<string, OrtKatalogEintrag>>(new Map())
+  /** ISO-3, DEStatis-Schlüssel, Bezeichnung → Katalog-ID (aus allinone.json) */
+  const nationalitaetenById = ref<Map<string, number>>(new Map())
   /** `${ortId}|${ortsteil lowercase}` → ID */
   const ortsteileMap = ref<Map<string, number>>(new Map())
   const lookupLoaded = ref(false)
@@ -51,10 +70,10 @@ export const useErzieherStore = defineStore('erzieher', () => {
     if (lookupLoaded.value && !force) return {}
     lookupLoading.value = true
     try {
-      const [schuelerList, erzieherarten, orte, ortsteile] = await Promise.all([
+      const [schuelerList, erzieherarten, kataloge, ortsteile] = await Promise.all([
         fetchSchuelerAktuell(),
         fetchErzieherarten(),
-        fetchOrteKatalog().catch(() => new Map<string, OrtKatalogEintrag>()),
+        loadKataloge(),
         fetchOrtsteile().catch(() => []),
       ])
 
@@ -72,7 +91,8 @@ export const useErzieherStore = defineStore('erzieher', () => {
       for (const a of erzieherarten) if (a.bezeichnung) aMap.set(norm(a.bezeichnung), a.id)
       erzieherartenMap.value = aMap
 
-      orteKatalog.value = orte
+      orteKatalog.value = kataloge.orte ?? new Map()
+      nationalitaetenById.value = kataloge.nationalitaetenById ?? new Map()
       const otMap = new Map<string, number>()
       for (const ot of ortsteile) {
         if (ot.ortsteil && ot.ort_id !== null) otMap.set(`${ot.ort_id}|${norm(ot.ortsteil)}`, ot.id)
@@ -91,6 +111,19 @@ export const useErzieherStore = defineStore('erzieher', () => {
   function resolveWohnort(row: SchuelerErzieherImportRow): number | null {
     if (!row.plz.trim() && !row.ort.trim()) return null
     return resolveWohnortId(orteKatalog.value, row.plz, row.ort)
+  }
+
+  /**
+   * Liefert die Katalog-ID aus allinone.json (Nationalitaeten), die als idStaatsangehoerigkeit gesendet wird.
+   * Akzeptiert die ID selbst (z. B. 68069085) sowie ISO-3-Code, DEStatis-Schlüssel und Bezeichnung.
+   */
+  function resolveStaatsangehoerigkeit(raw: string): number | null {
+    const wert = raw.trim()
+    if (/^\d{4,}$/.test(wert)) {
+      const id = Number(wert)
+      for (const v of nationalitaetenById.value.values()) if (v === id) return id
+    }
+    return resolveNationalitaetId(nationalitaetenById.value, wert)
   }
 
   function resolveAndValidate(): void {
@@ -116,6 +149,13 @@ export const useErzieherStore = defineStore('erzieher', () => {
       if (row._lookupStatus === 'not_found') errors.push('Schüler nicht gefunden')
       if (row._lookupStatus === 'ambiguous') errors.push('Schüler nicht eindeutig (mehrere Treffer)')
       if (row._lookupStatus === 'pending')   errors.push('Schüler noch nicht abgeglichen')
+      // Unbekannte Staatsangehörigkeit nur melden, wenn der Katalog geladen ist
+      if (nationalitaetenById.value.size > 0) {
+        for (const [wert, person] of [[row.staatsangehoerigkeit1, '1. Person'], [row.staatsangehoerigkeit2, '2. Person']] as const) {
+          if (wert.trim() && resolveStaatsangehoerigkeit(wert) === null)
+            errors.push(`Staatsangehörigkeit „${wert.trim()}" (${person}) unbekannt`)
+        }
+      }
       row._errors = errors
       row._valid = errors.length === 0
     }
@@ -141,7 +181,10 @@ export const useErzieherStore = defineStore('erzieher', () => {
     rows.value = []
   }
 
-  async function uploadAll(selectedIds?: Set<string>): Promise<{ sent: number; skipped: number; failed: number }> {
+  async function uploadAll(
+    selectedIds: Set<string> | undefined,
+    modus: DuplikatModus,
+  ): Promise<{ sent: number; updated: number; skipped: number; failed: number }> {
     const toSend = rows.value.filter(r =>
       r._valid && !r._sent && (selectedIds === undefined || selectedIds.has(r._id)),
     )
@@ -150,6 +193,7 @@ export const useErzieherStore = defineStore('erzieher', () => {
     uploadTotal.value = toSend.length
     uploadCancelled.value = false
     let sent = 0
+    let updated = 0
     let skipped = 0
     let failed = 0
 
@@ -172,17 +216,19 @@ export const useErzieherStore = defineStore('erzieher', () => {
       if (!row._schuelerId) { fail(row, 'Schüler nicht zugeordnet'); continue }
       const idSchueler = row._schuelerId
 
-      // Duplikat: gleiche 1. Person ist beim Schüler bereits als Erzieher eingetragen
       let vorhandene: ErzieherVorhanden[]
       try {
-        vorhandene = await getVorhandene(idSchueler)
+        vorhandene = modus === 'zusaetzlich' ? [] : await getVorhandene(idSchueler)
       } catch {
         fail(row, 'Vorhandene Erzieher konnten nicht geladen werden')
         continue
       }
-      const istDuplikat = vorhandene.some(e =>
-        norm(e.nachname) === norm(row.nachname1) && norm(e.vorname) === norm(row.vorname1))
-      if (istDuplikat) {
+      const findePerson = (nachname: string, vorname: string) =>
+        vorhandene.find(e => norm(e.nachname) === norm(nachname) && norm(e.vorname) === norm(vorname))
+      // Vorhanden = gleiche 1. Person ist beim Schüler bereits als Erzieher eingetragen
+      const vorhanden = modus === 'zusaetzlich' ? undefined : findePerson(row.nachname1, row.vorname1)
+
+      if (vorhanden && modus === 'ueberspringen') {
         row._errors = [`Erzieher „${row.vorname1} ${row.nachname1}" ist beim Schüler bereits vorhanden — übersprungen`]
         row._result = 'uebersprungen'
         row._sent = true
@@ -211,11 +257,39 @@ export const useErzieherStore = defineStore('erzieher', () => {
       const ortsteilID = wohnortID !== null && row.ortsteil.trim()
         ? ortsteileMap.value.get(`${wohnortID}|${norm(row.ortsteil)}`) ?? null
         : null
+      const person1 = erzieherPerson1Payload(row, {
+        idSchueler, idErzieherArt, wohnortID, ortsteilID,
+        idStaatsangehoerigkeit: resolveStaatsangehoerigkeit(row.staatsangehoerigkeit1),
+      })
+      const person2 = erzieherPerson2Payload(row, resolveStaatsangehoerigkeit(row.staatsangehoerigkeit2))
 
-      const created = await createErzieher(
-        idSchueler,
-        erzieherPerson1Payload(row, { idSchueler, idErzieherArt, wohnortID, ortsteilID }),
-      )
+      if (vorhanden && modus === 'ueberschreiben') {
+        const patched = await patchErzieher(vorhanden.id, ohneLeereFelder(person1))
+        if (!patched.success) { fail(row, `Überschreiben fehlgeschlagen – ${patched.error}`); continue }
+        if (hatZweitePerson(row)) {
+          // 2. Person: vorhandene gleichnamige Person aktualisieren, sonst im Eintrag ergänzen
+          const vorhanden2 = findePerson(row.nachname2, row.vorname2)
+          const result2 = vorhanden2
+            ? await patchErzieher(vorhanden2.id, ohneLeereFelder(person2))
+            : await patchErzieherZweitePerson(vorhanden.id, person2)
+          if (!result2.success) {
+            row._errors = [`1. Person überschrieben, 2. Person fehlgeschlagen – ${result2.error}`]
+            row._result = 'ueberschrieben'
+            row._sent = true
+            failed++
+            uploadProgress.value++
+            continue
+          }
+        }
+        row._errors = []
+        row._result = 'ueberschrieben'
+        row._sent = true
+        updated++
+        uploadProgress.value++
+        continue
+      }
+
+      const created = await createErzieher(idSchueler, person1)
       if (!created.success || created.id === undefined) {
         fail(row, `Anlegen fehlgeschlagen – ${created.error ?? 'keine ID erhalten'}`)
         continue
@@ -223,7 +297,7 @@ export const useErzieherStore = defineStore('erzieher', () => {
       vorhandene.push({ id: created.id, nachname: row.nachname1, vorname: row.vorname1 })
 
       if (hatZweitePerson(row)) {
-        const patched = await patchErzieherZweitePerson(created.id, erzieherPerson2Payload(row))
+        const patched = await patchErzieherZweitePerson(created.id, person2)
         if (!patched.success) {
           // 1. Person ist angelegt → Zeile nicht erneut senden
           row._errors = [`1. Person angelegt, 2. Person fehlgeschlagen – ${patched.error}`]
@@ -243,7 +317,7 @@ export const useErzieherStore = defineStore('erzieher', () => {
     }
 
     uploading.value = false
-    return { sent, skipped, failed }
+    return { sent, updated, skipped, failed }
   }
 
   function stopUpload(): void {

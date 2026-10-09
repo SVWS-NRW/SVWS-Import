@@ -170,7 +170,7 @@ Schüler-Stammdaten mit persönlichen Angaben, Adresse, Klasse, Staatsangehörig
 
 Erziehungsberechtigte zu den Schülern aus `schueler-stammdaten.csv`. Jede Zeile ist ein Erzieher-Eintrag mit bis zu zwei Personen und gemeinsamer Adresse; enthält Beispiele für Eltern, Mutter/Vater, Pflege- und Großeltern sowie volljährige Schüler (auch zwei Einträge für einen Schüler). Alternativ kann der Schild-NRW-Export `SchuelerErzieher.dat` geladen werden.
 
-**Wichtige Spalten:** `nachname`, `vorname`, `geburtsdatum`, `erzieherart`, `nachname1`, `vorname1`, `nachname2`, `vorname2`, `plz`, `ort`
+**Wichtige Spalten:** `nachname`, `vorname`, `geburtsdatum`, `erzieherart`, `nachname1`, `vorname1`, `staatsangehoerigkeit1`, `nachname2`, `vorname2`, `staatsangehoerigkeit2`, `plz`, `ort`
 
 ---
 

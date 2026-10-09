@@ -383,7 +383,8 @@
           <tr><td><code>anrede1</code>, <code>titel1</code></td><td>1. Person</td><td>Text</td><td>z.&nbsp;B. <code>Frau</code>, <code>Dr.</code></td></tr>
           <tr><td><code>nachname1</code> / <code>vorname1</code> <span class="required-badge">Pflicht</span></td><td>1. Person</td><td>Text</td><td>Mindestens einer der beiden Namen</td></tr>
           <tr><td><code>email1</code></td><td>1. Person</td><td>Text</td><td></td></tr>
-          <tr><td><code>anrede2</code>, <code>titel2</code>, <code>nachname2</code>, <code>vorname2</code>, <code>email2</code></td><td>2. Person</td><td>Text</td><td>Optional — leer lassen, wenn es nur eine Person gibt</td></tr>
+          <tr><td><code>staatsangehoerigkeit1</code></td><td>1. Person</td><td>Text</td><td>ISO-3-Code (<code>DEU</code>), DEStatis-Schlüssel (<code>000</code>), Bezeichnung (<code>deutsch</code>) oder Katalog-ID aus <code>allinone.json</code></td></tr>
+          <tr><td><code>anrede2</code>, <code>titel2</code>, <code>nachname2</code>, <code>vorname2</code>, <code>email2</code>, <code>staatsangehoerigkeit2</code></td><td>2. Person</td><td>Text</td><td>Optional — leer lassen, wenn es nur eine Person gibt</td></tr>
           <tr class="cat-row"><td colspan="4">Gemeinsame Adresse</td></tr>
           <tr><td><code>strasse</code></td><td>Adresse</td><td>Text</td><td>Ohne Spalte <code>hausnummer</code> wird die Hausnummer automatisch abgetrennt</td></tr>
           <tr><td><code>hausnummer</code>, <code>hausnummerzusatz</code></td><td>Adresse</td><td>Text</td><td></td></tr>

@@ -106,7 +106,9 @@ Eine Zeile entspricht einem Erzieher-Eintrag mit **bis zu zwei Personen** (z. B.
 | `nachname`, `vorname`, `geburtsdatum` | Schüler (Pflicht) | `Müller`, `Anna`, `12.04.2007` |
 | `erzieherart` | Art des Eintrags | `Eltern`, `Mutter`, `Schüler ist volljährig` |
 | `anrede1`, `titel1`, `nachname1`, `vorname1`, `email1` | 1. Person (Name Pflicht) | `Frau`, `Dr.`, `Müller`, `Sabine` |
+| `staatsangehoerigkeit1` | Staatsangehörigkeit der 1. Person | `DEU` |
 | `anrede2`, `titel2`, `nachname2`, `vorname2`, `email2` | 2. Person (optional) | `Herr`, `Müller`, `Thomas` |
+| `staatsangehoerigkeit2` | Staatsangehörigkeit der 2. Person | `TUR` |
 | `strasse`, `hausnummer`, `hausnummerzusatz` | Gemeinsame Adresse | `Westfalenstraße`, `15` |
 | `plz`, `ort`, `ortsteil` | Wohnort aus dem Ortskatalog | `44137`, `Dortmund` |
 | `anschreiben` | Erhält Anschreiben (`J`/`N`) | `J` |
@@ -114,9 +116,16 @@ Eine Zeile entspricht einem Erzieher-Eintrag mit **bis zu zwei Personen** (z. B.
 
 Hinweise:
 
+- **Staatsangehörigkeit**: Angegeben werden kann der ISO-3-Code (`DEU`), der DEStatis-Schlüssel (`000`), die Bezeichnung (`deutsch`) oder direkt die Katalog-ID aus `allinone.json`. Gesendet wird immer die Katalog-ID; unbekannte Werte werden rot markiert.
 - **Unbekannte Erzieherarten** werden in der Tabelle mit ✚ markiert und beim Senden im Katalog der Schule angelegt.
 - **PLZ/Ort**, die nicht im Ortskatalog stehen, werden mit ⚠ markiert; der Eintrag wird dann ohne Wohnort gespeichert.
-- **Bereits vorhandene Erzieher** (gleicher Name der 1. Person beim selben Schüler) werden übersprungen (⏭), damit ein erneuter Import keine Dubletten erzeugt.
+- **Bereits vorhandene Erzieher**: Ist die 1. Person (gleicher Nach- und Vorname) beim selben Schüler schon eingetragen, entscheidet die Auswahl neben „Datei laden":
+
+| Auswahl | Verhalten | Status |
+|---------|-----------|--------|
+| **Vorhandene Erzieher überspringen** (Standard) | Die Zeile wird nicht importiert – ein erneuter Import erzeugt keine Dubletten | ⏭ Übersprungen |
+| **Vorhandene Erzieher überschreiben** | Der vorhandene Eintrag wird mit den Werten aus der Datei aktualisiert; leere Felder lassen vorhandene Werte unverändert. Die 2. Person wird aktualisiert, wenn sie (gleicher Name) schon existiert, sonst im Eintrag ergänzt. | ✎ Überschrieben |
+| **Erzieher zusätzlich anlegen** | Es wird immer ein neuer Erzieher-Eintrag angelegt | ✔ Gesendet |
 
 ## Nach dem Import
 

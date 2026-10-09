@@ -232,6 +232,16 @@
                   :loading="ezStore.lookupLoading"
                   @click="handleEzReloadLookup"
                 />
+                <Select
+                  v-model="ezDuplikatModus"
+                  :options="EZ_DUPLIKAT_OPTIONEN"
+                  optionLabel="label"
+                  optionValue="value"
+                  size="small"
+                  :disabled="ezStore.uploading"
+                  v-tooltip.top="'Was passieren soll, wenn die 1. Person beim Schüler bereits als Erzieher eingetragen ist'"
+                  style="width: 270px"
+                />
                 <FileUpload
                   :key="ezFileKey"
                   mode="basic"
@@ -263,6 +273,9 @@
               </div>
             </div>
 
+            <Message v-if="ezInfo" severity="info" :closable="true" @close="ezInfo = ''">
+              {{ ezInfo }}
+            </Message>
             <Message v-if="ezLookupError" severity="warn" :closable="true" @close="ezLookupError = ''">
               {{ ezLookupError }}
             </Message>
@@ -271,6 +284,7 @@
             </Message>
             <Message v-if="ezUploadResult" :severity="ezUploadResult.failed > 0 ? 'warn' : 'success'" :closable="true" @close="ezUploadResult = null">
               {{ ezUploadResult.sent }} Erzieher-Einträge angelegt
+              <span v-if="ezUploadResult.updated > 0">, {{ ezUploadResult.updated }} überschrieben</span>
               <span v-if="ezUploadResult.skipped > 0">, {{ ezUploadResult.skipped }} übersprungen (bereits vorhanden)</span>
               <span v-if="ezUploadResult.failed > 0">, {{ ezUploadResult.failed }} fehlgeschlagen</span>
             </Message>
@@ -330,7 +344,7 @@ import { useConfirm } from 'primevue/useconfirm'
 import { useSchuelerStore } from '@/stores/schueler'
 import { useSchuleStore } from '@/stores/schule'
 import { useSchulbesuchStore } from '@/stores/schulbesuch'
-import { useErzieherStore } from '@/stores/erzieher'
+import { useErzieherStore, type DuplikatModus } from '@/stores/erzieher'
 import { useDarkMode } from '@/composables/useDarkMode'
 import { type SchuelerImportRow } from '@/models/Schueler'
 import { type SchuelerSchulbesuchImportRow } from '@/models/SchuelerSchulbesuch'
@@ -339,7 +353,7 @@ import ImportStats from '@/components/ImportStats.vue'
 import ColumnMappingDialog from '@/components/ColumnMappingDialog.vue'
 import { parseSchuelerCsv } from '@/utils/csvParser'
 import { parseSchuelerXlsx } from '@/utils/xlsxParser'
-import { parseSchuelerSchulbesuchCsv, parseSchuelerErzieherCsv } from '@/utils/csvParser'
+import { parseSchuelerSchulbesuchCsv, parseSchuelerErzieherCsv, istErzieherDatei } from '@/utils/csvParser'
 
 ModuleRegistry.registerModules([ClientSideRowModelModule])
 
@@ -374,6 +388,14 @@ function onSelectionChanged(): void {
 async function onFileSelect(event: { files: File[] }): Promise<void> {
   const file = event.files[0]
   if (!file) return
+  // Erzieher-Datei versehentlich bei den Stammdaten geladen → im Tab „Erzieherdaten“ einlesen
+  if (!/\.(xlsx|xls)$/i.test(file.name) && await istErzieherDatei(file)) {
+    fileKey.value++
+    activeTab.value = 'erzieher'
+    await onEzFileSelect({ files: [file] })
+    ezInfo.value = `„${file.name}“ enthält Erzieherdaten und wurde deshalb im Tab „Erzieherdaten“ geladen.`
+    return
+  }
   parsing.value = true
   parseError.value = ''
   try {
@@ -872,10 +894,17 @@ const sbColumnDefs = computed<ColDef<SchuelerSchulbesuchImportRow>[]>(() => {
 const ezParseError = ref('')
 const ezParsing = ref(false)
 const ezLookupError = ref('')
-const ezUploadResult = ref<{ sent: number; skipped: number; failed: number } | null>(null)
+const ezUploadResult = ref<{ sent: number; updated: number; skipped: number; failed: number } | null>(null)
+const EZ_DUPLIKAT_OPTIONEN: { label: string; value: DuplikatModus }[] = [
+  { label: 'Vorhandene Erzieher überspringen',  value: 'ueberspringen' },
+  { label: 'Vorhandene Erzieher überschreiben', value: 'ueberschreiben' },
+  { label: 'Erzieher zusätzlich anlegen',       value: 'zusaetzlich' },
+]
+const ezDuplikatModus = ref<DuplikatModus>('ueberspringen')
 const ezGridApi = ref<GridApi | null>(null)
 const ezFileKey = ref(0)
 const ezSelectedCount = ref(0)
+const ezInfo = ref('')
 
 function onEzGridReady(params: GridReadyEvent): void {
   ezGridApi.value = params.api
@@ -891,6 +920,7 @@ async function onEzFileSelect(event: { files: File[] }): Promise<void> {
   ezParsing.value = true
   ezParseError.value = ''
   ezLookupError.value = ''
+  ezInfo.value = ''
   try {
     const rows = await parseSchuelerErzieherCsv(file)
     if (rows.length === 0) throw new Error('Keine Datensätze gefunden')
@@ -920,7 +950,7 @@ async function handleEzUploadAll(): Promise<void> {
   ezUploadResult.value = null
   const selected = ezGridApi.value?.getSelectedRows() ?? []
   const selectedIds = selected.length > 0 ? new Set(selected.map((r: { _id: string }) => r._id)) : undefined
-  ezUploadResult.value = await ezStore.uploadAll(selectedIds)
+  ezUploadResult.value = await ezStore.uploadAll(selectedIds, ezDuplikatModus.value)
   ezGridApi.value?.refreshCells({ force: true })
 }
 
@@ -991,12 +1021,16 @@ const ezColumnDefs = computed<ColDef<SchuelerErzieherImportRow>[]>(() => {
       cellStyle: (p) => p.data?._errors.some(e => e.includes('1. Person')) ? { background: '#fee2e2' } : null },
     { field: 'vorname1',  headerName: 'Vorname 1',  width: 130 },
     { field: 'email1',    headerName: 'E-Mail 1',   width: 180, hide: !has('email1') },
+    { field: 'staatsangehoerigkeit1', headerName: 'Staatsang. 1', width: 120, hide: !has('staatsangehoerigkeit1'),
+      cellStyle: (p) => p.data?._errors.some(e => e.includes('(1. Person)')) ? { background: '#fee2e2' } : null },
     // 2. Person
     { field: 'anrede2',   headerName: 'Anrede 2',   width: 100, hide: !has('anrede2') },
     { field: 'titel2',    headerName: 'Titel 2',    width: 90,  hide: !has('titel2') },
     { field: 'nachname2', headerName: 'Nachname 2', width: 140, hide: !has('nachname2') },
     { field: 'vorname2',  headerName: 'Vorname 2',  width: 130, hide: !has('vorname2') },
     { field: 'email2',    headerName: 'E-Mail 2',   width: 180, hide: !has('email2') },
+    { field: 'staatsangehoerigkeit2', headerName: 'Staatsang. 2', width: 120, hide: !has('staatsangehoerigkeit2'),
+      cellStyle: (p) => p.data?._errors.some(e => e.includes('(2. Person)')) ? { background: '#fee2e2' } : null },
     // Adresse
     { field: 'strassenname',     headerName: 'Straße',         width: 180 },
     { field: 'hausnummer',       headerName: 'Hausnr.',        width: 90 },
@@ -1019,6 +1053,7 @@ const ezColumnDefs = computed<ColDef<SchuelerErzieherImportRow>[]>(() => {
         const title = params.data._errors.join('; ').replace(/"/g, '&quot;')
         if (params.data._result === 'uebersprungen') return `<span style="color:#f59e0b" title="${title}">⏭ Übersprungen</span>`
         if (params.data._sent && params.data._errors.length) return `<span style="color:#f59e0b" title="${title}">⚠ Teilweise</span>`
+        if (params.data._result === 'ueberschrieben') return '<span style="color:#3b82f6">✎ Überschrieben</span>'
         if (params.data._sent) return '<span style="color:#22c55e">✔ Gesendet</span>'
         if (!params.data._valid) return `<span style="color:#ef4444" title="${title}">✖ Fehler</span>`
         return '<span style="color:#f59e0b">● Bereit</span>'

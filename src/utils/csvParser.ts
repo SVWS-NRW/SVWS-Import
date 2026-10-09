@@ -681,12 +681,14 @@ export function parseSchuelerErzieherCsv(file: File): Promise<import('@/models/S
               nachname1: t('nachname1', 'nachname1.person'),
               vorname1:  t('vorname1', 'vorname1.person'),
               email1:    t('email1', 'email1.person', 'email'),
+              staatsangehoerigkeit1: t('staatsangehoerigkeit1', 'staatsangehörigkeit1', 'staatsangehoerigkeit1.person', 'staatsangehörigkeit1.person'),
               // 2. Person
               anrede2:   t('anrede2', 'anrede2.person'),
               titel2:    t('titel2', 'titel2.person'),
               nachname2: t('nachname2', 'nachname2.person'),
               vorname2:  t('vorname2', 'vorname2.person'),
               email2:    t('email2', 'email2.person'),
+              staatsangehoerigkeit2: t('staatsangehoerigkeit2', 'staatsangehörigkeit2', 'staatsangehoerigkeit2.person', 'staatsangehörigkeit2.person'),
               // Adresse
               strassenname,
               hausnummer,
@@ -708,4 +710,11 @@ export function parseSchuelerErzieherCsv(file: File): Promise<import('@/models/S
       },
     })
   })
+}
+
+/** Erkennt eine Erzieher-Datei (neue CSV oder SchuelerErzieher.dat) an typischen Spalten in der Kopfzeile. */
+export async function istErzieherDatei(file: File): Promise<boolean> {
+  const kopf = (await file.slice(0, 4096).text()).replace(/^﻿/, '').split(/\r?\n/)[0] ?? ''
+  const spalten = kopf.split(/[;|,\t]/).map(s => normalizeKey(s.replace(/"/g, '').trim()))
+  return spalten.some(s => ['erzieherart', 'nachname1', 'nachname1.person'].includes(s))
 }

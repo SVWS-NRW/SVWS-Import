@@ -17,6 +17,7 @@
       <button @click="scrollTo('hinweise')">Allgemeine Hinweise</button>
       <button @click="scrollTo('schueler')">Schüler Stammdaten</button>
       <button @click="scrollTo('schulbesuch')">Schulbesuch</button>
+      <button @click="scrollTo('erzieher')">Erzieherdaten</button>
       <button @click="scrollTo('lehrer')">Lehrkräfte</button>
       <button @click="scrollTo('klassen')">Klassen</button>
       <button @click="scrollTo('faecher')">Fächer</button>
@@ -351,6 +352,45 @@
           <tr><td><code>teilnahmeSprachfoerderkurs</code></td><td>Kindergarten</td><td>Boolean</td><td><code>true</code> / <code>false</code></td></tr>
           <tr class="cat-row"><td colspan="4">Abschluss</td></tr>
           <tr><td><code>schluesselHoechsterSchulabschluss</code></td><td>Abschluss</td><td>Text</td><td>z.&nbsp;B. <code>K</code>, <code>Z1</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── Schüler Erzieherdaten ──────────────────────────────────────────── -->
+    <div id="erzieher" class="format-section">
+      <h3>
+        <i class="pi pi-users section-icon" /> Schüler Erzieherdaten
+        <span class="path-badge direct">Direktimport</span>
+      </h3>
+      <p class="section-desc">
+        Erziehungsberechtigte zu vorhandenen Schülern. Eine Zeile ist ein Erzieher-Eintrag mit bis zu zwei Personen
+        und gemeinsamer Adresse; mehrere Zeilen pro Schüler sind möglich. Schüler werden anhand von
+        <code>Nachname</code>, <code>Vorname</code> und <code>Geburtsdatum</code> zugeordnet.
+        Unterstützt wird auch der Schild-NRW-Export <code>SchuelerErzieher.dat</code> (Spalten wie <code>Nachname 1.Person</code>).
+        Beispieldatei: <code>schueler-erzieher.csv</code>
+      </p>
+      <table class="field-table">
+        <thead>
+          <tr><th>Spaltenname</th><th>Kategorie</th><th>Typ</th><th>Hinweis</th></tr>
+        </thead>
+        <tbody>
+          <tr class="cat-row"><td colspan="4">Schüler-Identifikation</td></tr>
+          <tr><td><code>nachname</code> <span class="required-badge">Pflicht</span></td><td>Identifikation</td><td>Text</td><td>Zum Abgleich mit vorhandenem Schüler</td></tr>
+          <tr><td><code>vorname</code> <span class="required-badge">Pflicht</span></td><td>Identifikation</td><td>Text</td><td></td></tr>
+          <tr><td><code>geburtsdatum</code> <span class="required-badge">Pflicht</span></td><td>Identifikation</td><td>Datum</td><td><code>TT.MM.JJJJ</code> oder <code>JJJJ-MM-TT</code></td></tr>
+          <tr class="cat-row"><td colspan="4">Erzieher-Eintrag</td></tr>
+          <tr><td><code>erzieherart</code></td><td>Eintrag</td><td>Text</td><td>z.&nbsp;B. <code>Eltern</code>, <code>Mutter</code>, <code>Schüler ist volljährig</code> — unbekannte Arten werden im Katalog angelegt</td></tr>
+          <tr><td><code>anrede1</code>, <code>titel1</code></td><td>1. Person</td><td>Text</td><td>z.&nbsp;B. <code>Frau</code>, <code>Dr.</code></td></tr>
+          <tr><td><code>nachname1</code> / <code>vorname1</code> <span class="required-badge">Pflicht</span></td><td>1. Person</td><td>Text</td><td>Mindestens einer der beiden Namen</td></tr>
+          <tr><td><code>email1</code></td><td>1. Person</td><td>Text</td><td></td></tr>
+          <tr><td><code>anrede2</code>, <code>titel2</code>, <code>nachname2</code>, <code>vorname2</code>, <code>email2</code></td><td>2. Person</td><td>Text</td><td>Optional — leer lassen, wenn es nur eine Person gibt</td></tr>
+          <tr class="cat-row"><td colspan="4">Gemeinsame Adresse</td></tr>
+          <tr><td><code>strasse</code></td><td>Adresse</td><td>Text</td><td>Ohne Spalte <code>hausnummer</code> wird die Hausnummer automatisch abgetrennt</td></tr>
+          <tr><td><code>hausnummer</code>, <code>hausnummerzusatz</code></td><td>Adresse</td><td>Text</td><td></td></tr>
+          <tr><td><code>plz</code>, <code>ort</code></td><td>Adresse</td><td>Text</td><td>Muss im Ortskatalog vorhanden sein, sonst ohne Wohnort gespeichert</td></tr>
+          <tr><td><code>ortsteil</code></td><td>Adresse</td><td>Text</td><td>Ortsteil des Wohnorts aus dem Ortsteil-Katalog</td></tr>
+          <tr><td><code>anschreiben</code></td><td>Eintrag</td><td>Boolean</td><td><code>J</code>/<code>N</code>, <code>ja</code>/<code>nein</code>, <code>true</code>/<code>false</code></td></tr>
+          <tr><td><code>bemerkungen</code></td><td>Eintrag</td><td>Text</td><td></td></tr>
         </tbody>
       </table>
     </div>

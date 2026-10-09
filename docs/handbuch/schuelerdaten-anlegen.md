@@ -90,6 +90,34 @@ Unter `examples/schuelerdaten.csv` finden Sie eine vollständige Schülerliste. 
 | Ungültiger Geschlechtswert | Wert ist nicht `m`, `w` oder `d` | Korrekte Werte verwenden |
 | Schüler beim Unterrichtsimport nicht gefunden | Name oder Geburtsdatum weicht ab | Schreibweise exakt angleichen |
 
+## Erzieherdaten importieren
+
+Im Tab **„Erzieherdaten"** der Schüler-Ansicht werden Erziehungsberechtigte zu bereits vorhandenen Schülern importiert. Die Schüler werden – wie beim Schulbesuch – über **Nachname + Vorname + Geburtsdatum** gesucht (Spalte „Abgleich").
+
+Unterstützte Dateien:
+
+- die CSV-Datei im Format von `examples/schueler-erzieher.csv`
+- der Schild-NRW-3-Export **`SchuelerErzieher.dat`** (Pipe-getrennt, Spalten wie `Nachname 1.Person`, `E-Mail 2. Person`)
+
+Eine Zeile entspricht einem Erzieher-Eintrag mit **bis zu zwei Personen** (z. B. Mutter und Vater) und einer gemeinsamen Adresse. Für einen Schüler können mehrere Zeilen vorkommen (z. B. getrennt lebende Eltern).
+
+| Spalte | Beschreibung | Beispiel |
+|--------|-------------|----------|
+| `nachname`, `vorname`, `geburtsdatum` | Schüler (Pflicht) | `Müller`, `Anna`, `12.04.2007` |
+| `erzieherart` | Art des Eintrags | `Eltern`, `Mutter`, `Schüler ist volljährig` |
+| `anrede1`, `titel1`, `nachname1`, `vorname1`, `email1` | 1. Person (Name Pflicht) | `Frau`, `Dr.`, `Müller`, `Sabine` |
+| `anrede2`, `titel2`, `nachname2`, `vorname2`, `email2` | 2. Person (optional) | `Herr`, `Müller`, `Thomas` |
+| `strasse`, `hausnummer`, `hausnummerzusatz` | Gemeinsame Adresse | `Westfalenstraße`, `15` |
+| `plz`, `ort`, `ortsteil` | Wohnort aus dem Ortskatalog | `44137`, `Dortmund` |
+| `anschreiben` | Erhält Anschreiben (`J`/`N`) | `J` |
+| `bemerkungen` | Freitext | |
+
+Hinweise:
+
+- **Unbekannte Erzieherarten** werden in der Tabelle mit ✚ markiert und beim Senden im Katalog der Schule angelegt.
+- **PLZ/Ort**, die nicht im Ortskatalog stehen, werden mit ⚠ markiert; der Eintrag wird dann ohne Wohnort gespeichert.
+- **Bereits vorhandene Erzieher** (gleicher Name der 1. Person beim selben Schüler) werden übersprungen (⏭), damit ein erneuter Import keine Dubletten erzeugt.
+
 ## Nach dem Import
 
 - Gesamtzahl der aktiven Schüler prüfen

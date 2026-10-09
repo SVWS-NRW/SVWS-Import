@@ -640,3 +640,72 @@ export function normalisiereDatum(raw: string): string {
   if (mdy) return `${mdy[3]}-${mdy[1].padStart(2, '0')}-${mdy[2].padStart(2, '0')}`
   return raw
 }
+
+/**
+ * Erzieherdaten — unterstützt die neue CSV (schueler-erzieher.csv) und den
+ * Schild-NRW-3-Export SchuelerErzieher.dat (Pipe-getrennt, Spalten „Nachname 1.Person“ usw.).
+ */
+export function parseSchuelerErzieherCsv(file: File): Promise<import('@/models/SchuelerErzieher').SchuelerErzieherImportRow[]> {
+  return new Promise((resolve, reject) => {
+    Papa.parse<Record<string, string>>(file, {
+      header: true,
+      skipEmptyLines: true,
+      delimiter: /\.dat$/i.test(file.name) ? '|' : '',
+      // Schild-Exporte beginnen mit BOM — sonst heißt die erste Spalte "\uFEFFNachname"
+      transformHeader: (h) => h.replace(/^\uFEFF/, ''),
+      complete(results) {
+        try {
+          const rows = results.data.map((record) => {
+            const m = buildLookup(record)
+            const t = (...keys: string[]) => get(m, ...keys).trim()
+            const strasseRaw = t('strassenname', 'strasse', 'straße', 'strae')
+            const hnrExplizit = t('hausnummer', 'hausnr', 'hnr')
+            const [strassenname, hausnummer] = hnrExplizit ? [strasseRaw, hnrExplizit] : splitStrasseHausnummer(strasseRaw)
+            return {
+              _id: generateId(),
+              _valid: false,
+              _errors: [] as string[],
+              _sent: false,
+              _schuelerId: null,
+              _lookupStatus: 'pending' as const,
+              _erzieherartStatus: 'empty' as const,
+              _wohnortStatus: 'empty' as const,
+              // Schüler
+              nachname:     t('nachname', 'name', 'familienname'),
+              vorname:      t('vorname', 'rufname'),
+              geburtsdatum: normalisiereDatum(t('geburtsdatum', 'geburtstag', 'geb')),
+              erzieherart:  t('erzieherart', 'art'),
+              // 1. Person (neue CSV: anrede1 …, Schild-Export: „Anrede 1.Person“ …)
+              anrede1:   t('anrede1', 'anrede1.person', 'anrede'),
+              titel1:    t('titel1', 'titel1.person', 'titel'),
+              nachname1: t('nachname1', 'nachname1.person'),
+              vorname1:  t('vorname1', 'vorname1.person'),
+              email1:    t('email1', 'email1.person', 'email'),
+              // 2. Person
+              anrede2:   t('anrede2', 'anrede2.person'),
+              titel2:    t('titel2', 'titel2.person'),
+              nachname2: t('nachname2', 'nachname2.person'),
+              vorname2:  t('vorname2', 'vorname2.person'),
+              email2:    t('email2', 'email2.person'),
+              // Adresse
+              strassenname,
+              hausnummer,
+              hausnummerZusatz:   t('hausnummerzusatz', 'hausnummernzusatz', 'hausnrzusatz'),
+              plz:                t('plz', 'postleitzahl'),
+              ort:                t('ort', 'wohnort'),
+              ortsteil:           t('ortsteil'),
+              erhaeltAnschreiben: t('anschreiben', 'erhaeltanschreiben'),
+              bemerkungen:        t('bemerkungen', 'bemerkung'),
+            }
+          })
+          resolve(rows)
+        } catch (e) {
+          reject(e)
+        }
+      },
+      error(err) {
+        reject(new Error(`CSV-Fehler: ${err.message}`))
+      },
+    })
+  })
+}

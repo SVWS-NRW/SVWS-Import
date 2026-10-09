@@ -16,6 +16,7 @@ import { betriebImportToApi, ansprechpartnerImportToApi, type BetriebImportRow, 
 import { ortsteilImportToApi, type OrtsteilImportRow, type OrtsteilDetails } from '@/models/Ortsteile'
 import { resolveWohnortId, resolveReligionId, resolveNationalitaetId, resolveVerkehrsspracheId, fetchSchulReligionen, fetchJahrgangAsdKataloge } from './katalogService'
 import type { Floskelgruppe, Floskel, FloskelApiPayload } from '@/models/Floskel'
+import type { ErzieherStammdatenPayload } from '@/models/SchuelerErzieher'
 import type {
   Ankreuzkompetenz,
   AnkreuzkompetenzCreatePayload,
@@ -1202,3 +1203,65 @@ export async function downloadLernplattformExport(
   return { blob: response.data as Blob, filename }
 }
 
+
+// ── Erzieher ─────────────────────────────────────────────────────────────────
+
+export interface ErzieherartEintrag {
+  id: number
+  bezeichnung: string
+}
+
+export async function fetchErzieherarten(): Promise<ErzieherartEintrag[]> {
+  const response = await getApiClient().get<ErzieherartEintrag[]>('/schule/erzieherarten')
+  return Array.isArray(response.data) ? response.data : []
+}
+
+export async function createErzieherart(bezeichnung: string): Promise<{ id: number } | { error: string }> {
+  try {
+    const resp = await getApiClient().post<ErzieherartEintrag>('/schule/erzieherart/new', {
+      bezeichnung,
+      sortierung: 32000,
+      istSichtbar: true,
+    })
+    return { id: resp.data.id }
+  } catch (error: unknown) {
+    return { error: toAppError(error).messageUser }
+  }
+}
+
+export interface ErzieherVorhanden {
+  id: number
+  nachname?: string | null
+  vorname?: string | null
+}
+
+/** Vorhandene Erzieher eines Schülers; 404 bedeutet „keine Erzieher“ */
+export async function fetchSchuelerErzieher(idSchueler: number): Promise<ErzieherVorhanden[]> {
+  try {
+    const response = await getApiClient().get<ErzieherVorhanden[]>(`/schueler/${idSchueler}/erzieher`)
+    return Array.isArray(response.data) ? response.data : []
+  } catch (error: unknown) {
+    if ((error as { response?: { status?: number } })?.response?.status === 404) return []
+    throw error
+  }
+}
+
+/** Legt einen neuen Erzieher-Eintrag mit der 1. Person an */
+export async function createErzieher(idSchueler: number, payload: ErzieherStammdatenPayload): Promise<UploadResult> {
+  try {
+    const resp = await getApiClient().post(`/schueler/erzieher/new/${idSchueler}/1`, payload)
+    return { success: true, id: resp.data?.id }
+  } catch (error: unknown) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}
+
+/** Ergänzt die 2. Person im Erzieher-Eintrag (id = ID aus createErzieher) */
+export async function patchErzieherZweitePerson(idErzieher: number, payload: ErzieherStammdatenPayload): Promise<UploadResult> {
+  try {
+    await getApiClient().patch(`/erzieher/${idErzieher}/stammdaten/2`, payload)
+    return { success: true }
+  } catch (error: unknown) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}

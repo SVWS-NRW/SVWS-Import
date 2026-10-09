@@ -23,6 +23,10 @@
           Schulbesuch
           <Badge v-if="sbStore.totalCount > 0" :value="sbStore.totalCount" severity="secondary" class="tab-badge" />
         </Tab>
+        <Tab value="erzieher">
+          Erzieherdaten
+          <Badge v-if="ezStore.totalCount > 0" :value="ezStore.totalCount" severity="secondary" class="tab-badge" />
+        </Tab>
       </TabList>
 
       <TabPanels>
@@ -207,6 +211,96 @@
             />
           </div>
         </TabPanel>
+
+        <!-- ── Erzieherdaten ──────────────────────────────────────────── -->
+        <TabPanel value="erzieher">
+          <div class="tab-content">
+            <div class="tab-actions">
+              <ImportStats
+                :total="ezStore.totalCount"
+                :valid="ezStore.validCount"
+                :errors="ezStore.errorCount"
+                :sent="ezStore.sentCount"
+              />
+              <div class="action-buttons">
+                <Button
+                  v-tooltip.top="'Schülerliste und Erzieherarten neu aus Datenbank laden'"
+                  icon="pi pi-refresh"
+                  severity="secondary"
+                  size="small"
+                  text
+                  :loading="ezStore.lookupLoading"
+                  @click="handleEzReloadLookup"
+                />
+                <FileUpload
+                  :key="ezFileKey"
+                  mode="basic"
+                  :auto="false"
+                  :multiple="false"
+                  accept=".csv,.dat"
+                  chooseLabel="Datei laden"
+                  chooseIcon="pi pi-folder-open"
+                  :maxFileSize="10000000"
+                  :disabled="ezParsing"
+                  @select="onEzFileSelect"
+                />
+                <Button
+                  :label="ezStore.uploading ? `${ezStore.uploadProgress} / ${ezStore.uploadTotal}` : ezSelectedCount > 0 ? `${ezSelectedCount} senden` : 'Alles senden'"
+                  icon="pi pi-upload"
+                  size="small"
+                  :disabled="ezStore.validCount === 0 || ezStore.uploading"
+                  :loading="ezStore.uploading"
+                  @click="handleEzUploadAll"
+                />
+                <Button
+                  :label="ezStore.uploading ? 'Stoppen' : 'Leeren'"
+                  :icon="ezStore.uploading ? 'pi pi-stop' : 'pi pi-trash'"
+                  :severity="ezStore.uploading ? 'warn' : 'danger'"
+                  text
+                  size="small"
+                  @click="ezStore.uploading ? ezStore.stopUpload() : confirmEzClear()"
+                />
+              </div>
+            </div>
+
+            <Message v-if="ezLookupError" severity="warn" :closable="true" @close="ezLookupError = ''">
+              {{ ezLookupError }}
+            </Message>
+            <Message v-if="ezParseError" severity="error" :closable="true" @close="ezParseError = ''">
+              {{ ezParseError }}
+            </Message>
+            <Message v-if="ezUploadResult" :severity="ezUploadResult.failed > 0 ? 'warn' : 'success'" :closable="true" @close="ezUploadResult = null">
+              {{ ezUploadResult.sent }} Erzieher-Einträge angelegt
+              <span v-if="ezUploadResult.skipped > 0">, {{ ezUploadResult.skipped }} übersprungen (bereits vorhanden)</span>
+              <span v-if="ezUploadResult.failed > 0">, {{ ezUploadResult.failed }} fehlgeschlagen</span>
+            </Message>
+
+            <Message v-if="ezStore.rows.length === 0" severity="info" :closable="false" class="hint-msg">
+              CSV-Datei (z.&nbsp;B. <strong>schueler-erzieher.csv</strong>) oder den Schild-NRW-Export
+              <strong>SchuelerErzieher.dat</strong> laden. Der Schüler wird anhand von
+              <strong>Nachname</strong>, <strong>Vorname</strong> und <strong>Geburtsdatum</strong> gesucht.
+              Eine Zeile entspricht einem Erzieher-Eintrag mit bis zu zwei Personen.
+            </Message>
+
+            <ag-grid-vue
+              v-if="ezStore.rows.length > 0"
+              :class="[isDark ? 'ag-theme-quartz-dark' : 'ag-theme-quartz', 'data-table']"
+              :rowData="ezStore.rows"
+              :columnDefs="ezColumnDefs"
+              :defaultColDef="defaultColDef"
+              :tooltipShowDelay="400"
+              :rowClassRules="ezRowClassRules"
+              :getRowId="getEzRowId"
+              rowSelection="multiple"
+              :suppressRowClickSelection="true"
+              @cell-value-changed="onEzCellChanged"
+              @grid-ready="onEzGridReady"
+              @selection-changed="onEzSelectionChanged"
+              :animateRows="true"
+              :stopEditingWhenCellsLoseFocus="true"
+            />
+          </div>
+        </TabPanel>
       </TabPanels>
     </Tabs>
 
@@ -236,14 +330,16 @@ import { useConfirm } from 'primevue/useconfirm'
 import { useSchuelerStore } from '@/stores/schueler'
 import { useSchuleStore } from '@/stores/schule'
 import { useSchulbesuchStore } from '@/stores/schulbesuch'
+import { useErzieherStore } from '@/stores/erzieher'
 import { useDarkMode } from '@/composables/useDarkMode'
 import { type SchuelerImportRow } from '@/models/Schueler'
 import { type SchuelerSchulbesuchImportRow } from '@/models/SchuelerSchulbesuch'
+import { type SchuelerErzieherImportRow } from '@/models/SchuelerErzieher'
 import ImportStats from '@/components/ImportStats.vue'
 import ColumnMappingDialog from '@/components/ColumnMappingDialog.vue'
 import { parseSchuelerCsv } from '@/utils/csvParser'
 import { parseSchuelerXlsx } from '@/utils/xlsxParser'
-import { parseSchuelerSchulbesuchCsv } from '@/utils/csvParser'
+import { parseSchuelerSchulbesuchCsv, parseSchuelerErzieherCsv } from '@/utils/csvParser'
 
 ModuleRegistry.registerModules([ClientSideRowModelModule])
 
@@ -251,6 +347,7 @@ const router = useRouter()
 const store = useSchuelerStore()
 const schuleStore = useSchuleStore()
 const sbStore = useSchulbesuchStore()
+const ezStore = useErzieherStore()
 const confirm = useConfirm()
 const { isDark } = useDarkMode()
 
@@ -766,6 +863,173 @@ const sbColumnDefs = computed<ColDef<SchuelerSchulbesuchImportRow>[]>(() => {
         params.data._sent
           ? ''
           : `<button onclick="window.__deleteSchulbesuch('${params.data._id}')" style="border:none;background:none;cursor:pointer;color:#ef4444;font-size:1rem" title="Zeile löschen">✕</button>`,
+    },
+  ])
+})
+
+// ── Erzieherdaten ─────────────────────────────────────────────────────────────
+
+const ezParseError = ref('')
+const ezParsing = ref(false)
+const ezLookupError = ref('')
+const ezUploadResult = ref<{ sent: number; skipped: number; failed: number } | null>(null)
+const ezGridApi = ref<GridApi | null>(null)
+const ezFileKey = ref(0)
+const ezSelectedCount = ref(0)
+
+function onEzGridReady(params: GridReadyEvent): void {
+  ezGridApi.value = params.api
+}
+
+function onEzSelectionChanged(): void {
+  ezSelectedCount.value = ezGridApi.value?.getSelectedRows().length ?? 0
+}
+
+async function onEzFileSelect(event: { files: File[] }): Promise<void> {
+  const file = event.files[0]
+  if (!file) return
+  ezParsing.value = true
+  ezParseError.value = ''
+  ezLookupError.value = ''
+  try {
+    const rows = await parseSchuelerErzieherCsv(file)
+    if (rows.length === 0) throw new Error('Keine Datensätze gefunden')
+    if (!ezStore.lookupLoaded) {
+      const result = await ezStore.loadSchuelerLookup()
+      if (result.error) ezLookupError.value = `Schülerliste konnte nicht geladen werden: ${result.error} — Abgleich nicht möglich.`
+    }
+    ezStore.setRows(rows)
+  } catch (e) {
+    ezParseError.value = e instanceof Error ? e.message : 'Fehler beim Einlesen der Datei'
+  } finally {
+    ezParsing.value = false
+  }
+}
+
+async function handleEzReloadLookup(): Promise<void> {
+  ezLookupError.value = ''
+  const result = await ezStore.loadSchuelerLookup(true)
+  if (result.error) {
+    ezLookupError.value = result.error
+  } else if (ezStore.rows.length > 0) {
+    ezStore.resolveAndValidate()
+  }
+}
+
+async function handleEzUploadAll(): Promise<void> {
+  ezUploadResult.value = null
+  const selected = ezGridApi.value?.getSelectedRows() ?? []
+  const selectedIds = selected.length > 0 ? new Set(selected.map((r: { _id: string }) => r._id)) : undefined
+  ezUploadResult.value = await ezStore.uploadAll(selectedIds)
+  ezGridApi.value?.refreshCells({ force: true })
+}
+
+function confirmEzClear(): void {
+  confirm.require({
+    message: 'Alle Erzieher-Importdaten verwerfen?',
+    header: 'Bestätigung',
+    icon: 'pi pi-exclamation-triangle',
+    acceptLabel: 'Ja, leeren',
+    rejectLabel: 'Abbrechen',
+    accept: () => { ezStore.clear(); ezFileKey.value++ },
+  })
+}
+
+function onEzCellChanged(event: CellValueChangedEvent<SchuelerErzieherImportRow>): void {
+  if (event.data) {
+    ezStore.updateRow(event.data._id, { [event.colDef.field as string]: event.newValue })
+    ezGridApi.value?.refreshCells({ force: true })
+  }
+}
+
+;(window as unknown as Record<string, unknown>).__deleteErzieher = (id: string) => {
+  ezStore.deleteRow(id)
+}
+
+function getEzRowId(params: GetRowIdParams<SchuelerErzieherImportRow>): string {
+  return params.data._id
+}
+
+const ezRowClassRules = {
+  'row-sent':  (params: { data: SchuelerErzieherImportRow }) => params.data._sent,
+  'row-error': (params: { data: SchuelerErzieherImportRow }) => !params.data._valid && !params.data._sent,
+}
+
+const ezColumnDefs = computed<ColDef<SchuelerErzieherImportRow>[]>(() => {
+  const has = (field: keyof SchuelerErzieherImportRow) => ezStore.rows.some(r => !!r[field])
+  return withHeaderTooltips([
+    {
+      field: 'nachname', headerName: 'Nachname', pinned: 'left', width: 140,
+      checkboxSelection: true, headerCheckboxSelection: true,
+      cellStyle: (p) => p.data?._errors.some(e => e.includes('Nachname des Schülers')) ? { background: '#fee2e2' } : null,
+    },
+    { field: 'vorname',      headerName: 'Vorname',      pinned: 'left', width: 130 },
+    { field: 'geburtsdatum', headerName: 'Geburtsdatum', pinned: 'left', width: 130 },
+    {
+      headerName: 'Abgleich', width: 120, pinned: 'left', editable: false, sortable: false, filter: false,
+      cellRenderer: (params: { data: SchuelerErzieherImportRow }) => {
+        switch (params.data._lookupStatus) {
+          case 'ok':        return `<span style="color:#22c55e" title="ID: ${params.data._schuelerId}">✔ Gefunden</span>`
+          case 'not_found': return '<span style="color:#ef4444">✖ Nicht gefunden</span>'
+          case 'ambiguous': return '<span style="color:#f59e0b">⚠ Nicht eindeutig</span>'
+          default:          return '<span style="color:#94a3b8">⋯ Ausstehend</span>'
+        }
+      },
+    },
+    {
+      field: 'erzieherart', headerName: 'Erzieherart', width: 170,
+      cellRenderer: (params: { data: SchuelerErzieherImportRow; value: string }) => {
+        if (params.data._erzieherartStatus === 'new')
+          return `<span style="color:#3b82f6" title="Unbekannte Erzieherart — wird beim Senden im Katalog angelegt">${params.value} ✚</span>`
+        return params.value ?? ''
+      },
+    },
+    // 1. Person
+    { field: 'anrede1',   headerName: 'Anrede 1',   width: 100 },
+    { field: 'titel1',    headerName: 'Titel 1',    width: 90,  hide: !has('titel1') },
+    { field: 'nachname1', headerName: 'Nachname 1', width: 140,
+      cellStyle: (p) => p.data?._errors.some(e => e.includes('1. Person')) ? { background: '#fee2e2' } : null },
+    { field: 'vorname1',  headerName: 'Vorname 1',  width: 130 },
+    { field: 'email1',    headerName: 'E-Mail 1',   width: 180, hide: !has('email1') },
+    // 2. Person
+    { field: 'anrede2',   headerName: 'Anrede 2',   width: 100, hide: !has('anrede2') },
+    { field: 'titel2',    headerName: 'Titel 2',    width: 90,  hide: !has('titel2') },
+    { field: 'nachname2', headerName: 'Nachname 2', width: 140, hide: !has('nachname2') },
+    { field: 'vorname2',  headerName: 'Vorname 2',  width: 130, hide: !has('vorname2') },
+    { field: 'email2',    headerName: 'E-Mail 2',   width: 180, hide: !has('email2') },
+    // Adresse
+    { field: 'strassenname',     headerName: 'Straße',         width: 180 },
+    { field: 'hausnummer',       headerName: 'Hausnr.',        width: 90 },
+    { field: 'hausnummerZusatz', headerName: 'Hausnr. Zusatz', width: 120, hide: !has('hausnummerZusatz') },
+    { field: 'plz',              headerName: 'PLZ',            width: 80 },
+    {
+      field: 'ort', headerName: 'Ort', width: 140,
+      cellRenderer: (params: { data: SchuelerErzieherImportRow; value: string }) => {
+        if (params.data._wohnortStatus === 'not_found')
+          return `<span style="color:#f59e0b" title="PLZ/Ort nicht im Ortskatalog — Adresse wird ohne Wohnort gespeichert">${params.value} ⚠</span>`
+        return params.value ?? ''
+      },
+    },
+    { field: 'ortsteil',           headerName: 'Ortsteil',     width: 120, hide: !has('ortsteil') },
+    { field: 'erhaeltAnschreiben', headerName: 'Anschreiben',  width: 115 },
+    { field: 'bemerkungen',        headerName: 'Bemerkungen',  width: 180, hide: !has('bemerkungen') },
+    {
+      headerName: 'Importstatus', width: 130, editable: false,
+      cellRenderer: (params: { data: SchuelerErzieherImportRow }) => {
+        const title = params.data._errors.join('; ').replace(/"/g, '&quot;')
+        if (params.data._result === 'uebersprungen') return `<span style="color:#f59e0b" title="${title}">⏭ Übersprungen</span>`
+        if (params.data._sent && params.data._errors.length) return `<span style="color:#f59e0b" title="${title}">⚠ Teilweise</span>`
+        if (params.data._sent) return '<span style="color:#22c55e">✔ Gesendet</span>'
+        if (!params.data._valid) return `<span style="color:#ef4444" title="${title}">✖ Fehler</span>`
+        return '<span style="color:#f59e0b">● Bereit</span>'
+      },
+    },
+    {
+      headerName: '', width: 60, editable: false, sortable: false, filter: false,
+      cellRenderer: (params: { data: SchuelerErzieherImportRow }) =>
+        params.data._sent
+          ? ''
+          : `<button onclick="window.__deleteErzieher('${params.data._id}')" style="border:none;background:none;cursor:pointer;color:#ef4444;font-size:1rem" title="Zeile löschen">✕</button>`,
     },
   ])
 })

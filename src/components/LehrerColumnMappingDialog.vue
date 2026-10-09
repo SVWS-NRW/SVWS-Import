@@ -149,7 +149,7 @@ function onConfirm(): void {
 }
 
 .grid-head {
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -160,7 +160,7 @@ function onConfirm(): void {
 
 .csv-name {
   font-family: monospace;
-  font-size: 0.875rem;
+  font-size: 0.95rem;
   border: 1px solid var(--p-content-border-color);
   color: var(--p-text-color);
   border-radius: 4px;
@@ -171,7 +171,7 @@ function onConfirm(): void {
 }
 
 .samples {
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   color: var(--p-text-muted-color);
   white-space: nowrap;
   overflow: hidden;

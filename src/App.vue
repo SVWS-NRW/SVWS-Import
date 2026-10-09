@@ -132,6 +132,52 @@ html, body {
   color: var(--p-text-muted-color);
 }
 
+/* Dialoge (Spalten-Zuordnung, Bestätigungen zum Löschen/Leeren, Floskel-Import) */
+.p-dialog .p-dialog-header {
+  padding: 1rem 1.25rem;
+  font-size: 1.15rem;
+}
+
+.p-dialog .p-dialog-content {
+  padding: 0.75rem 1.25rem;
+  font-size: 0.95rem;
+}
+
+.p-dialog .p-dialog-content p {
+  font-size: 0.95rem;
+  margin: 0 0 0.6rem;
+}
+
+.p-dialog .p-dialog-footer {
+  padding: 0.75rem 1.25rem;
+}
+
+.p-dialog .p-dialog-footer .p-button {
+  font-size: 0.9rem;
+  padding: 0.35rem 0.75rem;
+}
+
+.p-dialog table thead th,
+.p-dialog table tbody td {
+  font-size: 0.9rem;
+  padding: 0.35rem 0.6rem;
+}
+
+.p-dialog .p-inputtext {
+  font-size: 0.9rem;
+  padding: 0.35rem 0.5rem;
+}
+
+.p-dialog .p-select .p-select-label {
+  font-size: 0.9rem;
+  padding: 0.35rem 0.5rem;
+}
+
+.p-dialog .p-select .p-select-dropdown .p-icon {
+  width: 0.8rem;
+  height: 0.8rem;
+}
+
 /* Tabs in den Import-Ansichten (Schüler, Unterricht, Betriebe) */
 .p-tablist .p-tab {
   font-size: 1.1rem;

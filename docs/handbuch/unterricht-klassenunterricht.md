@@ -47,15 +47,32 @@ Sie können einzelne Zeilen in der Tabelle markieren (Checkbox links). Wenn Zeil
 
 ### 5. Import starten
 
-Klicken Sie auf **„Importieren"**. Die Fortschrittsanzeige zeigt `X / Y Einträge…`, weil intern für jeden Schüler der betreffenden Klasse ein eigener Datensatz erzeugt wird.
+Wählen Sie neben dem Button aus, wie mit bereits vorhandenen Fächern umgegangen werden soll:
+
+| Auswahl | Verhalten |
+|---------|-----------|
+| **Vorhandene Fächer überspringen** (Standard) | Hat ein Schüler im Abschnitt bereits Leistungsdaten für das Fach, wird für ihn nichts angelegt |
+| **Vorhandene Fächer überschreiben** | Lehrkraft, Kursart, Wochenstunden und „aufs Zeugnis" werden in den vorhandenen Datensatz geschrieben |
+| **Fächer zusätzlich anlegen** | Es wird immer ein neuer Datensatz angelegt – auch wenn das Fach schon vorhanden ist |
+
+> **Tipp:** Wird der Import versehentlich zweimal ausgeführt, verhindert „überspringen" doppelte Fächer bei den Schülern.
+
+Klicken Sie dann auf **„Importieren"**. Die Fortschrittsanzeige zeigt `X / Y Einträge…`, weil intern für jeden Schüler der betreffenden Klasse ein eigener Datensatz erzeugt wird.
 
 > **Hinweis:** Die Gesamtzahl ist höher als die Zeilenanzahl in der CSV – eine CSV-Zeile erzeugt einen Eintrag **pro Schüler** in der Klasse.
 
 ### 6. Ergebnis prüfen
 
-Nach dem Import erscheint: `X importiert · Y Fehler`
+Nach dem Import erscheint z. B.: `X angelegt · Y überschrieben · Z übersprungen (Fach bereits vorhanden) · N Fehler`
 
-Zeilen mit einem grünen Häkchen (✔) wurden erfolgreich übertragen. Bei Fehlern können Sie den Import nach Korrektur der Quelldatei erneut durchführen.
+Die Status-Spalte fasst jede CSV-Zeile zusammen; der Tooltip zeigt die Zahlen pro Schüler der Klasse:
+
+| Status | Bedeutung |
+|--------|-----------|
+| ✔ Gesendet | Leistungsdaten wurden (zumindest teilweise) angelegt |
+| ✎ Überschrieben | Nur vorhandene Datensätze wurden aktualisiert |
+| ⏭ Übersprungen | Alle Schüler der Klasse hatten das Fach bereits |
+| ⚠ Fehler | Bei mindestens einem Schüler ist ein Fehler aufgetreten – Details im Tooltip |
 
 ### 7. Tabelle leeren
 
@@ -121,7 +138,7 @@ Jede Zeile steht für ein Fach in einer Klasse. Beim Import wird dieses Fach all
 
 ## Wie funktioniert der Import intern?
 
-Die Anwendung ermittelt zunächst alle **aktiven Schüler** der jeweiligen Klasse im gewählten Abschnitt. Für jeden dieser Schüler wird dann ein Leistungsdatensatz mit dem angegebenen Fach, der Lehrkraft und der Kursart angelegt. Dadurch kann eine einzelne CSV-Zeile viele Datenbankeinträge erzeugen.
+Die Anwendung ermittelt zunächst alle **aktiven Schüler** der jeweiligen Klasse im gewählten Abschnitt. Für jeden dieser Schüler wird geprüft, ob im Lernabschnitt bereits Leistungsdaten für das Fach existieren. Je nach Auswahl wird dann ein Leistungsdatensatz mit dem angegebenen Fach, der Lehrkraft und der Kursart angelegt, der vorhandene Datensatz überschrieben oder der Schüler übersprungen. Dadurch kann eine einzelne CSV-Zeile viele Datenbankeinträge erzeugen.
 
 ---
 
@@ -129,5 +146,5 @@ Die Anwendung ermittelt zunächst alle **aktiven Schüler** der jeweiligen Klass
 <nav style="display:flex;justify-content:space-between;margin-top:2rem;padding-top:1rem;border-top:1px solid var(--vp-c-divider)">
   <a href="unterricht-importieren.html">« Unterrichtsdaten importieren</a>
   <a href="../index.html">Inhaltsverzeichnis</a>
-  <a href="unterricht-kursunterricht.html">Kursunterricht importieren »</a>
+  <a href="unterricht-schuelerunterricht.html">Schülerunterricht importieren »</a>
 </nav>

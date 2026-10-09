@@ -126,7 +126,7 @@ Jeder Kurs in der linken Liste zeigt:
 
 
 <nav style="display:flex;justify-content:space-between;margin-top:2rem;padding-top:1rem;border-top:1px solid var(--vp-c-divider)">
-  <a href="unterricht-schuelerunterricht.html">« Schülerunterricht importieren</a>
+  <a href="unterricht-kursunterricht.html">« Kursunterricht importieren</a>
   <a href="../index.html">Inhaltsverzeichnis</a>
   <a href="beispieldateien.html">Beispieldateien »</a>
 </nav>

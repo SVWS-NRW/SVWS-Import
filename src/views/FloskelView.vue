@@ -1284,16 +1284,16 @@ h2 {
 
 .aktion-toggle {
   display: flex;
-  gap: 0.25rem;
+  gap: 0.35rem;
 }
 
 .aktion-btn {
-  padding: 0.15rem 0.35rem;
+  padding: 0.25rem 0.5rem;
   border: 1px solid var(--p-surface-border);
   border-radius: 4px;
   background: var(--p-surface-card);
   color: var(--p-text-color);
-  font-size: 0.7rem;
+  font-size: 0.85rem;
   cursor: pointer;
   font-family: inherit;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
@@ -1310,56 +1310,5 @@ h2 {
   background: var(--p-orange-500, #f97316);
   border-color: var(--p-orange-500, #f97316);
   color: #fff;
-}
-</style>
-
-<style>
-.p-dialog .p-dialog-header {
-  padding: 0.5rem 0.75rem;
-  font-size: 0.85rem;
-}
-
-.p-dialog .p-dialog-content {
-  padding: 0.5rem 0.75rem;
-  font-size: 0.75rem;
-}
-
-.p-dialog .p-dialog-content p {
-  font-size: 0.75rem;
-  margin: 0 0 0.4rem;
-}
-
-.p-dialog .p-dialog-footer {
-  padding: 0.4rem 0.75rem;
-}
-
-.p-dialog .p-dialog-footer .p-button {
-  font-size: 0.75rem;
-  padding: 0.2rem 0.5rem;
-}
-
-.p-dialog table thead th,
-.p-dialog table tbody td {
-  font-size: 0.72rem;
-  padding: 0.2rem 0.5rem;
-}
-
-.p-dialog .p-inputtext {
-  font-size: 0.72rem;
-  padding: 0.2rem 0.35rem;
-}
-
-.p-dialog .p-select .p-select-label {
-  font-size: 0.72rem;
-  padding: 0.2rem 0.25rem;
-}
-
-.p-dialog .p-select .p-select-dropdown {
-  width: 1.25rem;
-}
-
-.p-dialog .p-select .p-select-dropdown .p-icon {
-  width: 0.6rem;
-  height: 0.6rem;
 }
 </style>

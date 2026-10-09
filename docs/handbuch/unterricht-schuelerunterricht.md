@@ -12,8 +12,9 @@ Der Tab **Schülerunterricht** importiert individuelle Leistungsdaten für einze
 
 - Schüler müssen bereits mit Status **aktiv** im SVWS-Server vorhanden sein
 - Fächer und Lehrkräfte sind bekannt (Kürzel vorhanden)
-- Falls Kurse verknüpft werden sollen: Kurse müssen bereits angelegt sein (z. B. über Tab [Kursunterricht](unterricht-kursunterricht.md))
 - Schüler werden eindeutig identifiziert über **Nachname + Vorname + Geburtsdatum** (Geburtsdatum ist optional, erhöht aber die Treffsicherheit)
+
+> **Wichtig:** Ist die Spalte `kurs` gefüllt, müssen die Kurse **vorher** angelegt sein – über den Tab [Kursunterricht](unterricht-kursunterricht.md), der in der Ansicht rechts neben „Schülerunterricht" liegt. Zeilen mit einem unbekannten Kurs werden rot markiert und nicht importiert. Ist die Spalte `kurs` leer, ist kein vorheriger Kursimport nötig.
 
 ---
 
@@ -43,17 +44,25 @@ Fehlerhafte Zeilen erscheinen rot und werden beim Import übersprungen.
 
 ### 3. Import starten
 
-Klicken Sie auf **„Importieren"**. Für jede gültige Zeile läuft folgendes ab:
+Wählen Sie neben dem Button aus, wie mit bereits vorhandenen Fächern umgegangen werden soll (siehe [Vorhandene Fächer](#_4-vorhandene-facher)), und klicken Sie auf **„Importieren"**. Für jede gültige Zeile läuft folgendes ab:
 
 1. Der Lernabschnitt des Schülers wird ermittelt
-2. Es wird geprüft, ob bereits ein Leistungsdatensatz für dieses Fach existiert (Duplikaterkennung)
-3. Falls nicht vorhanden: Neuer Leistungsdatensatz wird angelegt
+2. Es wird geprüft, ob bereits ein Leistungsdatensatz für dieses Fach existiert
+3. Falls nicht vorhanden (oder Modus „zusätzlich anlegen"): Neuer Leistungsdatensatz wird angelegt
 4. Alle weiteren Felder (Note, Fehlstunden, Kurs, usw.) werden in einem zweiten Schritt eingetragen
-5. Falls dieser zweite Schritt scheitert, wird der erste Schritt automatisch **rückgängig gemacht** (Rollback)
+5. Falls dieser zweite Schritt scheitert, wird der neu angelegte Datensatz automatisch **rückgängig gemacht** (Rollback)
 
-### 4. Duplikate
+Nach dem Import zeigt die Zeile neben dem Button, wie viele Datensätze angelegt, überschrieben, übersprungen oder fehlerhaft waren.
 
-Wenn für einen Schüler im selben Abschnitt bereits Leistungsdaten für ein bestimmtes Fach vorliegen, wird die Zeile als **„bereits erledigt"** markiert (grünes ✔) und nicht erneut importiert. Es wird kein Fehler angezeigt.
+### 4. Vorhandene Fächer
+
+Hat ein Schüler im selben Abschnitt bereits Leistungsdaten für das Fach – zum Beispiel weil vorher der [Klassenunterricht](unterricht-klassenunterricht.md) importiert wurde –, entscheidet die Auswahl neben dem Button:
+
+| Auswahl | Verhalten | Status in der Tabelle |
+|---------|-----------|----------------------|
+| **Vorhandene Fächer überspringen** (Standard) | Die Zeile wird nicht importiert | ⏭ Übersprungen |
+| **Vorhandene Fächer überschreiben** | Die Felder aus der CSV (Note, Lehrer, Kurs, Fehlstunden usw.) werden in den vorhandenen Datensatz geschrieben. Leere CSV-Felder lassen den vorhandenen Wert unverändert. | ✎ Überschrieben |
+| **Fächer zusätzlich anlegen** | Es wird ein weiterer Leistungsdatensatz für dasselbe Fach angelegt | ✔ Gesendet |
 
 ---
 
@@ -77,7 +86,7 @@ Wenn für einen Schüler im selben Abschnitt bereits Leistungsdaten für ein bes
 | Spaltenname | Beschreibung | Beispiel |
 |-------------|-------------|---------|
 | `fachlehrer` | Kürzel der Fachlehrkraft | `BIES` |
-| `kurs` | Kürzel des Kurses (muss im Abschnitt existieren) | `AG-Sport` |
+| `kurs` | Kürzel des Kurses – muss im Abschnitt bereits angelegt sein (Tab „Kursunterricht") | `AG-Sport` |
 | `kursart` | Kursart-Kürzel | `PUK` |
 | `jahrgaenge` | Jahrgangskürzel (kommagetrennt) | `05,06,07` |
 | `wochenstd` | Wochenstunden | `4` |
@@ -131,7 +140,7 @@ Nicht benötigte Felder können leer bleiben – einfach den Wert weglassen, das
 | `Lehrer „BIES" nicht gefunden` | Lehrerkürzel unbekannt | Lehrkräfte prüfen |
 | `Kurs „AG-Sport" in diesem Abschnitt nicht gefunden` | Kurs nicht angelegt | Zuerst Kurse über Tab „Kursunterricht" anlegen |
 | `Abschnitt 2025/2 nicht gefunden` | Schuljahresabschnitt nicht vorhanden | Korrekte Werte in `schuljahr` und `abschnitt` prüfen |
-| `Leistungsdaten für Fach „M" bereits vorhanden` | Datensatz existiert bereits | Kein erneuter Import nötig – Zeile wird übersprungen |
+| `Leistungsdaten für Fach „M" bereits vorhanden — übersprungen` | Datensatz existiert bereits, Modus „überspringen" | Kein erneuter Import nötig – oder Modus „überschreiben" wählen, um die CSV-Werte zu übernehmen |
 
 ---
 
@@ -143,7 +152,7 @@ Wenn das Anlegen der Zusatzangaben (Note, Fehlstunden etc.) nach dem Erstellen d
 
 
 <nav style="display:flex;justify-content:space-between;margin-top:2rem;padding-top:1rem;border-top:1px solid var(--vp-c-divider)">
-  <a href="unterricht-kursunterricht.html">« Kursunterricht importieren</a>
+  <a href="unterricht-klassenunterricht.html">« Klassenunterricht importieren</a>
   <a href="../index.html">Inhaltsverzeichnis</a>
-  <a href="unterricht-kurszuweisung.html">Kurszuweisung »</a>
+  <a href="unterricht-kursunterricht.html">Kursunterricht importieren »</a>
 </nav>

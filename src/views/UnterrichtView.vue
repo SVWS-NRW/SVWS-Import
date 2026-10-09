@@ -43,13 +43,13 @@
           Klassenunterricht
           <Badge v-if="klasseRows.length > 0" :value="klasseRows.length" severity="secondary" class="tab-badge" />
         </Tab>
-        <Tab value="kurs">
-          Kursunterricht
-          <Badge v-if="kursRows.length > 0" :value="kursRows.length" severity="secondary" class="tab-badge" />
-        </Tab>
         <Tab value="schueler">
           Schülerunterricht
           <Badge v-if="schuelerRows.length > 0" :value="schuelerRows.length" severity="secondary" class="tab-badge" />
+        </Tab>
+        <Tab value="kurs">
+          Kursunterricht
+          <Badge v-if="kursRows.length > 0" :value="kursRows.length" severity="secondary" class="tab-badge" />
         </Tab>
         <Tab value="zuweisung">Kurszuweisung</Tab>
       </TabList>
@@ -68,6 +68,16 @@
                 :maxFileSize="10000000" :disabled="parsingKlasse"
                 @select="onKlasseFileSelect"
               />
+              <Select
+                v-model="klasseDuplikatModus"
+                :options="DUPLIKAT_OPTIONEN"
+                optionLabel="label"
+                optionValue="value"
+                size="small"
+                :disabled="klasseImport.running"
+                v-tooltip.top="'Was passieren soll, wenn ein Schüler im Abschnitt bereits Leistungsdaten zu diesem Fach hat'"
+                style="width: 260px"
+              />
               <Button label="Importieren" icon="pi pi-upload" size="small"
                 :disabled="klasseRows.filter(r => r._valid && !r._sent).length === 0 || klasseImport.running"
                 @click="handleKlasseImport" />
@@ -82,7 +92,11 @@
                 {{ klasseImport.done }}&nbsp;/&nbsp;{{ klasseImport.total }} Einträge…
               </span>
               <span v-if="!klasseImport.running && klasseImport.total > 0" class="import-result">
-                {{ klasseImport.done - klasseImport.errors }} importiert
+                {{ klasseImport.created }} angelegt
+                <span v-if="klasseImport.updated > 0"> · {{ klasseImport.updated }} überschrieben</span>
+                <span v-if="klasseImport.skipped > 0" style="color:#f59e0b">
+                  · {{ klasseImport.skipped }} übersprungen (Fach bereits vorhanden)
+                </span>
                 <span v-if="klasseImport.errors > 0" style="color:#ef4444">
                   · {{ klasseImport.errors }} Fehler
                 </span>
@@ -228,6 +242,16 @@
                 :maxFileSize="10000000" :disabled="parsingSchueler"
                 @select="onSchuelerFileSelect"
               />
+              <Select
+                v-model="schuelerDuplikatModus"
+                :options="DUPLIKAT_OPTIONEN"
+                optionLabel="label"
+                optionValue="value"
+                size="small"
+                :disabled="schuelerImport.running"
+                v-tooltip.top="'Was passieren soll, wenn der Schüler im Abschnitt bereits Leistungsdaten zu diesem Fach hat'"
+                style="width: 260px"
+              />
               <Button label="Importieren" icon="pi pi-upload" size="small"
                 :disabled="schuelerRows.filter(r => r._valid && !r._sent).length === 0 || schuelerImport.running || loadingSchuelerLookups"
                 @click="handleSchuelerImport" />
@@ -242,7 +266,11 @@
                 {{ schuelerImport.done }}&nbsp;/&nbsp;{{ schuelerImport.total }} Einträge…
               </span>
               <span v-if="!schuelerImport.running && schuelerImport.total > 0" class="import-result">
-                {{ schuelerImport.done - schuelerImport.errors }} importiert
+                {{ schuelerImport.created }} angelegt
+                <span v-if="schuelerImport.updated > 0"> · {{ schuelerImport.updated }} überschrieben</span>
+                <span v-if="schuelerImport.skipped > 0" style="color:#f59e0b">
+                  · {{ schuelerImport.skipped }} übersprungen (Fach bereits vorhanden)
+                </span>
                 <span v-if="schuelerImport.errors > 0" style="color:#ef4444">
                   · {{ schuelerImport.errors }} Fehler
                 </span>
@@ -568,6 +596,8 @@ interface KlassenunterrichtRow extends BaseRow {
   idLehrer: number | null
   idFach: number | null
   _kursartOk: boolean
+  /** Ergebnis je Schüler der Klasse für die Status-Anzeige */
+  _summary?: { created: number; updated: number; skipped: number; errors: number }
 }
 
 interface KursRow extends BaseRow {
@@ -621,6 +651,8 @@ interface SchuelerUnterrichtRow extends BaseRow {
   idLehrer: number | null
   idZusatzkraft: number | null
   idLernabschnitt: number | null
+  /** Ergebnis des Imports für die Status-Anzeige */
+  _result?: 'angelegt' | 'ueberschrieben' | 'uebersprungen'
 }
 
 interface DbKurs {
@@ -687,7 +719,16 @@ const cachedKlassenByAbschnitt = ref<Record<number, KlasseDetails[]>>({})
 const cachedKursarten = ref<Set<string>>(new Set())
 
 const klasseWarnCount = computed(() => klasseRows.value.filter(r => !r._valid && !r._sent).length)
-const klasseImport = ref({ running: false, total: 0, done: 0, errors: 0 })
+// Umgang mit Leistungsdaten, die für ein Fach im Lernabschnitt bereits existieren (Klassen- und Schülerunterricht)
+type DuplikatModus = 'ueberspringen' | 'ueberschreiben' | 'zusaetzlich'
+const DUPLIKAT_OPTIONEN: { label: string; value: DuplikatModus }[] = [
+  { label: 'Vorhandene Fächer überspringen',   value: 'ueberspringen' },
+  { label: 'Vorhandene Fächer überschreiben',  value: 'ueberschreiben' },
+  { label: 'Fächer zusätzlich anlegen',        value: 'zusaetzlich' },
+]
+
+const klasseImport = ref({ running: false, total: 0, done: 0, errors: 0, created: 0, updated: 0, skipped: 0 })
+const klasseDuplikatModus = ref<DuplikatModus>('ueberspringen')
 const klasseGridApi = ref<GridApi<KlassenunterrichtRow> | null>(null)
 const klasseSelectedCount = ref(0)
 
@@ -873,30 +914,76 @@ async function handleKlasseImport(): Promise<void> {
   // Gesamtzahl vorberechnen für Fortschrittsanzeige
   const total = rows.reduce((sum, row) =>
     sum + aktiveSchueler.filter(s => s.idKlasse === row.idKlasse).length, 0)
-  klasseImport.value = { running: true, total, done: 0, errors: 0 }
+  klasseImport.value = { running: true, total, done: 0, errors: 0, created: 0, updated: 0, skipped: 0 }
+  const modus = klasseDuplikatModus.value
+
+  // Vorhandene Leistungsdaten je Lernabschnitt cachen (für Duplikaterkennung)
+  const vorhandeneLeistungsdaten = new Map<number, Array<{ id: number; fachID: number }>>()
+  async function getVorhandene(lernabschnittId: number) {
+    if (vorhandeneLeistungsdaten.has(lernabschnittId))
+      return vorhandeneLeistungsdaten.get(lernabschnittId)!
+    const data = await fetchLeistungsdatenFuerLernabschnitt(lernabschnittId)
+    vorhandeneLeistungsdaten.set(lernabschnittId, data)
+    return data
+  }
 
   for (const row of rows) {
     if (row.idFach === null || row.idKlasse === null) continue
     const schuelerInKlasse = aktiveSchueler.filter(s => s.idKlasse === row.idKlasse)
+    const summary = { created: 0, updated: 0, skipped: 0, errors: 0 }
+    const fehler = new Set<string>()
+    const wochenstunden = row.wochenstunden ? parseInt(row.wochenstunden) || null : null
+    const aufZeugnis = row.aufsZeugnis.toLowerCase() === 'true'
 
     for (const schueler of schuelerInKlasse) {
       const lernabschnittId = await getLernabschnittId(schueler.id)
       if (lernabschnittId === null) {
-        klasseImport.value.errors++
-        klasseImport.value.done++
+        summary.errors++
+        fehler.add('Lernabschnitt nicht gefunden')
         continue
       }
+
+      const vorhandene = modus === 'zusaetzlich' ? [] : await getVorhandene(lernabschnittId)
+      const vorhanden = vorhandene.find(e => e.fachID === row.idFach)
+      if (vorhanden && modus === 'ueberspringen') {
+        summary.skipped++
+        continue
+      }
+      if (vorhanden && modus === 'ueberschreiben') {
+        const patch: Record<string, unknown> = { kursart: row.kursart, aufZeugnis }
+        if (row.idLehrer !== null) patch.lehrerID = row.idLehrer
+        if (wochenstunden !== null) patch.wochenstunden = wochenstunden
+        const result = await patchSchuelerLeistungsdaten(vorhanden.id, patch)
+        if (result.success) summary.updated++
+        else { summary.errors++; fehler.add(result.error ?? 'Fehler beim Überschreiben') }
+        continue
+      }
+
       const result = await createLeistungsdaten({
         lernabschnittID: lernabschnittId,
         fachID: row.idFach,
         kursart: row.kursart,
         lehrerID: row.idLehrer,
-        wochenstunden: row.wochenstunden ? parseInt(row.wochenstunden) || null : null,
-        aufZeugnis: row.aufsZeugnis.toLowerCase() === 'true',
+        wochenstunden,
+        aufZeugnis,
       })
-      if (!result.success) klasseImport.value.errors++
-      klasseImport.value.done++
+      if (result.success) {
+        summary.created++
+        // Lokalen Cache aktualisieren, damit doppelte CSV-Zeilen im gleichen Lauf erkannt werden
+        if (result.id) vorhandene.push({ id: result.id, fachID: row.idFach })
+      } else {
+        summary.errors++
+        fehler.add(result.error ?? 'Fehler beim Anlegen')
+      }
     }
+
+    klasseImport.value.created += summary.created
+    klasseImport.value.updated += summary.updated
+    klasseImport.value.skipped += summary.skipped
+    klasseImport.value.errors  += summary.errors
+    klasseImport.value.done    += schuelerInKlasse.length
+    row._summary = summary
+    row._errors = [...fehler]
     row._sent = true
   }
 
@@ -1163,7 +1250,8 @@ const schuelerRows = ref<SchuelerUnterrichtRow[]>([])
 const parsingSchueler = ref(false)
 const schuelerFileKey = ref(0)
 const loadingSchuelerLookups = ref(false)
-const schuelerImport = ref({ running: false, total: 0, done: 0, errors: 0 })
+const schuelerImport = ref({ running: false, total: 0, done: 0, errors: 0, created: 0, updated: 0, skipped: 0 })
+const schuelerDuplikatModus = ref<DuplikatModus>('ueberspringen')
 const schuelerGridApi = ref<GridApi<SchuelerUnterrichtRow> | null>(null)
 const schuelerSelectedCount = ref(0)
 const cachedSchuelerListe = ref<SchuelerAuswahl[]>([])
@@ -1340,7 +1428,8 @@ async function handleSchuelerImport(): Promise<void> {
     .filter(r => r._valid && !r._sent)
   if (rows.length === 0) return
 
-  schuelerImport.value = { running: true, total: rows.length, done: 0, errors: 0 }
+  schuelerImport.value = { running: true, total: rows.length, done: 0, errors: 0, created: 0, updated: 0, skipped: 0 }
+  const modus = schuelerDuplikatModus.value
 
   const lernabschnittCache = new Map<string, number | null>()
   async function getLernabschnittId(schuelerId: number, abschnittId: number): Promise<number | null> {
@@ -1378,24 +1467,6 @@ async function handleSchuelerImport(): Promise<void> {
       continue
     }
 
-    // Duplikaterkennung: existiert bereits ein Eintrag für dieses Fach?
-    const vorhandene = await getVorhandene(lernabschnittId)
-    if (vorhandene.some(e => e.fachID === row.idFach)) {
-      row._errors.push(`Leistungsdaten für Fach „${row.fach}" bereits vorhanden — übersprungen`)
-      row._sent = true  // als "bereits erledigt" markieren, Button importiert nicht erneut
-      schuelerImport.value.done++
-      continue
-    }
-
-    const createResult = await createSchuelerLeistungsdaten(lernabschnittId, row.idFach)
-    if (!createResult.success || !createResult.id) {
-      row._errors.push(createResult.error ?? 'Fehler beim Anlegen')
-      row._valid = false
-      schuelerImport.value.errors++
-      schuelerImport.value.done++
-      continue
-    }
-
     const patch: Record<string, unknown> = {}
     if (row.idLehrer !== null)         patch.lehrerID                 = row.idLehrer
     if (row.idKurs !== null)           patch.kursID                   = row.idKurs
@@ -1410,6 +1481,45 @@ async function handleSchuelerImport(): Promise<void> {
     if (row.unentschfehlstd)           patch.fehlstundenUnentschuldigt = parseInt(row.unentschfehlstd) || 0
     if (row.mahnung)                   patch.istGemahnt               = ['true', 'ja', '1', 'j', 'x'].includes(row.mahnung.toLowerCase())
     if (row.mahndatum)                 patch.mahndatum                = row.mahndatum
+
+    // Vorhandener Eintrag für dieses Fach? Behandlung je nach gewähltem Modus
+    const vorhandene = await getVorhandene(lernabschnittId)
+    const vorhanden = vorhandene.find(e => e.fachID === row.idFach)
+    if (vorhanden && modus === 'ueberspringen') {
+      row._errors.push(`Leistungsdaten für Fach „${row.fach}" bereits vorhanden — übersprungen`)
+      row._result = 'uebersprungen'
+      row._sent = true  // als "bereits erledigt" markieren, Button importiert nicht erneut
+      schuelerImport.value.skipped++
+      schuelerImport.value.done++
+      continue
+    }
+
+    if (vorhanden && modus === 'ueberschreiben') {
+      if (Object.keys(patch).length > 0) {
+        const patchResult = await patchSchuelerLeistungsdaten(vorhanden.id, patch)
+        if (!patchResult.success) {
+          row._errors.push(patchResult.error ?? 'Fehler beim Überschreiben')
+          row._valid = false
+          schuelerImport.value.errors++
+          schuelerImport.value.done++
+          continue
+        }
+      }
+      row._result = 'ueberschrieben'
+      row._sent = true
+      schuelerImport.value.updated++
+      schuelerImport.value.done++
+      continue
+    }
+
+    const createResult = await createSchuelerLeistungsdaten(lernabschnittId, row.idFach)
+    if (!createResult.success || !createResult.id) {
+      row._errors.push(createResult.error ?? 'Fehler beim Anlegen')
+      row._valid = false
+      schuelerImport.value.errors++
+      schuelerImport.value.done++
+      continue
+    }
 
     if (Object.keys(patch).length > 0) {
       const patchResult = await patchSchuelerLeistungsdaten(createResult.id, patch)
@@ -1427,9 +1537,11 @@ async function handleSchuelerImport(): Promise<void> {
     }
 
     // Lokalen Cache aktualisieren, damit ein zweiter Eintrag im gleichen Lauf erkannt wird
-    vorhandeneLeistungsdaten.get(lernabschnittId)?.push({ id: createResult.id, fachID: row.idFach })
+    vorhandene.push({ id: createResult.id, fachID: row.idFach })
 
+    row._result = 'angelegt'
     row._sent = true
+    schuelerImport.value.created++
     schuelerImport.value.done++
   }
 
@@ -1843,8 +1955,23 @@ const klasseColDefs: ColDef<KlassenunterrichtRow>[] = [
   },
   { field: 'wochenstunden', headerName: 'Std./Wo.', width: 85 },
   { field: 'aufsZeugnis',   headerName: 'Aufs.Zeugnis', width: 115 },
-  { headerName: 'Status', width: 130, editable: false, cellRenderer: statusCell },
+  { headerName: 'Status', width: 140, editable: false, cellRenderer: klasseStatusCell },
 ]
+
+function klasseStatusCell(p: { data: KlassenunterrichtRow }): string {
+  const sm = p.data._summary
+  if (!sm) return statusCell(p)
+  const parts = [`${sm.created} angelegt`]
+  if (sm.updated) parts.push(`${sm.updated} überschrieben`)
+  if (sm.skipped) parts.push(`${sm.skipped} übersprungen`)
+  if (sm.errors)  parts.push(`${sm.errors} Fehler: ${p.data._errors.join('; ')}`)
+  const title = parts.join(' · ').replace(/"/g, '&quot;')
+  if (sm.errors) return `<span style="color:#ef4444" title="${title}">⚠ ${sm.errors} Fehler</span>`
+  if (sm.created === 0 && sm.updated === 0 && sm.skipped > 0)
+    return `<span style="color:#f59e0b" title="${title}">⏭ Übersprungen</span>`
+  if (sm.created === 0 && sm.updated > 0) return `<span style="color:#3b82f6" title="${title}">✎ Überschrieben</span>`
+  return `<span style="color:#22c55e" title="${title}">✔ Gesendet</span>`
+}
 
 const kursColDefs: ColDef<KursRow>[] = [
   {
@@ -1976,8 +2103,15 @@ const schuelerColDefs: ColDef<SchuelerUnterrichtRow>[] = [
     },
   },
   { field: 'wochenstdzusatzkraft', headerName: 'Std. Zusatz',  width: 95 },
-  { headerName: 'Status', width: 130, editable: false, cellRenderer: statusCell },
+  { headerName: 'Status', width: 140, editable: false, cellRenderer: schuelerStatusCell },
 ]
+
+function schuelerStatusCell(p: { data: SchuelerUnterrichtRow }): string {
+  const title = p.data._errors.join('; ').replace(/"/g, '&quot;')
+  if (p.data._result === 'uebersprungen')  return `<span style="color:#f59e0b" title="${title}">⏭ Übersprungen</span>`
+  if (p.data._result === 'ueberschrieben') return '<span style="color:#3b82f6">✎ Überschrieben</span>'
+  return statusCell(p)
+}
 </script>
 
 <style>
@@ -1987,22 +2121,22 @@ const schuelerColDefs: ColDef<SchuelerUnterrichtRow>[] = [
 
 /* MultiSelect Dropdown-Panel (teleportiert ins body) */
 .toolbar-ms-panel .p-multiselect-option {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.78rem;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.95rem;
 }
 
 /* MultiSelect auf gleiche Größe wie Select/InputText bringen */
 .zuweisung-toolbar .p-multiselect .p-multiselect-label {
-  padding: 0.2rem 0.5rem !important;
-  font-size: 0.75rem !important;
+  padding: 0.35rem 0.6rem !important;
+  font-size: 0.9rem !important;
 }
 .zuweisung-toolbar .p-multiselect .p-multiselect-dropdown {
   padding: 0 0.3rem;
   width: auto;
 }
 .zuweisung-toolbar .p-multiselect .p-multiselect-dropdown .p-icon {
-  width: 0.75rem;
-  height: 0.75rem;
+  width: 0.9rem;
+  height: 0.9rem;
 }
 </style>
 
@@ -2191,8 +2325,8 @@ h2 {
 .zuweisung-toolbar {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  padding: 0.5rem 0.75rem;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
   background: var(--p-surface-50, #f9fafb);
   border: 1px solid var(--p-surface-border);
   border-radius: 8px;
@@ -2205,7 +2339,7 @@ h2 {
 .toolbar-row {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.6rem;
   flex-wrap: wrap;
 }
 
@@ -2215,15 +2349,15 @@ h2 {
 }
 
 .toolbar-label {
-  font-size: 0.72rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: var(--p-text-muted-color);
   white-space: nowrap;
-  width: 3.5rem;
+  width: 4.5rem;
 }
 
 .toolbar-sub-label {
-  font-size: 0.72rem;
+  font-size: 0.9rem;
   color: var(--p-text-muted-color);
   cursor: pointer;
   white-space: nowrap;
@@ -2231,17 +2365,17 @@ h2 {
 
 :deep(.zuweisung-toolbar .p-button),
 :deep(.zuweisung-toolbar .p-inputtext) {
-  font-size: 0.75rem;
-  padding: 0.2rem 0.5rem;
+  font-size: 0.9rem;
+  padding: 0.35rem 0.6rem;
 }
 
 :deep(.zuweisung-toolbar .p-select) {
-  font-size: 0.75rem;
+  font-size: 0.9rem;
 }
 
 :deep(.zuweisung-toolbar .p-select .p-select-label) {
-  font-size: 0.75rem;
-  padding: 0.2rem 0.5rem;
+  font-size: 0.9rem;
+  padding: 0.35rem 0.6rem;
 }
 
 :deep(.zuweisung-toolbar .p-select .p-select-dropdown) {
@@ -2249,31 +2383,31 @@ h2 {
 }
 
 :deep(.zuweisung-toolbar .p-select .p-select-dropdown .p-icon) {
-  width: 0.75rem;
-  height: 0.75rem;
+  width: 0.9rem;
+  height: 0.9rem;
 }
 
 :deep(.zuweisung-toolbar .p-checkbox) {
-  width: 0.9rem;
-  height: 0.9rem;
+  width: 1.1rem;
+  height: 1.1rem;
 }
 
 :deep(.zuweisung-toolbar .p-checkbox .p-checkbox-box) {
-  width: 0.9rem;
-  height: 0.9rem;
+  width: 1.1rem;
+  height: 1.1rem;
   border-radius: 2px;
 }
 
 :deep(.zuweisung-toolbar .p-checkbox .p-checkbox-box .p-icon) {
-  width: 0.6rem;
-  height: 0.6rem;
+  width: 0.75rem;
+  height: 0.75rem;
 }
 
 .zuweisung-layout {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 260px 1fr;
+  grid-template-columns: 320px 1fr;
   gap: 0.75rem;
 }
 
@@ -2290,7 +2424,7 @@ h2 {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.4rem 0.75rem;
+  padding: 0.6rem 0.9rem;
   background: var(--p-surface-100, #f3f4f6);
   border-bottom: 1px solid var(--p-surface-border);
   flex-shrink: 0;
@@ -2301,7 +2435,7 @@ h2 {
 }
 
 .panel-title {
-  font-size: 0.78rem;
+  font-size: 0.95rem;
   font-weight: 600;
   flex: 1;
   white-space: nowrap;
@@ -2310,17 +2444,17 @@ h2 {
 }
 
 .panel-count {
-  font-size: 0.7rem;
+  font-size: 0.82rem;
   font-weight: 600;
   color: var(--p-primary-color);
   background: color-mix(in srgb, var(--p-primary-color) 15%, transparent);
   border-radius: 10px;
-  padding: 0.05rem 0.4rem;
+  padding: 0.1rem 0.5rem;
   flex-shrink: 0;
 }
 
 .panel-jahrgaenge {
-  font-size: 0.68rem;
+  font-size: 0.8rem;
   color: var(--p-text-muted-color);
   flex: 1;
   text-align: right;
@@ -2337,7 +2471,7 @@ h2 {
   justify-content: center;
   gap: 0.5rem;
   color: var(--p-text-muted-color);
-  font-size: 0.8rem;
+  font-size: 0.95rem;
   padding: 2rem 1rem;
   text-align: center;
 }
@@ -2360,12 +2494,12 @@ h2 {
 .kurs-item {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.4rem 0.75rem;
+  gap: 0.5rem;
+  padding: 0.55rem 0.9rem;
   cursor: pointer;
   border-bottom: 1px solid var(--p-surface-border);
   transition: background 0.15s;
-  font-size: 0.8rem;
+  font-size: 0.95rem;
 }
 
 .kurs-item:hover {
@@ -2390,11 +2524,11 @@ h2 {
 
 .kurs-fach {
   font-weight: 600;
-  font-size: 0.82rem;
+  font-size: 1rem;
 }
 
 .kurs-meta {
-  font-size: 0.7rem;
+  font-size: 0.82rem;
   color: var(--p-text-muted-color);
 }
 
@@ -2406,17 +2540,17 @@ h2 {
 }
 
 .kurs-lehrer {
-  font-size: 0.68rem;
+  font-size: 0.8rem;
   color: var(--p-text-muted-color);
 }
 
 .kurs-count-badge {
-  font-size: 0.68rem;
+  font-size: 0.8rem;
   font-weight: 700;
   background: var(--p-surface-200, #e5e7eb);
   border-radius: 10px;
-  padding: 0.05rem 0.35rem;
-  min-width: 1.4rem;
+  padding: 0.1rem 0.45rem;
+  min-width: 1.7rem;
   text-align: center;
 }
 
@@ -2452,10 +2586,10 @@ h2 {
   min-height: 0;
   overflow-y: auto;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(max(180px, calc(25% - 0.25rem)), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(max(220px, calc(25% - 0.25rem)), 1fr));
   align-content: flex-start;
-  gap: 0.3rem;
-  padding: 0.4rem;
+  gap: 0.4rem;
+  padding: 0.6rem;
 }
 
 .list-hint {
@@ -2465,7 +2599,7 @@ h2 {
   justify-content: center;
   gap: 0.4rem;
   color: var(--p-text-muted-color);
-  font-size: 0.78rem;
+  font-size: 0.95rem;
   padding: 1.2rem 1rem;
   text-align: center;
 }
@@ -2482,12 +2616,12 @@ h2 {
 .schueler-row {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.25rem 0.5rem;
+  gap: 0.45rem;
+  padding: 0.4rem 0.6rem;
   cursor: pointer;
   border: 1px solid var(--p-surface-border);
   border-radius: 6px;
-  font-size: 0.78rem;
+  font-size: 0.95rem;
   user-select: none;
   transition: background 0.1s, border-color 0.1s;
   min-width: 0;
@@ -2511,7 +2645,7 @@ h2 {
 .schueler-row-action {
   margin-left: auto;
   flex-shrink: 0;
-  font-size: 0.7rem;
+  font-size: 0.82rem;
   color: var(--p-primary-color);
   opacity: 0;
   transition: opacity 0.1s;
@@ -2535,11 +2669,11 @@ h2 {
 
 .klasse-tag {
   flex-shrink: 0;
-  font-size: 0.68rem;
+  font-size: 0.8rem;
   color: var(--p-text-muted-color);
   background: var(--p-surface-200, #e5e7eb);
   border-radius: 4px;
-  padding: 0.05rem 0.3rem;
+  padding: 0.1rem 0.4rem;
 }
 
 .is-dark .klasse-tag {

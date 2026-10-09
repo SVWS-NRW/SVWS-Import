@@ -5,7 +5,7 @@ export const jahrgaengeSchema: ImportModule = {
   entityType: 'jahrgaenge',
   moduleType: 'stammdaten',
   label: 'Jahrgänge',
-  description: 'Jahrgangsstufen anlegen: Kürzel, Bezeichnung, Sortierung',
+  description: 'Jahrgangsstufen anlegen: Kürzel, Bezeichnung, ASD-Jahrgang, Sortierung',
   icon: 'pi pi-calendar',
   fields: [],
 }

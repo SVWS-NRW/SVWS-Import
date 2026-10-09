@@ -596,17 +596,17 @@
         </thead>
         <tbody>
           <tr><td><code>kuerzel</code> <span class="required-badge">Pflicht</span></td><td>Text</td><td>z.&nbsp;B. <code>05</code>, <code>EF</code>, <code>Q1</code></td></tr>
-          <tr><td><code>kurzbezeichnung</code></td><td>Text</td><td>Kurze Anzeigenbezeichnung, z.&nbsp;B. <code>Jg. 05</code></td></tr>
-          <tr><td><code>kuerzelStatistik</code></td><td>Text</td><td>Amtliches Statistikkürzel</td></tr>
+          <tr><td><code>kurzbezeichnung</code></td><td>Text</td><td>Kurze Anzeigenbezeichnung, max. 2 Zeichen, z.&nbsp;B. <code>05</code></td></tr>
+          <tr><td><code>kuerzelStatistik</code> <span class="required-badge">Pflicht</span></td><td>Text</td><td>Kürzel des ASD-Jahrgangs aus dem Katalog, z.&nbsp;B. <code>05</code>, <code>EF</code></td></tr>
           <tr><td><code>bezeichnung</code> <span class="required-badge">Pflicht</span></td><td>Text</td><td>Vollständige Bezeichnung, z.&nbsp;B. <code>Jahrgang 5</code></td></tr>
           <tr><td><code>sortierung</code></td><td>Zahl</td><td>Anzeigereihenfolge</td></tr>
-          <tr><td><code>kuerzelSchulgliederung</code></td><td>Text</td><td>Zugeordnete Schulgliederung, z.&nbsp;B. <code>***</code></td></tr>
+          <tr><td><code>kuerzelSchulgliederung</code></td><td>Text</td><td>Kürzel der Schulgliederung aus dem Katalog, z.&nbsp;B. <code>***</code></td></tr>
           <tr><td><code>istSichtbar</code></td><td>Boolean</td><td>Standard: <code>true</code></td></tr>
-          <tr><td><code>anzahlRestabschnitte</code></td><td>Zahl</td><td>Verbleibende Schulabschnitte bis zum Abschluss</td></tr>
+          <tr><td><code>anzahlRestabschnitte</code></td><td>Zahl</td><td>Verbleibende Schulabschnitte bis zum Abschluss (0–41)</td></tr>
           <tr><td><code>idBildungsstufe</code></td><td>Zahl</td><td>Interne ID der Bildungsstufe</td></tr>
           <tr><td><code>idFolgejahrgang</code></td><td>Zahl</td><td>Interne ID des Folgejahrgangs</td></tr>
-          <tr><td><code>gueltigVon</code></td><td>Text</td><td>Schuljahr (Beginn der Gültigkeit)</td></tr>
-          <tr><td><code>gueltigBis</code></td><td>Text</td><td>Schuljahr (Ende der Gültigkeit)</td></tr>
+          <tr><td><code>gueltigVon</code></td><td>Zahl</td><td>ID des ersten gültigen Schuljahresabschnitts</td></tr>
+          <tr><td><code>gueltigBis</code></td><td>Zahl</td><td>ID des letzten gültigen Schuljahresabschnitts</td></tr>
         </tbody>
       </table>
     </div>

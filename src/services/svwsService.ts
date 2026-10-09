@@ -3,7 +3,7 @@ import { toAppError } from './errorService'
 import type { SchuelerNeu, SchuelerImportRow } from '@/models/Schueler'
 import type { LehrerStammdaten, LehrerImportRow } from '@/models/Lehrer'
 import type { KlasseImportRow, KlasseDetails } from '@/models/Klassen'
-import type { JahrgangImportRow, JahrgangDetails } from '@/models/Jahrgaenge'
+import type { JahrgangImportRow, JahrgangDetails, JahrgangAsdKataloge } from '@/models/Jahrgaenge'
 import type { FachImportRow, FachDetails } from '@/models/Faecher'
 import type { SchuleStammdaten, Schuljahresabschnitt } from '@/models/Schule'
 import { schuelerImportToApi } from '@/models/Schueler'
@@ -14,7 +14,7 @@ import { fachImportToApi } from '@/models/Faecher'
 import type { ImportModule, MappedRow, ImportContext, EntityType, OrtKatalogEintrag, ReligionKatalogEintrag } from '@/models/ImportSchema'
 import { betriebImportToApi, ansprechpartnerImportToApi, type BetriebImportRow, type BetriebDetails, type AnsprechpartnerImportRow } from '@/models/Betriebe'
 import { ortsteilImportToApi, type OrtsteilImportRow, type OrtsteilDetails } from '@/models/Ortsteile'
-import { resolveWohnortId, resolveReligionId, resolveNationalitaetId, resolveVerkehrsspracheId, fetchSchulReligionen } from './katalogService'
+import { resolveWohnortId, resolveReligionId, resolveNationalitaetId, resolveVerkehrsspracheId, fetchSchulReligionen, fetchJahrgangAsdKataloge } from './katalogService'
 import type { Floskelgruppe, Floskel, FloskelApiPayload } from '@/models/Floskel'
 import type {
   Ankreuzkompetenz,
@@ -504,14 +504,23 @@ export async function fetchLehrkraefte(): Promise<LehrkraftListEntry[]> {
   return Array.isArray(response.data) ? response.data : []
 }
 
+/** Lädt die Jahrgänge der Schule und ergänzt kuerzelStatistik über idJahrgang aus dem ASD-Katalog. */
 export async function fetchJahrgaenge(): Promise<JahrgangDetails[]> {
   const response = await getApiClient().get('/jahrgaenge')
-  return Array.isArray(response.data) ? response.data : []
+  const jahrgaenge: JahrgangDetails[] = Array.isArray(response.data) ? response.data : []
+  try {
+    const { jahrgaenge: asd } = await fetchJahrgangAsdKataloge()
+    const kuerzelById = new Map([...asd].map(([kuerzel, id]) => [id, kuerzel]))
+    for (const j of jahrgaenge) {
+      if (typeof j.idJahrgang === 'number') j.kuerzelStatistik = kuerzelById.get(j.idJahrgang) ?? null
+    }
+  } catch { /* Katalog nicht verfügbar → Abgleich nur über kuerzel */ }
+  return jahrgaenge
 }
 
-export async function createJahrgang(row: JahrgangImportRow): Promise<UploadResult> {
+export async function createJahrgang(row: JahrgangImportRow, kataloge: JahrgangAsdKataloge): Promise<UploadResult> {
   try {
-    const payload = jahrgangImportToApi(row)
+    const payload = jahrgangImportToApi(row, kataloge)
     const response = await getApiClient().post('/jahrgaenge/create', payload)
     return { success: true, id: response.data?.id }
   } catch (error: unknown) {

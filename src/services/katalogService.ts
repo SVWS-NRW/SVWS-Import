@@ -1,5 +1,6 @@
 import { getApiClient, getRootClient } from './apiClient'
 import type { ImportKataloge, OrtKatalogEintrag, ReligionKatalogEintrag } from '@/models/ImportSchema'
+import type { JahrgangAsdKataloge } from '@/models/Jahrgaenge'
 
 // ── allinone.json types ──────────────────────────────────────────────────────
 
@@ -272,6 +273,33 @@ export function resolveWohnortId(
   if (!plz && !ortsname) return null
   const key = `${plz.trim()}|${ortsname.trim().toLowerCase()}`
   return orte.get(key)?.id ?? null
+}
+
+// ── ASD-Jahrgänge + Schulgliederungen (für den Jahrgangsimport) ──────────────
+
+let asdKatalogePromise: Promise<JahrgangAsdKataloge> | null = null
+
+/** Kürzel → CoreType-ID für Jahrgaenge und Schulgliederung (jeweils aktueller Historien-Eintrag), gecacht */
+export function fetchJahrgangAsdKataloge(): Promise<JahrgangAsdKataloge> {
+  if (!asdKatalogePromise) {
+    // Bei Fehler Cache verwerfen, damit der nächste Aufruf erneut lädt
+    asdKatalogePromise = loadJahrgangAsdKataloge().catch((e) => { asdKatalogePromise = null; throw e })
+  }
+  return asdKatalogePromise
+}
+
+async function loadJahrgangAsdKataloge(): Promise<JahrgangAsdKataloge> {
+  const data = await fetchAllInOne()
+  const toMap = (katalog: AllinoneKatalog | undefined): Map<string, number> => {
+    const map = new Map<string, number>()
+    for (const entry of (katalog?.daten ?? [])) {
+      const h = currentHistorie(entry)
+      // id 0 ist gültig (z.B. Schulgliederung "***")
+      if (h?.kuerzel && typeof h.id === 'number') map.set(h.kuerzel.trim(), h.id)
+    }
+    return map
+  }
+  return { jahrgaenge: toMap(data['Jahrgaenge']), schulgliederungen: toMap(data['Schulgliederung']) }
 }
 
 // ── Schulform + Jahrgänge (aus allinone.json, ein einziger Fetch) ─────────────

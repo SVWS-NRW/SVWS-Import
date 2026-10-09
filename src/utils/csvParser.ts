@@ -326,9 +326,18 @@ export async function parseJahrgaengeCsv(file: File): Promise<JahrgangImportRow[
             _valid: true,
             _errors: [],
             _sent: false,
-            kuerzel:          get(m, 'internkrz', 'kuerzel', 'kürzel', 'jahrgang', 'jg'),
-            kuerzelStatistik: get(m, 'statistikkrz', 'kuerzelstatistik', 'statistikkuerzel'),
-            gliederung:       get(m, 'gliederung'),
+            kuerzel:                get(m, 'internkrz', 'kuerzel', 'kürzel', 'jahrgang', 'jg'),
+            kurzbezeichnung:        get(m, 'kurzbezeichnung'),
+            kuerzelStatistik:       get(m, 'statistikkrz', 'kuerzelstatistik', 'statistikkuerzel'),
+            bezeichnung:            get(m, 'bezeichnung', 'beschreibung', 'name'),
+            sortierung:             get(m, 'sortierung'),
+            kuerzelSchulgliederung: get(m, 'kuerzelschulgliederung', 'schulgliederung', 'gliederung'),
+            istSichtbar:            get(m, 'istsichtbar', 'sichtbar'),
+            anzahlRestabschnitte:   get(m, 'anzahlrestabschnitte', 'restabschnitte'),
+            idBildungsstufe:        get(m, 'idbildungsstufe'),
+            idFolgejahrgang:        get(m, 'idfolgejahrgang'),
+            gueltigVon:             get(m, 'gueltigvon'),
+            gueltigBis:             get(m, 'gueltigbis'),
           }
         })
         resolve(rows)

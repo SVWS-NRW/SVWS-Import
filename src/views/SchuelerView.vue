@@ -6,7 +6,6 @@
           icon="pi pi-arrow-left"
           text
           rounded
-          size="small"
           @click="router.push({ name: 'import' })"
           aria-label="Zurück"
         />
@@ -777,8 +776,8 @@ const sbColumnDefs = computed<ColDef<SchuelerSchulbesuchImportRow>[]>(() => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  gap: 0.375rem;
-  padding: 0.375rem 1rem;
+  gap: 0.75rem;
+  padding: 0.75rem 1.5rem;
   padding-bottom: 1.5rem;
 }
 
@@ -793,19 +792,19 @@ const sbColumnDefs = computed<ColDef<SchuelerSchulbesuchImportRow>[]>(() => {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.5rem;
 }
 
 h2 {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 1.6rem;
   white-space: nowrap;
   font-weight: 600;
 }
 
 .tab-badge {
   margin-left: 0.4rem;
-  font-size: 0.7rem;
+  font-size: 0.8rem;
 }
 
 .tab-content {
@@ -842,27 +841,27 @@ h2 {
 
 :deep(.action-buttons .p-button),
 :deep(.p-fileupload-basic .p-button) {
-  padding: 0.2rem 0.5rem;
-  font-size: 0.75rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.9rem;
 }
 
 :deep(.action-buttons .p-button .p-button-icon),
 :deep(.p-fileupload-basic .p-button .p-button-icon) {
-  font-size: 0.75rem;
+  font-size: 0.9rem;
 }
 
 :deep(.p-fileupload-label),
 :deep(.p-fileupload-basic-content > span:not([class*="p-button"])) {
-  font-size: 0.72rem;
+  font-size: 0.9rem;
   color: var(--p-text-muted-color);
 }
 
 :deep(.tab-actions .p-select) {
-  font-size: 0.72rem;
+  font-size: 0.9rem;
 }
 :deep(.tab-actions .p-select .p-select-label) {
-  font-size: 0.72rem;
-  padding: 0.2rem 0.25rem;
+  font-size: 0.9rem;
+  padding: 0.35rem 0.5rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

@@ -19,6 +19,20 @@ function classifyStatus(status: number): { type: AppErrorType; messageUser: stri
   return { type: 'api', messageUser: `HTTP ${status}` }
 }
 
+/** Liest eine lesbare Fehlermeldung aus dem Response-Body (Text oder JSON mit message/log). */
+function extractServerMessage(data: unknown): string {
+  let text = ''
+  if (typeof data === 'string') {
+    text = data
+  } else if (data && typeof data === 'object') {
+    const d = data as { message?: unknown; log?: unknown }
+    if (typeof d.message === 'string') text = d.message
+    else if (Array.isArray(d.log)) text = d.log.filter(l => typeof l === 'string').join(' ')
+  }
+  text = text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+  return text.length > 300 ? `${text.slice(0, 300)}…` : text
+}
+
 export function toAppError(input: unknown, source?: string): AppError {
   const id = generateId()
   const timestamp = new Date().toISOString()
@@ -29,12 +43,15 @@ export function toAppError(input: unknown, source?: string): AppError {
     const axiosErr = input as { response?: { status: number; data?: unknown } }
     const status = axiosErr.response?.status ?? 0
     const data = axiosErr.response?.data
-    const { type, messageUser } = classifyStatus(status)
+    const classified = classifyStatus(status)
     const messageTechnical =
       typeof data === 'string' ? data
       : data && typeof data === 'object' ? JSON.stringify(data)
       : `HTTP ${status}`
-    return { id, type, severity: 'error', messageUser, messageTechnical, timestamp, context }
+    // Bei allgemeinen Statuscodes (z.B. 400, 404) die Begründung des Servers mit anzeigen
+    const serverText = classified.messageUser.startsWith('HTTP') ? extractServerMessage(data) : ''
+    const messageUser = serverText ? `${classified.messageUser}: ${serverText}` : classified.messageUser
+    return { id, type: classified.type, severity: 'error', messageUser, messageTechnical, timestamp, context }
   }
 
   // Netzwerkfehler ohne Response

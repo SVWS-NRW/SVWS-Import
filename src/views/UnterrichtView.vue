@@ -6,7 +6,6 @@
       <div class="header-left">
         <Button
           icon="pi pi-arrow-left"
-          size="small"
           text
           rounded
           @click="router.push({ name: 'import' })"
@@ -2013,8 +2012,8 @@ const schuelerColDefs: ColDef<SchuelerUnterrichtRow>[] = [
   display: flex;
   flex-direction: column;
   height: 100%;
-  gap: 0.375rem;
-  padding: 0.375rem 1rem;
+  gap: 0.75rem;
+  padding: 0.75rem 1.5rem;
 }
 
 .table-header {
@@ -2027,12 +2026,12 @@ const schuelerColDefs: ColDef<SchuelerUnterrichtRow>[] = [
 .header-left {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.5rem;
 }
 
 h2 {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 1.6rem;
   white-space: nowrap;
 }
 
@@ -2056,7 +2055,7 @@ h2 {
 
 .tab-badge {
   margin-left: 0.35rem;
-  font-size: 0.7rem;
+  font-size: 0.8rem;
 }
 
 /* ── Tab 1/2/3 gemeinsam ─────────────────────────────────────────────── */
@@ -2076,8 +2075,8 @@ h2 {
 
 :deep(.tab-actions .p-button),
 :deep(.tab-actions .p-fileupload-basic .p-button) {
-  padding: 0.2rem 0.5rem;
-  font-size: 0.75rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.9rem;
 }
 
 .hint-box {
@@ -2166,19 +2165,19 @@ h2 {
 .lookup-loading {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  font-size: 0.75rem;
+  gap: 0.5rem;
+  font-size: 0.9rem;
   color: var(--p-text-muted-color);
 }
 
 .import-result {
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   color: #22c55e;
 }
 
 :deep(.header-left .p-select .p-select-label) {
-  font-size: 0.72rem;
-  padding: 0.2rem 0.25rem;
+  font-size: 0.9rem;
+  padding: 0.35rem 0.5rem;
 }
 
 /* ── Tab 4: Kurszuweisung ─────────────────────────────────────────────── */

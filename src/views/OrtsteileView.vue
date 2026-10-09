@@ -4,7 +4,6 @@
       <div class="header-left">
         <Button
           icon="pi pi-arrow-left"
-          size="small"
           text
           rounded
           @click="router.push({ name: 'import' })"
@@ -310,8 +309,8 @@ function confirmClear(): void {
   display: flex;
   flex-direction: column;
   height: 100%;
-  gap: 0.375rem;
-  padding: 0.375rem 1rem;
+  gap: 0.75rem;
+  padding: 0.75rem 1.5rem;
 }
 
 .table-header {
@@ -329,13 +328,13 @@ function confirmClear(): void {
 
 h2 {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 1.6rem;
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
+  gap: 0.5rem;
   margin-left: auto;
 }
 
@@ -362,22 +361,22 @@ h2 {
 
 :deep(.header-actions .p-button),
 :deep(.p-fileupload-basic .p-button) {
-  padding: 0.2rem 0.5rem;
-  font-size: 0.75rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.9rem;
 }
 
 :deep(.header-actions .p-button .p-button-icon),
 :deep(.p-fileupload-basic .p-button .p-button-icon) {
-  font-size: 0.75rem;
+  font-size: 0.9rem;
 }
 
 :deep(.p-fileupload-label),
 :deep(.p-fileupload-basic-content > span:not([class*="p-button"])) {
-  font-size: 0.72rem;
+  font-size: 0.9rem;
   color: var(--p-text-muted-color);
 }
 :deep(.p-fileupload-basic .p-button .p-button-icon) {
-  font-size: 0.75rem;
+  font-size: 0.9rem;
 }
 
 .data-table {

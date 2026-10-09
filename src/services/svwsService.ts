@@ -648,11 +648,16 @@ export async function createKlasse(row: KlasseImportRow, idSchuljahresabschnitt:
     const response = await getApiClient().post('/klassen/create', payload)
     const newId: number = response.data?.id
     if (newId && row.idKlassenlehrer !== null) {
-      await getApiClient().patch(`/klassen/${newId}`, { klassenLeitungen: [row.idKlassenlehrer] })
+      try {
+        await getApiClient().patch(`/klassen/${newId}`, { klassenLeitungen: [row.idKlassenlehrer] })
+      } catch (error: unknown) {
+        // Klasse ist angelegt, nur die Klassenleitung fehlt
+        return { success: false, id: newId, error: `Klasse angelegt, Klassenleitung fehlgeschlagen – ${toAppError(error).messageUser}` }
+      }
     }
     return { success: true, id: newId }
   } catch (error: unknown) {
-    return { success: false, error: toAppError(error).messageUser }
+    return { success: false, error: `Anlegen fehlgeschlagen – ${toAppError(error).messageUser}` }
   }
 }
 

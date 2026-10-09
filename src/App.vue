@@ -122,14 +122,19 @@ html, body {
 }
 
 .p-tooltip .p-tooltip-text {
-  font-size: 0.72rem;
-  padding: 0.2rem 0.4rem;
+  font-size: 0.85rem;
+  padding: 0.3rem 0.5rem;
 }
 
 .p-fileupload-label,
 .p-fileupload-basic-content span:not(.p-button-label):not(.p-button-icon) {
-  font-size: 0.72rem !important;
+  font-size: 0.9rem !important;
   color: var(--p-text-muted-color);
+}
+
+/* Tabs in den Import-Ansichten (Schüler, Unterricht, Betriebe) */
+.p-tablist .p-tab {
+  font-size: 1.1rem;
 }
 </style>
 

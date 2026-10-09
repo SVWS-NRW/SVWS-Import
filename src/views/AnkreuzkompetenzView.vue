@@ -6,7 +6,6 @@
           icon="pi pi-arrow-left"
           text
           rounded
-          size="small"
           @click="router.push({ name: 'import' })"
           aria-label="Zurück"
         />
@@ -636,7 +635,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  padding: 0.375rem 1rem;
+  padding: 0.75rem 1.5rem;
 }
 
 .view-header {
@@ -648,19 +647,19 @@ onMounted(() => {
 .header-left {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.5rem;
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.5rem;
   margin-left: auto;
 }
 
 h2 {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 1.6rem;
   font-weight: 600;
 }
 
@@ -756,12 +755,12 @@ h2 {
 
 .import-summary-hint {
   color: var(--p-text-muted-color);
-  font-size: 0.72rem;
+  font-size: 0.9rem;
 }
 
 .import-progress {
   color: var(--p-text-muted-color);
-  font-size: 0.72rem;
+  font-size: 0.9rem;
 }
 
 .muted {
@@ -853,13 +852,13 @@ h2 {
 }
 
 :deep(.p-fileupload-basic .p-button) {
-  font-size: 0.75rem;
-  padding: 0.2rem 0.5rem;
+  font-size: 0.9rem;
+  padding: 0.35rem 0.75rem;
 }
 
 :deep(.p-fileupload-label),
 :deep(.p-fileupload-basic-content span:not(.p-button-label):not(.p-button-icon)) {
-  font-size: 0.72rem !important;
+  font-size: 0.9rem !important;
   color: var(--p-text-muted-color);
 }
 

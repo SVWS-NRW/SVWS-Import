@@ -112,6 +112,10 @@ export const useKlassenStore = defineStore('klassen', () => {
       if (result.success) {
         updated[i] = { ...row, _sent: true, _errors: [] }
         sent++
+      } else if (result.id) {
+        // Klasse angelegt, Folgeschritt (Klassenleitung) fehlgeschlagen → nicht erneut anlegen
+        updated[i] = { ...row, _sent: true, _errors: [result.error ?? 'Unbekannter Fehler'] }
+        failed++
       } else {
         updated[i] = { ...row, _errors: [result.error ?? 'Unbekannter Fehler'] }
         failed++

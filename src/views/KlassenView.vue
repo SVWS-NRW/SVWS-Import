@@ -4,7 +4,6 @@
       <div class="header-left">
         <Button
           icon="pi pi-arrow-left"
-          size="small"
           text
           rounded
           @click="router.push({ name: 'import' })"
@@ -133,7 +132,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { AgGridVue } from '@ag-grid-community/vue3'
 import { ClientSideRowModelModule } from '@ag-grid-community/client-side-row-model'
@@ -178,18 +177,35 @@ function onSelectionChanged(): void {
   selectedCount.value = importGridApi.value?.getSelectedRows().length ?? 0
 }
 
+// Erst nach dem initialen Laden auf Abschnittswechsel reagieren (onMounted setzt den Standard-Abschnitt)
+let initialLoadDone = false
+
 onMounted(async () => {
   if (schuleStore.loaded) {
     const defaultId = schuleStore.aktuellerAbschnittId ?? schuleStore.abschnitteOptions[0]?.id ?? null
     if (defaultId !== null) store.idSchuljahresabschnitt = defaultId
   }
-  const [, lehrkraefte] = await Promise.all([
-    jahrgaengeStore.existingJahrgaenge.length === 0 ? jahrgaengeStore.loadExisting() : Promise.resolve(),
-    fetchLehrkraefte(),
-  ])
-  cachedLehrkraefte.value = lehrkraefte
-  store.resolveJahrgaenge(jahrgaengeStore.existingJahrgaenge)
-  store.resolveLehrkraefte(lehrkraefte)
+  try {
+    const [, lehrkraefte, existing] = await Promise.all([
+      jahrgaengeStore.existingJahrgaenge.length === 0 ? jahrgaengeStore.loadExisting() : Promise.resolve(),
+      fetchLehrkraefte(),
+      store.loadExisting(),
+    ])
+    if (existing.error) loadError.value = existing.error
+    cachedLehrkraefte.value = lehrkraefte
+    store.resolveJahrgaenge(jahrgaengeStore.existingJahrgaenge)
+    store.resolveLehrkraefte(lehrkraefte)
+  } finally {
+    initialLoadDone = true
+  }
+})
+
+// Vorhandene Klassen beim Wechsel des Schuljahresabschnitts neu laden
+watch(() => store.idSchuljahresabschnitt, async () => {
+  if (!initialLoadDone) return
+  loadError.value = ''
+  const result = await store.loadExisting()
+  if (result.error) loadError.value = result.error
 })
 const uploadResult = ref<{ sent: number; failed: number } | null>(null)
 const loadError = ref('')
@@ -278,8 +294,11 @@ const importColDefs: ColDef<KlasseImportRow>[] = [
     width: 110,
     editable: false,
     cellRenderer: (params: { data: KlasseImportRow }) => {
+      const title = params.data._errors.join('; ').replace(/"/g, '&quot;')
+      if (params.data._sent && params.data._errors.length) return `<span style="color:#f59e0b" title="${title}">⚠ Gesendet</span>`
       if (params.data._sent) return '<span style="color:#22c55e">✔ Gesendet</span>'
-      if (!params.data._valid) return `<span style="color:#ef4444" title="${params.data._errors.join('; ')}">✖ Fehler</span>`
+      // Validierungs- und Upload-Fehler (z.B. HTTP 400 vom Server)
+      if (params.data._errors.length) return `<span style="color:#ef4444" title="${title}">✖ Fehler</span>`
       return '<span style="color:#f59e0b">● Bereit</span>'
     },
   },
@@ -298,7 +317,7 @@ const importColDefs: ColDef<KlasseImportRow>[] = [
 
 const rowClassRules = {
   'row-sent':  (params: { data: KlasseImportRow }) => params.data._sent,
-  'row-error': (params: { data: KlasseImportRow }) => !params.data._valid && !params.data._sent,
+  'row-error': (params: { data: KlasseImportRow }) => params.data._errors.length > 0 && !params.data._sent,
 }
 
 function getRowId(params: GetRowIdParams<KlasseImportRow>): string {
@@ -381,8 +400,8 @@ function confirmClear(): void {
   display: flex;
   flex-direction: column;
   height: 100%;
-  gap: 0.375rem;
-  padding: 0.375rem 1rem;
+  gap: 0.75rem;
+  padding: 0.75rem 1.5rem;
 }
 
 .table-header {
@@ -396,28 +415,28 @@ function confirmClear(): void {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.5rem;
 }
 
 h2 {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 1.6rem;
   white-space: nowrap;
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
+  gap: 0.5rem;
   margin-left: auto;
 }
 
 :deep(.header-left .p-select) {
-  font-size: 0.72rem;
+  font-size: 0.9rem;
 }
 :deep(.header-left .p-select .p-select-label) {
-  font-size: 0.72rem;
-  padding: 0.2rem 0.25rem;
+  font-size: 0.9rem;
+  padding: 0.35rem 0.5rem;
 }
 :deep(.header-left .p-select .p-select-dropdown) {
   width: 1.25rem;
@@ -466,22 +485,22 @@ h2 {
 
 :deep(.header-actions .p-button),
 :deep(.p-fileupload-basic .p-button) {
-  padding: 0.2rem 0.5rem;
-  font-size: 0.75rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.9rem;
 }
 
 :deep(.header-actions .p-button .p-button-icon),
 :deep(.p-fileupload-basic .p-button .p-button-icon) {
-  font-size: 0.75rem;
+  font-size: 0.9rem;
 }
 
 :deep(.p-fileupload-label),
 :deep(.p-fileupload-basic-content > span:not([class*="p-button"])) {
-  font-size: 0.72rem;
+  font-size: 0.9rem;
   color: var(--p-text-muted-color);
 }
 :deep(.p-fileupload-basic .p-button .p-button-icon) {
-  font-size: 0.75rem;
+  font-size: 0.9rem;
 }
 
 .data-table {

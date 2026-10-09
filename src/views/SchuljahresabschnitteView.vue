@@ -4,7 +4,6 @@
       <div class="header-left">
         <Button
           icon="pi pi-arrow-left"
-          size="small"
           text
           rounded
           @click="router.push({ name: 'import' })"
@@ -206,8 +205,8 @@ onMounted(async () => {
 .table-view {
   display: flex;
   flex-direction: column;
-  gap: 0.375rem;
-  padding: 0.375rem 1rem;
+  gap: 0.75rem;
+  padding: 0.75rem 1.5rem;
 }
 
 .table-header {
@@ -225,7 +224,7 @@ onMounted(async () => {
 
 h2 {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 1.6rem;
 }
 
 .header-actions {

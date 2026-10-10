@@ -164,7 +164,7 @@ Unterstützte Dateien:
 |--------------|---------------|-------------|----------|
 | `schuelerid` | – | Optional, hat Vorrang vor Name + Geburtsdatum | `625` |
 | `nachname`, `vorname`, `geburtsdatum` | gleich | Schüler (Pflicht ohne Schüler-ID) | `Müller`, `Anna`, `12.04.2007` |
-| `schuljahr`, `abschnitt` | `Jahr`, `Abschnitt` | Schuljahresabschnitt (Pflicht, muss in SVWS vorhanden sein) | `2026`, `1` |
+| `schuljahr`, `abschnitt` | `Jahr`, `Abschnitt` | Schuljahresabschnitt (Pflicht, muss in SVWS vorhanden sein) | `2026`, `2` |
 | `wechselnr` | – | Nur bei Klassenwechsel innerhalb des Abschnitts (leer = aktueller Lernabschnitt) | `1` |
 | `jahrgang`, `klasse` | gleich | Jahrgangs- und Klassenkürzel (Klasse des jeweiligen Abschnitts) | `10`, `10a` |
 | `tutor` | `Klassenlehrer` | Kürzel der Lehrkraft | `FRIT` |

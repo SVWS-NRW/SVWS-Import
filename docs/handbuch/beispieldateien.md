@@ -178,7 +178,7 @@ Erziehungsberechtigte zu den Schülern aus `schueler-stammdaten.csv`. Jede Zeile
 
 **Verwendung:** Import-Bereich → Schülerdaten → Tab „Lernabschnittsdaten"
 
-Lernabschnittsdaten im Schuljahresabschnitt 2026/1 zu den Schülern aus `schueler-stammdaten.csv`, mit Klassen und Klassenlehrkräften aus `klassen.csv`: Gliederung, Organisationsform, Klassenart, Wertung, Wiederholung, Konferenz- und Zeugnisdatum, Fehlstunden und Zeitraum. Alternativ kann der Schild-NRW-Export `SchuelerLernabschnittsdaten.dat` geladen werden. Übertragen wird nur in Lernabschnitte, die beim Schüler bereits vorhanden sind.
+Lernabschnittsdaten im Schuljahresabschnitt 2026/2 zu den Schülern aus `schueler-stammdaten.csv`, mit Klassen und Klassenlehrkräften aus `klassen.csv`: Gliederung, Organisationsform, Klassenart, Wertung, Wiederholung, Konferenz- und Zeugnisdatum, Fehlstunden und Zeitraum. Alternativ kann der Schild-NRW-Export `SchuelerLernabschnittsdaten.dat` geladen werden. Übertragen wird nur in Lernabschnitte, die beim Schüler bereits vorhanden sind.
 
 **Wichtige Spalten:** `nachname`, `vorname`, `geburtsdatum`, `schuljahr`, `abschnitt`, `jahrgang`, `klasse`, `tutor`, `versetzung`, `fehlstunden`, `fehlstundenunentschuldigt`
 

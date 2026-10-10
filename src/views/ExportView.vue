@@ -45,11 +45,11 @@
               :icon="istSchuelerAuswahlTile ? 'pi pi-file-export' : 'pi pi-refresh'"
               size="small"
               :loading="loading"
-              :disabled="selectedFields.length === 0 || (istSchuelerAuswahlTile && schuelerAuswahl.length === 0) || (selectedTile === 'lehrer' && lehrerListe.length === 0)"
+              :disabled="selectedFields.length === 0 || (istSchuelerAuswahlTile && schuelerAuswahl.length === 0) || (selectedTile === 'lehrer' && lehrerListe.length === 0) || (selectedTile === 'betriebe' && betriebeListe.length === 0)"
               @click="loadData"
             />
             <Button
-              v-if="data.length > 0 && !istSchuelerAuswahlTile && selectedTile !== 'lehrer'"
+              v-if="data.length > 0 && !istSchuelerAuswahlTile && selectedTile !== 'lehrer' && selectedTile !== 'betriebe'"
               label="Exportieren"
               icon="pi pi-file-export"
               size="small"
@@ -414,6 +414,85 @@
         </DataTable>
       </div>
 
+      <!-- Betriebsliste -->
+      <div v-if="selectedTile === 'betriebe'" class="config-section">
+        <div class="section-header">
+          <h3 class="section-title">
+            Betriebsliste
+            <span v-if="betriebeListe.length > 0" class="count-badge">
+              {{ filteredBetriebe.length }} von {{ betriebeListe.length }}
+              <template v-if="selectedBetriebe.length > 0"> · {{ selectedBetriebe.length }} ausgewählt</template>
+            </span>
+          </h3>
+          <div class="section-actions">
+            <InputText
+              v-model="betriebeNameSearch"
+              placeholder="Name / Ort suchen…"
+              size="small"
+              class="schueler-name-search"
+            />
+            <MultiSelect
+              v-model="betriebeSichtbarFilter"
+              :options="LEHRER_SICHTBAR_OPTIONS"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Sichtbarkeit"
+              size="small"
+              style="width: 150px"
+            />
+            <Button
+              icon="pi pi-refresh"
+              severity="secondary"
+              text
+              size="small"
+              :loading="betriebeListLoading"
+              v-tooltip.top="'Betriebsliste neu laden'"
+              @click="reloadBetriebeListe"
+            />
+          </div>
+        </div>
+        <div v-if="betriebeListLoading" class="list-empty">
+          <i class="pi pi-spin pi-spinner" />
+          <span>Betriebe werden geladen…</span>
+        </div>
+        <div v-else-if="betriebeListError" class="list-error">
+          <i class="pi pi-exclamation-triangle" />
+          <span>{{ betriebeListError }}</span>
+        </div>
+        <DataTable
+          v-else
+          v-model:selection="selectedBetriebe"
+          :value="filteredBetriebe"
+          dataKey="id"
+          paginator
+          :rows="50"
+          :rowsPerPageOptions="[25, 50, 100, 200]"
+          paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown CurrentPageReport"
+          currentPageReportTemplate="{first}–{last} von {totalRecords}"
+          size="small"
+          sortMode="single"
+          class="compact-table"
+        >
+          <Column selectionMode="multiple" style="width: 3rem; flex: none" />
+          <Column field="id"      header="ID"      sortable style="width: 80px" />
+          <Column field="name"    header="Name"    sortable style="min-width: 200px" />
+          <Column field="branche" header="Branche" sortable style="min-width: 140px" />
+          <Column field="ort"     header="Ort"     sortable style="min-width: 140px" />
+          <Column header="Sichtbar" sortField="istSichtbar" sortable style="min-width: 110px">
+            <template #body="{ data: row }">
+              <span :class="['status-badge', row.istSichtbar ? 'sichtbar-ja' : 'sichtbar-nein']">
+                {{ row.istSichtbar ? 'Sichtbar' : 'Versteckt' }}
+              </span>
+            </template>
+          </Column>
+          <template #empty>
+            <span style="color: var(--p-text-muted-color); font-size: 0.875rem;">
+              Keine Betriebe für den gewählten Filter.
+            </span>
+          </template>
+        </DataTable>
+      </div>
+
     </template>
   </div>
 </template>
@@ -434,10 +513,11 @@ import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
-import { fetchForExport, fetchSchuelerAuswahlliste, enrichSchueler, enrichRecords, fetchOrteById, fetchReligionenById, fetchSchulenById, fetchJahrgaengeById, fetchEinschulungsartenById, fetchUebergangsempfehlungenById, fetchKindergartenbesuchsdauerById, fetchKindergartenById, fetchLernplattformen, downloadLernplattformExport, fetchErzieherFuerSchueler, fetchErzieherartenById, fetchOrtsteileById, type SchuelerAuswahl, type LernplattformEintrag } from '@/services/svwsService'
+import { fetchForExport, fetchSchuelerAuswahlliste, enrichSchueler, enrichRecords, fetchOrteById, fetchReligionenById, fetchSchulenById, fetchJahrgaengeById, fetchEinschulungsartenById, fetchUebergangsempfehlungenById, fetchKindergartenbesuchsdauerById, fetchKindergartenById, fetchLernplattformen, downloadLernplattformExport, fetchErzieherFuerSchueler, fetchErzieherartenById, fetchOrtsteileById, fetchBetriebe, fetchBetriebsartenById, type SchuelerAuswahl, type LernplattformEintrag } from '@/services/svwsService'
 import type { OrtKatalogEintrag, ReligionKatalogEintrag } from '@/models/ImportSchema'
 import { fetchNationalitaetenIso3ById } from '@/services/katalogService'
 import { gruppiereErzieherEintraege, type ErzieherStammdaten } from '@/models/SchuelerErzieher'
+import type { BetriebDetails } from '@/models/Betriebe'
 import { exportAsCsv, exportAsJson } from '@/utils/exportUtils'
 import { useSchuleStore } from '@/stores/schule'
 import { useAuthStore } from '@/stores/auth'
@@ -682,7 +762,31 @@ const TILES: ExportTile[] = [
     label: 'Betriebe',
     description: 'Ausbildungsbetriebe exportieren',
     icon: 'pi pi-building',
-    comingSoon: true,
+    // Spaltenüberschriften so gewählt, dass die Datei wieder in den Betriebe-Import eingelesen werden kann
+    fields: [
+      { key: 'id',                                      label: 'Betrieb-ID',                   group: 'Betrieb' },
+      { key: 'name',                                    label: 'Name',                         group: 'Betrieb' },
+      { key: 'nameZusatz',                              label: 'Namenszusatz',                 group: 'Betrieb' },
+      { key: 'branche',                                 label: 'Branche',                      group: 'Betrieb' },
+      { key: 'betriebsart',                             label: 'Betriebsart',                  group: 'Betrieb' },
+      { key: 'bemerkungen',                             label: 'Bemerkungen',                  group: 'Betrieb' },
+      { key: 'strasse',                                 label: 'Straße',                       group: 'Adresse' },
+      { key: 'hausnummer',                              label: 'Hausnummer',                   group: 'Adresse' },
+      { key: 'hausnummerZusatz',                        label: 'Hausnummerzusatz',             group: 'Adresse' },
+      { key: 'plz',                                     label: 'PLZ',                          group: 'Adresse' },
+      { key: 'ort',                                     label: 'Ort',                          group: 'Adresse' },
+      { key: 'telefon1',                                label: 'Telefon 1',                    group: 'Kontakt' },
+      { key: 'telefon2',                                label: 'Telefon 2',                    group: 'Kontakt' },
+      { key: 'fax',                                     label: 'Fax',                          group: 'Kontakt' },
+      { key: 'eMail',                                   label: 'E-Mail',                       group: 'Kontakt' },
+      { key: 'istAusbildungsbetrieb',                   label: 'Ausbildungsbetrieb',           group: 'Merkmale' },
+      { key: 'istMassnahmentraeger',                    label: 'Maßnahmenträger',              group: 'Merkmale' },
+      { key: 'bietetPraktikumsplaetzeAn',               label: 'Praktikumsplätze',             group: 'Merkmale' },
+      { key: 'belehrungNachISGErforderlich',            label: 'Belehrung nach ISG',           group: 'Merkmale' },
+      { key: 'erweitertesFuehrungszeugnisErforderlich', label: 'Erweitertes Führungszeugnis',  group: 'Merkmale' },
+      { key: 'istSichtbar',                             label: 'Sichtbar',                     group: 'Merkmale' },
+      { key: 'sortierung',                              label: 'Sortierung',                   group: 'Merkmale' },
+    ],
   },
   {
     id: 'lernplattformen',
@@ -755,6 +859,11 @@ const LEHRER_BOOL_FIELDS = new Set([
   'istAktiv', 'istSichtbar', 'istRelevantFuerStatistik',
 ])
 
+const BETRIEB_BOOL_FIELDS = new Set([
+  'istAusbildungsbetrieb', 'istMassnahmentraeger', 'bietetPraktikumsplaetzeAn',
+  'belehrungNachISGErforderlich', 'erweitertesFuehrungszeugnisErforderlich', 'istSichtbar',
+])
+
 function formatLehrerValue(key: string, value: unknown): unknown {
   if (key === 'geschlecht') return GESCHLECHT_LABELS[value as number] ?? String(value ?? '')
   if (LEHRER_BOOL_FIELDS.has(key)) return value === true ? 'Ja' : value === false ? 'Nein' : ''
@@ -791,6 +900,13 @@ const lehrerListError         = ref('')
 const lehrerSichtbarFilter    = ref<boolean[]>([true])
 const lehrerPersonalTypFilter = ref<string[]>([])
 const lehrerNameSearch        = ref('')
+/** Betriebe inkl. aufgelöstem PLZ/Ort (für Anzeige, Suche und Export) */
+const betriebeListe           = ref<(BetriebDetails & { plz: string; ort: string })[]>([])
+const selectedBetriebe        = ref<(BetriebDetails & { plz: string; ort: string })[]>([])
+const betriebeListLoading     = ref(false)
+const betriebeListError       = ref('')
+const betriebeSichtbarFilter  = ref<boolean[]>([])
+const betriebeNameSearch      = ref('')
 
 const lpListe        = ref<LernplattformEintrag[]>([])
 const lpSelectedId   = ref<number | null>(null)
@@ -853,6 +969,12 @@ const loadBtnLabel = computed(() => {
       : filteredSchueler.value.length
     return count > 0 ? `Erzieher von ${count} Schülern exportieren` : 'Exportieren'
   }
+  if (selectedTile.value === 'betriebe') {
+    const count = selectedBetriebe.value.length > 0
+      ? selectedBetriebe.value.length
+      : filteredBetriebe.value.length
+    return count > 0 ? `${count} Betriebe exportieren` : 'Exportieren'
+  }
   if (selectedTile.value === 'lehrer') {
     const count = selectedLehrer.value.length > 0
       ? selectedLehrer.value.length
@@ -871,6 +993,17 @@ const filteredLehrer = computed(() => {
     (!typSet      || typSet.has(l.personTyp as string)) &&
     (!nameQ       || (l.nachname as string).toLowerCase().includes(nameQ) ||
                      (l.vorname  as string).toLowerCase().includes(nameQ)),
+  )
+})
+
+const filteredBetriebe = computed(() => {
+  const sichtbarSet = betriebeSichtbarFilter.value.length > 0 ? new Set(betriebeSichtbarFilter.value) : null
+  const q           = betriebeNameSearch.value.trim().toLowerCase()
+  return betriebeListe.value.filter(b =>
+    (!sichtbarSet || sichtbarSet.has(b.istSichtbar !== false)) &&
+    (!q           || (b.name ?? '').toLowerCase().includes(q) ||
+                     (b.nameZusatz ?? '').toLowerCase().includes(q) ||
+                     b.ort.toLowerCase().includes(q)),
   )
 })
 
@@ -924,10 +1057,14 @@ function selectTile(id: string): void {
   lehrerListe.value = []
   selectedLehrer.value = []
   lehrerListError.value = ''
+  betriebeListe.value = []
+  selectedBetriebe.value = []
+  betriebeListError.value = ''
   const tile = TILES.find(t => t.id === id)
   selectedFields.value = tile?.fields?.map(f => f.key) ?? []
   if (id === 'schueler' || id === 'erzieher') reloadAuswahlliste()
   if (id === 'lehrer')        reloadLehrerListe()
+  if (id === 'betriebe')      reloadBetriebeListe()
   if (id === 'lernplattformen') {
     lpListe.value = []
     lpSelectedId.value = null
@@ -972,6 +1109,28 @@ async function reloadLehrerListe(): Promise<void> {
     lehrerListe.value = []
   } finally {
     lehrerListLoading.value = false
+  }
+}
+
+async function reloadBetriebeListe(): Promise<void> {
+  betriebeListLoading.value = true
+  betriebeListError.value = ''
+  selectedBetriebe.value = []
+  try {
+    const [betriebe, orteById] = await Promise.all([
+      fetchBetriebe(),
+      // Ortskatalog optional: ohne ihn bleiben PLZ/Ort leer
+      fetchOrteById().catch(() => new Map<number, OrtKatalogEintrag>()),
+    ])
+    betriebeListe.value = betriebe.map(b => {
+      const ort = b.idOrt != null ? orteById.get(b.idOrt) : undefined
+      return { ...b, plz: ort?.plz ?? '', ort: ort?.ortsname ?? '' }
+    })
+  } catch (e) {
+    betriebeListError.value = e instanceof Error ? e.message : 'Fehler beim Laden der Betriebe'
+    betriebeListe.value = []
+  } finally {
+    betriebeListLoading.value = false
   }
 }
 
@@ -1137,6 +1296,11 @@ async function loadData(): Promise<void> {
 
   if (tile.id === 'erzieher') {
     await exportErzieher(tile)
+    return
+  }
+
+  if (tile.id === 'betriebe') {
+    await exportBetriebe(tile)
     return
   }
 
@@ -1317,6 +1481,47 @@ async function exportErzieher(tile: ExportTile): Promise<void> {
     exportProgress.value = 0
     exportDone.value = 0
     exportTotal.value = 0
+  }
+}
+
+async function exportBetriebe(tile: ExportTile): Promise<void> {
+  const betriebe = selectedBetriebe.value.length > 0 ? selectedBetriebe.value : filteredBetriebe.value
+  if (betriebe.length === 0) { loadError.value = 'Keine Betriebe zum Exportieren vorhanden.'; return }
+  if (selectedFields.value.length === 0) { loadError.value = 'Bitte mindestens ein Feld auswählen.'; return }
+
+  loading.value = true
+  try {
+    const sf = selectedFields.value
+    const artenById = sf.includes('betriebsart')
+      ? await fetchBetriebsartenById().catch(() => new Map<number, string>())
+      : null
+
+    const fieldLabelMap = Object.fromEntries((tile.fields ?? []).map(f => [f.key, f.label]))
+    const exportCols = sf.map(k => fieldLabelMap[k] ?? k)
+    const exportData = betriebe.map(b => {
+      const row: Record<string, unknown> = {
+        ...b,
+        betriebsart: b.idBetriebsart != null ? artenById?.get(b.idBetriebsart) ?? '' : '',
+      }
+      const r: Record<string, unknown> = {}
+      for (const k of sf) {
+        const v = row[k]
+        r[fieldLabelMap[k] ?? k] = BETRIEB_BOOL_FIELDS.has(k)
+          ? (v === true ? 'Ja' : v === false ? 'Nein' : '')
+          : v ?? ''
+      }
+      return r
+    })
+
+    const date = new Date().toISOString().slice(0, 10)
+    const filename = `betriebe_export_${date}`
+    format.value === 'csv'
+      ? exportAsCsv(exportData, exportCols, `${filename}.csv`)
+      : exportAsJson(exportData, exportCols, `${filename}.json`)
+  } catch (e) {
+    loadError.value = e instanceof Error ? e.message : 'Fehler beim Exportieren'
+  } finally {
+    loading.value = false
   }
 }
 

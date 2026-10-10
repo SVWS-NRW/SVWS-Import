@@ -444,8 +444,8 @@ export async function parseBetriebeCsv(file: File): Promise<BetriebImportRow[]> 
             istAusbildungsbetrieb:             get(m, 'ausbildungsbetrieb', 'istausbildungsbetrieb'),
             istMassnahmentraeger:              get(m, 'massnahmentraeger', 'istmassnahmentraeger', 'maßnahmenträger'),
             belehrungNachISGErforderlich:      get(m, 'belehrungisg', 'belehrungnachisg', 'belehrungnachisgerforderlich', 'isg'),
-            erweitertesFuehrungszeugnisErforderlich: get(m, 'erweitertesfuehrungszeugnis', 'fuehrungszeugnis', 'erwfuehrungszeugnis'),
-            bietetPraktikumsplaetzeAn:         get(m, 'praktikumsplaetze', 'bietetzpraktikumsplaetze', 'bietetzpraktikumsplaetzean'),
+            erweitertesFuehrungszeugnisErforderlich: get(m, 'erweitertesfuehrungszeugnis', 'erweitertesführungszeugnis', 'fuehrungszeugnis', 'führungszeugnis', 'erwfuehrungszeugnis'),
+            bietetPraktikumsplaetzeAn:         get(m, 'praktikumsplaetze', 'praktikumsplätze', 'bietetpraktikumsplaetzean', 'bietetzpraktikumsplaetze', 'bietetzpraktikumsplaetzean'),
           }
         })
         resolve(rows)

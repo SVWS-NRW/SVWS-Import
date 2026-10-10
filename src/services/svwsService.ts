@@ -549,6 +549,15 @@ export async function fetchBetriebe(): Promise<BetriebDetails[]> {
   return Array.isArray(response.data) ? response.data : []
 }
 
+export async function fetchBetriebsartenById(): Promise<Map<number, string>> {
+  const response = await getApiClient().get<{ id: number; bezeichnung?: string | null }[]>('/schule/betriebsarten')
+  const map = new Map<number, string>()
+  for (const b of Array.isArray(response.data) ? response.data : []) {
+    if (b.id && b.bezeichnung) map.set(b.id, b.bezeichnung)
+  }
+  return map
+}
+
 export async function createBetrieb(
   row: BetriebImportRow,
   orteMap?: Map<string, OrtKatalogEintrag>,

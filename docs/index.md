@@ -33,8 +33,8 @@ Die Struktur orientiert sich an den Kacheln der Import-Startseite.
 
 - [Unterrichtsdaten importieren – Übersicht](handbuch/unterricht-importieren.md)
   - [Klassenunterricht importieren](handbuch/unterricht-klassenunterricht.md)
-  - [Kursunterricht importieren (Kurse anlegen)](handbuch/unterricht-kursunterricht.md)
   - [Schülerunterricht importieren](handbuch/unterricht-schuelerunterricht.md)
+  - [Kursunterricht importieren (Kurse anlegen)](handbuch/unterricht-kursunterricht.md)
   - [Kurszuweisung (interaktiv)](handbuch/unterricht-kurszuweisung.md)
 
 ### Referenz

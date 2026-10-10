@@ -43,7 +43,7 @@ defineProps<{
 }
 
 .stat-value {
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   font-weight: 700;
   line-height: 1;
   min-width: 1.5ch;
@@ -51,7 +51,7 @@ defineProps<{
 }
 
 .stat-label {
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   color: var(--p-text-muted-color);
   text-transform: uppercase;
   letter-spacing: 0.03em;

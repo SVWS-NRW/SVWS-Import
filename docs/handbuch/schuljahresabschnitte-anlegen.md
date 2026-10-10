@@ -5,6 +5,8 @@
 
 Neue Schuljahresabschnitte in SVWS anlegen.
 
+> **Hinweis:** Das Anlegen von Schuljahresabschnitten wird vom SVWS-Server momentan noch nicht unterstützt. Das Formular ist deshalb deaktiviert; vorhandene Abschnitte werden weiterhin angezeigt.
+
 ## Schritte
 
 1. Öffnen Sie die Kachel Schuljahresabschnitte anlegen.

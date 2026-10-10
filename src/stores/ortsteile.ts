@@ -39,6 +39,8 @@ export const useOrtsteileStore = defineStore('ortsteile', () => {
     const row = rows.value[idx]
     const errors: string[] = []
     if (!row.ortsteil.trim()) errors.push('Ortsteilname fehlt')
+    else if (row.ortsteil.trim().length > 30) errors.push('Ortsteilname zu lang (max. 30 Zeichen)')
+    if (!row.plz.trim() && !row.ort.trim()) errors.push('PLZ und Ort fehlen (Zuordnung zum Ort nicht möglich)')
     rows.value[idx] = { ...row, _errors: errors, _valid: errors.length === 0 }
   }
 
@@ -77,7 +79,7 @@ export const useOrtsteileStore = defineStore('ortsteile', () => {
     try {
       orteMap = await fetchOrteKatalog()
     } catch {
-      // Ortsuche nicht verfügbar — ort_id bleibt null
+      // Ortsuche nicht verfügbar — Zeilen schlagen mit "Ort nicht im Katalog gefunden" fehl
     }
 
     for (let i = 0; i < updated.length; i++) {

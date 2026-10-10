@@ -42,11 +42,24 @@ export interface BetriebDetails {
   id: number
   name: string | null
   nameZusatz: string | null
+  bemerkungen?: string | null
   branche: string | null
+  idBetriebsart?: number | null
   strasse: string | null
   hausnummer: string | null
+  hausnummerZusatz?: string | null
+  idOrt?: number | null
   telefon1: string | null
+  telefon2?: string | null
+  fax?: string | null
   eMail: string | null
+  istAusbildungsbetrieb?: boolean
+  istMassnahmentraeger?: boolean
+  belehrungNachISGErforderlich?: boolean
+  erweitertesFuehrungszeugnisErforderlich?: boolean
+  bietetPraktikumsplaetzeAn?: boolean
+  istSichtbar?: boolean
+  sortierung?: number
   ansprechpartner: AnsprechpartnerDetails[]
   [key: string]: unknown
 }

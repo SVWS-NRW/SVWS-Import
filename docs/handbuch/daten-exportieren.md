@@ -2,18 +2,19 @@
 
 ## Ziel
 
-Schüler- oder Lehrerdaten aus dem SVWS-Server als CSV- oder JSON-Datei herunterladen – z. B. für Auswertungen, Weitergabe an andere Systeme oder als Datensicherung einzelner Felder.
+Schüler-, Lehrer-, Erzieher- oder Betriebsdaten sowie schulinterne Kataloge aus dem SVWS-Server als CSV- oder JSON-Datei herunterladen – z. B. für Auswertungen, Weitergabe an andere Systeme oder als Datensicherung einzelner Felder.
 
 ---
 
 ## Aufbau der Exportseite
 
-Die Exportseite ist in drei Bereiche gegliedert:
+Die Startseite des Exports zeigt Kacheln für die einzelnen Datentypen. Ein Klick auf eine Kachel öffnet die zugehörige Exportseite; über den **Pfeil links neben der Überschrift** (oder die Zurück-Taste des Browsers) gelangen Sie wieder zur Übersicht.
 
-1. **Datentyp wählen** – Kacheln oben zur Auswahl des Exportbereichs (z. B. Schülerdaten, Lehrerdaten)
-2. **Format & Export** – Auswahl des Dateiformats und Start des Exports
-3. **Feldauswahl** – Checkboxen zur Auswahl der gewünschten Spalten, gruppiert nach Themenbereich
-4. **Datensatzliste** – Tabelle aller verfügbaren Datensätze mit Filtermöglichkeiten und Auswahl
+Die Exportseite ist wie folgt gegliedert:
+
+1. **Format & Export** – Auswahl des Dateiformats und Start des Exports
+2. **Feldauswahl** – Checkboxen zur Auswahl der gewünschten Spalten, gruppiert nach Themenbereich
+3. **Datensatzliste** – Tabelle aller verfügbaren Datensätze mit Filtermöglichkeiten und Auswahl
 
 ---
 
@@ -21,10 +22,14 @@ Die Exportseite ist in drei Bereiche gegliedert:
 
 ### 1. Datentyp wählen
 
-Klicken Sie oben auf eine der Kacheln:
+Klicken Sie auf der Startseite auf eine der Kacheln:
 
 - **Schülerdaten** – Stammdaten und Schulbesuchsdaten aller Schülerinnen und Schüler
 - **Lehrerdaten** – Stammdaten und Personaldaten aller Lehrkräfte
+- **Erzieherdaten** – Erziehungsberechtigte zu den ausgewählten Schülerinnen und Schülern
+- **Betriebe** – der Katalog der Ausbildungs- und Praktikumsbetriebe
+- **Kataloge** – schulinterne Kataloge als JSON-Dateien (siehe [Kataloge](#kataloge))
+- **SVWS-Server** – Open-API-Spezifikation und Statistikkataloge des Servers (siehe [SVWS-Server](#svws-server))
 
 ### 2. Format wählen
 
@@ -58,6 +63,8 @@ Unterhalb der Feldauswahl befindet sich die **Datensatzliste**.
 | **Status** | Aktiv, Beurlaubt, Abgänger usw. |
 | **↺-Schaltfläche** | Liste neu vom Server laden |
 
+Die Schülerliste wird auch für den Export der **Erzieherdaten** verwendet.
+
 #### Lehrerliste
 
 | Filter | Funktion |
@@ -65,6 +72,14 @@ Unterhalb der Feldauswahl befindet sich die **Datensatzliste**.
 | **Suchfeld** (links) | Freitextsuche nach Nachname oder Vorname |
 | **Sichtbarkeit** | Sichtbare oder versteckte Einträge |
 | **Personaltyp** | Lehrkraft, Sekretariat, Schulleitung usw. |
+| **↺-Schaltfläche** | Liste neu vom Server laden |
+
+#### Betriebsliste
+
+| Filter | Funktion |
+|--------|----------|
+| **Suchfeld** (links) | Freitextsuche nach Name, Namenszusatz oder Ort |
+| **Sichtbarkeit** | Sichtbare oder versteckte Einträge |
 | **↺-Schaltfläche** | Liste neu vom Server laden |
 
 Klicken Sie in der Liste auf einzelne Zeilen oder nutzen Sie die **Checkbox in der Kopfzeile**, um alle sichtbaren Datensätze gleichzeitig zu markieren. Die Anzeige oben zeigt jederzeit, wie viele Datensätze gefiltert und wie viele ausgewählt sind.
@@ -83,7 +98,7 @@ Klicken Sie auf die grüne Schaltfläche **„Exportieren"**. Während des Expor
 
 | Gruppe | Beispielfelder |
 |--------|---------------|
-| Personendaten | Nachname, Vorname, Geburtsdatum, Geschlecht, Geburtsort |
+| Personendaten | Schüler-ID, Nachname, Vorname, Geburtsdatum, Geschlecht, Geburtsort |
 | Schule | Status, Jahrgang, Klasse, Aufnahmedatum |
 | Adresse & Kontakt | Straße, PLZ, Wohnort, Telefon, E-Mail |
 | Herkunft | Staatsangehörigkeit, Geburtsland, Verkehrssprache |
@@ -123,6 +138,59 @@ Klicken Sie auf die grüne Schaltfläche **„Exportieren"**. Während des Expor
 |--------|---------------|
 | Identifikation | Ident-Nr. (Teil 1 & 2), Personalaktennummer, LBV-Personalnummer, LBV-Vergütungsschlüssel |
 | Zu-/Abgang | Zugangsdatum, Zugangsgrund, Abgangsdatum, Abgangsgrund |
+
+---
+
+## Verfügbare Felder – Erzieherdaten
+
+Jede Zeile ist ein Erzieher-Eintrag mit bis zu zwei Personen und gemeinsamer Adresse. Hat ein Schüler mehrere Einträge, entstehen mehrere Zeilen. Schüler ohne Erzieher werden nicht exportiert.
+
+| Gruppe | Felder |
+|--------|--------|
+| Schüler | Schüler-ID, Nachname, Vorname, Geburtsdatum, Klasse, Jahrgang |
+| Eintrag | Erzieher-ID, Erzieherart, Anschreiben, Bemerkungen |
+| 1. Person / 2. Person | Anrede, Titel, Nachname, Vorname, E-Mail, Staatsangehörigkeit (ISO-Code, z. B. `DEU`) |
+| Adresse | Straße, Hausnummer, Hausnummerzusatz, PLZ, Ort, Ortsteil |
+
+> **Tipp:** Die Spaltenüberschriften passen zum Erzieher-Import. Eine exportierte Datei kann also bearbeitet und wieder eingelesen werden; die Schüler werden dabei über die **Schüler-ID** zugeordnet.
+
+---
+
+## Verfügbare Felder – Betriebe
+
+| Gruppe | Felder |
+|--------|--------|
+| Betrieb | Betrieb-ID, Name, Namenszusatz, Branche, Betriebsart, Bemerkungen |
+| Adresse | Straße, Hausnummer, Hausnummerzusatz, PLZ, Ort |
+| Kontakt | Telefon 1, Telefon 2, Fax, E-Mail |
+| Merkmale | Ausbildungsbetrieb, Maßnahmenträger, Praktikumsplätze, Belehrung nach ISG, Erweitertes Führungszeugnis, Sichtbar, Sortierung |
+
+Die Spaltenüberschriften passen zum Betriebe-Import. Ansprechpartner und die Zuordnung zu Schülern sind nicht enthalten.
+
+---
+
+## Kataloge
+
+Die Kachel **Kataloge** exportiert die schulinternen Kataloge (wie im SVWS-Client unter *Schule › Kataloge*) – ausschließlich als **JSON** und unverändert, so wie der SVWS-Server sie liefert.
+
+1. Wählen Sie die gewünschten Kataloge per Checkbox aus („Alle" / „Keine" für die Schnellauswahl).
+2. Für **Abteilungen** wählen Sie zusätzlich den Schuljahresabschnitt.
+3. Klicken Sie auf **„… Kataloge als JSON exportieren"**.
+
+Jeder Katalog wird als **eigene Datei** heruntergeladen, z. B. `katalog_erzieherarten_2026-10-10.json`. Kann ein Katalog nicht geladen werden, wird er in einer Fehlermeldung aufgeführt; die übrigen Kataloge werden trotzdem exportiert.
+
+> **Hinweis:** Bei mehreren Katalogen fragt der Browser beim ersten Mal ggf. nach, ob die Seite mehrere Dateien herunterladen darf. Bestätigen Sie dies.
+
+---
+
+## SVWS-Server
+
+Die Kachel **SVWS-Server** stellt zwei Dateien des verbundenen SVWS-Servers zum Download bereit. Sie werden unverändert heruntergeladen; die Serverversion wird an den Dateinamen angehängt.
+
+| Eintrag | Inhalt | Dateiname (Beispiel) |
+|---------|--------|----------------------|
+| **Open-API-Spezifikation** | Beschreibung aller REST-Schnittstellen des Servers | `server_1.5.0.json` |
+| **Statistikkataloge** | Alle Statistikkataloge des Servers in einer Datei | `allinone_1.5.0.json` |
 
 ---
 

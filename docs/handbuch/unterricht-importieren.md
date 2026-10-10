@@ -2,14 +2,16 @@
 
 ## Ziel
 
-Über die **Unterricht**-Ansicht lassen sich alle unterrichtsbezogenen Daten eines Schuljahresabschnitts in den SVWS-Server übertragen. Die Ansicht ist in vier Bereiche (Tabs) aufgeteilt, die aufeinander aufbauen:
+Über die **Unterricht**-Ansicht lassen sich alle unterrichtsbezogenen Daten eines Schuljahresabschnitts in den SVWS-Server übertragen. Die Ansicht ist in vier Bereiche (Tabs) aufgeteilt:
 
-| Tab | Was wird gemacht? | Typische Reihenfolge |
-|-----|--------------------|----------------------|
-| [Klassenunterricht](unterricht-klassenunterricht.md) | Weist allen Schülern einer Klasse Unterrichtsfächer zu | 1. |
-| [Kursunterricht](unterricht-kursunterricht.md) | Legt neue Kurse (z. B. Religions- oder Wahlpflichtkurse) in der Datenbank an | 2. |
-| [Schülerunterricht](unterricht-schuelerunterricht.md) | Importiert individuelle Leistungsdaten einzelner Schüler | 3. |
-| [Kurszuweisung](unterricht-kurszuweisung.md) | Weist Schüler per Klick interaktiv Kursen zu | 4. |
+| Tab | Was wird gemacht? |
+|-----|--------------------|
+| [Klassenunterricht](unterricht-klassenunterricht.md) | Weist allen Schülern einer Klasse Unterrichtsfächer zu |
+| [Schülerunterricht](unterricht-schuelerunterricht.md) | Importiert individuelle Leistungsdaten einzelner Schüler |
+| [Kursunterricht](unterricht-kursunterricht.md) | Legt neue Kurse (z. B. Religions- oder Wahlpflichtkurse) in der Datenbank an |
+| [Kurszuweisung](unterricht-kurszuweisung.md) | Weist Schüler per Klick interaktiv Kursen zu |
+
+> **Wichtig – Reihenfolge bei Kursen:** Ist in der Datei für den Schülerunterricht die Spalte `kurs` gefüllt, müssen die Kurse **vorher** über den Tab [Kursunterricht](unterricht-kursunterricht.md) angelegt werden. Andernfalls werden diese Zeilen mit „Kurs … in diesem Abschnitt nicht gefunden" rot markiert und nicht importiert. Ohne Kurs-Angaben kann der Schülerunterricht direkt nach dem Klassenunterricht importiert werden.
 
 ---
 

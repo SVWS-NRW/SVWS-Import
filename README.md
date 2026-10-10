@@ -62,7 +62,8 @@ Die App läuft dann im Vite-Dev-Server (Standard: `http://localhost:5173`).
 - `npm run electron:dev` startet die App als Electron-Desktop-App im Entwicklungsmodus (nur Linux)
 - `npm run electron:build` baut die Electron-App für die aktuelle Plattform (Linux → AppImage)
 - `npm run electron:build:win` baut den Windows-Installer (`.exe` via NSIS) – erfordert `wine` auf Linux
-- `npm run release` baut Linux (AppImage), Windows (NSIS-Installer) und das Webserver-ZIP in einem Durchgang und legt daraus einen GitHub-Release-Entwurf an – erfordert `wine` und eine angemeldete `gh`-CLI
+- `npm run release [patch|minor|major]` erhöht die Version, baut Linux (AppImage), Windows (NSIS-Installer) und das Web-App-ZIP, pusht Commit und Tag und legt einen GitHub-Release-Entwurf an – siehe [Release erstellen](#release-erstellen)
+- `npm run release:build` baut nur die Release-Dateien in `release/` (ohne Versionserhöhung und Upload)
 - `npm run release:github` legt nur den GitHub-Release-Entwurf `v<version>` aus den vorhandenen Dateien in `release/` an
 
 ## Electron Desktop-App
@@ -98,17 +99,55 @@ npm run electron:build
 # Nur Windows
 npm run electron:build:win
 
-# Linux + Windows + Webserver-ZIP, anschließend GitHub-Release-Entwurf
-npm run release
+# Linux + Windows + Web-App-ZIP (ohne Versionserhöhung und Upload)
+npm run release:build
 ```
 
 Die fertigen Pakete landen im Verzeichnis `release/`:
 
 - `SVWS-Import-<version>.AppImage`
 - `SVWS-Import-Setup-<version>.exe`
-- `SVWS-Import-<version>-webserver.zip`
+- `SVWS-Import-<version>-webapp.zip`
 
-`npm run release` lädt diese Dateien per `gh release create` als **Entwurf** (Tag `v<version>` aus der `package.json`) auf GitHub hoch. Der Entwurf kann dann auf GitHub geprüft und veröffentlicht werden. Voraussetzung ist eine angemeldete [GitHub CLI](https://cli.github.com/) (`gh auth login`). Vor einem Release die Version in der `package.json` erhöhen, da `gh` abbricht, wenn es für diese Version bereits ein Release gibt.
+### Release erstellen
+
+Voraussetzungen:
+
+- `wine` ist installiert (für den Windows-Installer, siehe oben)
+- die [GitHub CLI](https://cli.github.com/) ist angemeldet (`gh auth status`, sonst `gh auth login`)
+- alle Änderungen sind committet und der Branch hat einen Upstream auf GitHub
+
+Ein Befehl erledigt den kompletten Ablauf:
+
+```bash
+npm run release          # patch: 0.3.3 → 0.3.4
+npm run release minor    # minor: 0.3.3 → 0.4.0
+npm run release major    # major: 0.3.3 → 1.0.0
+```
+
+Die Flag-Schreibweise geht auch, braucht aber `--` davor, damit npm das Flag durchreicht: `npm run release -- --minor`.
+
+Das Skript [scripts/release.mjs](scripts/release.mjs) führt nacheinander aus:
+
+1. Prüfen der Voraussetzungen – bricht ab, bevor irgendetwas verändert wird
+2. `npm version <patch|minor|major>` – erhöht die Version in `package.json` und `package-lock.json`, erzeugt Commit und Tag `v<version>`
+3. `npm run release:build` – baut AppImage, Windows-Installer und Web-App-ZIP nach `release/`
+4. `git push --follow-tags` – pusht Commit und Tag
+5. `npm run release:github` – legt den Release-Entwurf „Release `<version>`“ mit den drei Dateien an (ohne Release-Notes)
+
+Anschließend auf GitHub unter **Releases** den Entwurf öffnen, Release-Notes eintragen (z. B. über „Generate release notes“) und mit **Publish release** veröffentlichen.
+
+Fehlerfälle:
+
+- **Build schlägt fehl:** Commit und Tag der Versionserhöhung werden lokal zurückgenommen, es wurde nichts gepusht. Fehler beheben und denselben Befehl erneut ausführen.
+- **Push oder Upload schlägt fehl:** Die Version ist bereits erhöht und die Dateien liegen in `release/`. Nach Behebung des Problems ohne neuen Build fortsetzen:
+
+  ```bash
+  git push --follow-tags
+  npm run release:github
+  ```
+
+- **Release existiert bereits:** `gh` bricht ab, wenn es für die Version schon ein Release gibt (auch als Entwurf). Dann den Entwurf auf GitHub löschen und `npm run release:github` erneut ausführen.
 
 ## Build und Auslieferung
 

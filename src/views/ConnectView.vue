@@ -57,13 +57,19 @@
 
         <Message v-if="auth.error" severity="error" :closable="false">
           {{ auth.error }}
+          <a
+            v-if="auth.certCheckUrl"
+            class="cert-link"
+            :href="auth.certCheckUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+          >Server-Zertifikat im neuen Tab prüfen</a>
         </Message>
 
         <Button
           type="submit"
           label="Verbinden"
           icon="pi pi-plug"
-          size="small"
           :loading="auth.connecting"
           :disabled="!isFormValid"
           class="w-full connect-btn"
@@ -228,64 +234,67 @@ async function handleConnect(): Promise<void> {
 
 .connect-card {
   background: var(--p-surface-card);
-  border-radius: 10px;
-  padding: 1.5rem;
-  width: 100%;
-  max-width: 320px;
+  border-radius: 12px;
+  padding: 2rem;
+  width: calc(100% - 2rem);
+  max-width: 440px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
 }
 
 .connect-header {
   text-align: center;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .connect-header h1 {
   margin: 0 0 0.25rem;
-  font-size: 1.1rem;
+  font-size: 1.6rem;
   font-weight: 700;
   color: var(--p-primary-color);
 }
 
 .connect-header .version {
   display: block;
-  font-size: 0.65rem;
+  font-size: 0.8rem;
   color: var(--p-text-muted-color);
   margin-bottom: 0.25rem;
 }
 
 .connect-header p {
   margin: 0;
-  font-size: 0.75rem;
+  font-size: 0.95rem;
   color: var(--p-text-muted-color);
 }
 
 .connect-form {
   display: flex;
   flex-direction: column;
-  gap: 0.625rem;
+  gap: 1rem;
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.35rem;
 }
 
 .field label {
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: var(--p-text-color);
 }
 
 .connect-btn {
-  margin-top: 0.25rem;
+  margin-top: 0.5rem;
 }
 
-:deep(.p-inputtext),
-:deep(.p-password-input) {
-  font-size: 0.78rem;
-  padding: 0.3rem 0.5rem;
+.cert-link {
+  display: block;
+  margin-top: 0.4rem;
+  font-weight: 600;
+  color: inherit;
+  text-decoration: underline;
+  word-break: break-all;
 }
 
 :deep(.p-password) {
@@ -296,22 +305,12 @@ async function handleConnect(): Promise<void> {
   width: 100%;
 }
 
-:deep(.p-password .p-password-toggle-mask-icon) {
-  width: 0.75rem;
-  height: 0.75rem;
-}
-
-:deep(.p-button) {
-  font-size: 0.78rem;
-  padding: 0.3rem 0.75rem;
-}
-
 .w-full {
   width: 100%;
 }
 
 .footer-links {
-  margin-top: 1rem;
+  margin-top: 1.25rem;
   display: flex;
   justify-content: center;
   gap: 0.5rem;
@@ -325,9 +324,9 @@ async function handleConnect(): Promise<void> {
   text-decoration: underline;
   text-underline-offset: 2px;
   font: inherit;
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   cursor: pointer;
-  padding: 0.15rem 0.3rem;
+  padding: 0.25rem 0.5rem;
 }
 
 .footer-link:hover {
@@ -347,7 +346,7 @@ async function handleConnect(): Promise<void> {
 }
 
 .modal-content {
-  font-size: 0.8rem;
+  font-size: 0.95rem;
   line-height: 1.5;
   color: var(--p-text-color);
   max-height: 70vh;
@@ -361,8 +360,8 @@ async function handleConnect(): Promise<void> {
   line-height: 1.25;
 }
 
-.modal-content :deep(h2) { font-size: 1rem; }
-.modal-content :deep(h3) { font-size: 0.9rem; }
+.modal-content :deep(h2) { font-size: 1.2rem; }
+.modal-content :deep(h3) { font-size: 1.05rem; }
 
 .modal-content :deep(p),
 .modal-content :deep(ul),

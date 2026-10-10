@@ -20,21 +20,23 @@ Jahrgangsstufen der Schule über eine CSV- oder XLSX-Datei in SVWS anlegen. Jahr
 
 | Spaltenname | Beschreibung | Beispiel |
 |-------------|-------------|----------|
-| `kuerzel` | Eindeutiges Jahrgangs-Kürzel | `05` |
-| `bezeichnung` | Voller Name des Jahrgangs | `Jahrgang 5` |
+| `kuerzel` | Eindeutiges Jahrgangs-Kürzel (max. 20 Zeichen) | `05` |
+| `bezeichnung` | Voller Name des Jahrgangs (max. 100 Zeichen) | `Jahrgang 5` |
+| `kuerzelStatistik` | Kürzel des amtlichen ASD-Jahrgangs; wird über den Katalog in die Jahrgangs-ID übersetzt | `05` |
 
 ### Wichtige optionale Felder
 
 | Spaltenname | Beschreibung | Beispiel |
 |-------------|-------------|----------|
-| `kurzbezeichnung` | Kurzbezeichnung für Listen | `Jg. 05` |
-| `kuerzelStatistik` | Kürzel für amtliche Statistik | `05` |
+| `kurzbezeichnung` | Kurzbezeichnung für Listen (max. 2 Zeichen) | `05` |
 | `sortierung` | Anzeigereihenfolge | `10` |
-| `kuerzelSchulgliederung` | Schulgliederungs-Kürzel | `***` |
-| `istSichtbar` | Im SVWS-Client anzeigen? (`true`/`false`) | `true` |
-| `anzahlRestabschnitte` | Verbleibende Halbjahre bis Schulabschluss | `12` |
-| `gueltigVon` | Erster Gültigkeits-Abschnitt | _(leer = immer)_ |
-| `gueltigBis` | Letzter Gültigkeits-Abschnitt | _(leer = immer)_ |
+| `kuerzelSchulgliederung` | Schulgliederungs-Kürzel aus dem Katalog | `***` |
+| `istSichtbar` | Im SVWS-Client anzeigen? (`true`/`false`, Standard `true`) | `true` |
+| `anzahlRestabschnitte` | Verbleibende Halbjahre bis Schulabschluss (0–41) | `12` |
+| `idBildungsstufe` | ID der Bildungsstufe (Katalog) | _(leer)_ |
+| `idFolgejahrgang` | ID des Folgejahrgangs in SVWS | _(leer)_ |
+| `gueltigVon` | ID des ersten gültigen Schuljahresabschnitts | _(leer = immer)_ |
+| `gueltigBis` | ID des letzten gültigen Schuljahresabschnitts | _(leer = immer)_ |
 
 ## Typische Jahrgangskürzel
 
@@ -50,7 +52,7 @@ Unter `examples/jahrgaenge.csv` finden Sie alle Jahrgänge von Klasse 5 bis Q2. 
 
 ```csv
 "kuerzel";"kurzbezeichnung";"kuerzelStatistik";"bezeichnung";"sortierung";"istSichtbar";"anzahlRestabschnitte"
-"05";"Jg. 05";"05";"Jahrgang 5";"10";"true";"12"
+"05";"05";"05";"Jahrgang 5";"10";"true";"12"
 "EF";"EF";"EF";"Einführungsphase";"70";"true";"3"
 "Q1";"Q1";"Q1";"Qualifikationsphase 1";"80";"true";"2"
 ```
@@ -60,6 +62,8 @@ Unter `examples/jahrgaenge.csv` finden Sie alle Jahrgänge von Klasse 5 bis Q2. 
 | Fehlermeldung | Ursache | Lösung |
 |---------------|---------|--------|
 | Pflichtfeld `kuerzel` fehlt | Spalte nicht gemappt | Mapping prüfen |
+| Statistik-Kürzel „…“ ist kein gültiger ASD-Jahrgang | `kuerzelStatistik` fehlt oder ist nicht im Katalog | Amtliches Kürzel eintragen, z. B. `05`, `EF`, `Q1` |
+| Kurzbezeichnung länger als 2 Zeichen | SVWS erlaubt nur 2 Zeichen | Kurzbezeichnung kürzen, z. B. `05` statt `Jg. 05` |
 | Jahrgang nicht gefunden (beim Klassen- oder Kursimport) | Kürzel stimmt nicht überein | Kürzel exakt angleichen – Groß-/Kleinschreibung beachten |
 | Doppeltes Kürzel | Jahrgang bereits vorhanden | Eintrag aus CSV entfernen oder in SVWS löschen |
 

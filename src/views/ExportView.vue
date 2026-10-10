@@ -1,32 +1,43 @@
 <template>
-  <div class="export-view">
-    <h2>Daten exportieren</h2>
-    <p class="subtitle">Wähle einen Datentyp, stelle die gewünschten Felder zusammen und exportiere als CSV oder JSON.</p>
+  <div class="export-view" :class="{ 'export-detail': activeTile }">
+    <!-- Übersicht: Kacheln -->
+    <template v-if="!activeTile">
+      <h2>Daten exportieren</h2>
+      <p class="subtitle">Wähle einen Datentyp, stelle die gewünschten Felder zusammen und exportiere als CSV oder JSON.</p>
 
-    <!-- Kacheln -->
-    <div class="export-cards">
-      <div
-        v-for="tile in TILES"
-        :key="tile.id"
-        class="export-card"
-        :class="{
-          active:        selectedTile === tile.id,
-          'coming-soon': tile.comingSoon,
-        }"
-        :title="tile.comingSoon ? 'Noch nicht verfügbar' : tile.description"
-        @click="!tile.comingSoon && selectTile(tile.id)"
-      >
-        <i :class="[tile.icon, 'card-icon']" />
-        <strong>{{ tile.label }}</strong>
-        <span v-if="tile.comingSoon" class="coming-soon-badge">In Vorbereitung</span>
+      <div class="export-cards">
+        <div
+          v-for="tile in TILES"
+          :key="tile.id"
+          class="export-card"
+          :class="{ 'coming-soon': tile.comingSoon }"
+          :title="tile.comingSoon ? 'Noch nicht verfügbar' : tile.description"
+          @click="!tile.comingSoon && router.push({ name: 'export', params: { tile: tile.id } })"
+        >
+          <i :class="[tile.icon, 'card-icon']" />
+          <strong>{{ tile.label }}</strong>
+          <span v-if="tile.comingSoon" class="coming-soon-badge">In Vorbereitung</span>
+        </div>
       </div>
-    </div>
+    </template>
 
-    <!-- Konfigurationsbereich -->
-    <template v-if="activeTile">
+    <!-- Exportseite der gewählten Kachel -->
+    <template v-else>
+      <div class="table-header">
+        <div class="header-left">
+          <Button
+            icon="pi pi-arrow-left"
+            text
+            rounded
+            @click="router.push({ name: 'export' })"
+            aria-label="Zurück"
+          />
+          <h2>{{ activeTile.label }} exportieren</h2>
+        </div>
+      </div>
 
-      <!-- Format + Aktionen (nur für Schüler/Lehrer und andere Tiles, nicht für Lernplattformen) -->
-      <div v-if="selectedTile !== 'lernplattformen'" class="config-section">
+      <!-- Format + Aktionen (nicht für Lernplattformen und Kataloge — eigene Bereiche) -->
+      <div v-if="!hatEigenenExportBereich" class="config-section">
         <h3 class="section-title">Format</h3>
         <div class="format-row">
           <label class="format-option">
@@ -42,14 +53,14 @@
           <div class="format-actions">
             <Button
               :label="loadBtnLabel"
-              :icon="selectedTile === 'schueler' ? 'pi pi-file-export' : 'pi pi-refresh'"
+              :icon="istSchuelerAuswahlTile ? 'pi pi-file-export' : 'pi pi-refresh'"
               size="small"
               :loading="loading"
-              :disabled="selectedFields.length === 0 || (selectedTile === 'schueler' && schuelerAuswahl.length === 0) || (selectedTile === 'lehrer' && lehrerListe.length === 0)"
+              :disabled="selectedFields.length === 0 || (istSchuelerAuswahlTile && schuelerAuswahl.length === 0) || (selectedTile === 'lehrer' && lehrerListe.length === 0) || (selectedTile === 'betriebe' && betriebeListe.length === 0)"
               @click="loadData"
             />
             <Button
-              v-if="data.length > 0 && selectedTile !== 'schueler' && selectedTile !== 'lehrer'"
+              v-if="data.length > 0 && !istSchuelerAuswahlTile && selectedTile !== 'lehrer' && selectedTile !== 'betriebe'"
               label="Exportieren"
               icon="pi pi-file-export"
               size="small"
@@ -59,13 +70,13 @@
           </div>
         </div>
         <div v-if="exportProgress > 0" class="export-progress">
-          <span class="progress-text">Lade {{ exportDone }} / {{ exportTotal }} {{ selectedTile === 'lehrer' ? 'Lehrerstammdaten' : 'Schülerdaten' }}…</span>
+          <span class="progress-text">Lade {{ exportDone }} / {{ exportTotal }} {{ selectedTile === 'lehrer' ? 'Lehrerstammdaten' : selectedTile === 'erzieher' ? 'Erzieherdaten' : 'Schülerdaten' }}…</span>
           <ProgressBar :value="Math.round(exportProgress * 100)" style="height: 6px; flex: 1" />
         </div>
       </div>
 
-      <!-- Felder wählen (nicht für Lernplattformen) -->
-      <div v-if="selectedTile !== 'lernplattformen'" class="config-section">
+      <!-- Felder wählen (nicht für Lernplattformen und Kataloge) -->
+      <div v-if="!hatEigenenExportBereich" class="config-section">
         <div class="section-header">
           <h3 class="section-title">Felder auswählen</h3>
           <div class="section-actions">
@@ -113,9 +124,12 @@
       <Message v-if="loadError" severity="error" :closable="true" @close="loadError = ''">
         {{ loadError }}
       </Message>
+      <Message v-if="exportInfo" severity="info" :closable="true" @close="exportInfo = ''">
+        {{ exportInfo }}
+      </Message>
 
-      <!-- Schülerliste (automatisch bei Schülerdaten-Kachel) -->
-      <div v-if="selectedTile === 'schueler'" class="config-section">
+      <!-- Schülerliste (automatisch bei Schülerdaten- und Erzieherdaten-Kachel) -->
+      <div v-if="istSchuelerAuswahlTile" class="config-section">
         <div class="section-header">
           <h3 class="section-title">
             Schülerliste
@@ -139,7 +153,7 @@
               optionValue="id"
               placeholder="Abschnitt wählen"
               size="small"
-              style="width: 160px"
+              style="width: 190px"
             />
             <InputNumber
               v-else
@@ -147,21 +161,21 @@
               :min="1"
               placeholder="Abschnitt-ID"
               size="small"
-              style="width: 100px"
+              style="width: 120px"
             />
             <MultiSelect
               v-model="jahrgangFilter"
               :options="jahrgaengeOptions"
               placeholder="Jahrgang"
               size="small"
-              style="width: 110px"
+              style="width: 135px"
             />
             <MultiSelect
               v-model="klasseFilter"
               :options="klassenOptions"
               placeholder="Klasse"
               size="small"
-              style="width: 110px"
+              style="width: 135px"
             />
             <MultiSelect
               v-model="statusFilter"
@@ -170,7 +184,7 @@
               optionValue="value"
               placeholder="Status"
               size="small"
-              style="width: 110px"
+              style="width: 135px"
             />
             <Button
               icon="pi pi-refresh"
@@ -226,6 +240,101 @@
         </DataTable>
       </div>
 
+      <!-- Kataloge -->
+      <div v-if="selectedTile === 'kataloge'" class="config-section">
+        <div class="section-header">
+          <h3 class="section-title">
+            Kataloge auswählen
+            <span class="count-badge">{{ selectedKataloge.length }} von {{ KATALOGE.length }}</span>
+          </h3>
+          <div class="section-actions">
+            <Button label="Alle" size="small" severity="secondary" text @click="selectedKataloge = KATALOGE.map(k => k.id)" />
+            <Button label="Keine" size="small" severity="secondary" text @click="selectedKataloge = []" />
+          </div>
+        </div>
+        <p class="katalog-hint">
+          Jeder Katalog wird als eigene JSON-Datei heruntergeladen — unverändert, so wie der SVWS-Server ihn liefert.
+        </p>
+        <div class="katalog-grid">
+          <label v-for="k in KATALOGE" :key="k.id" class="field-label">
+            <Checkbox v-model="selectedKataloge" :value="k.id" />
+            <span>{{ k.label }}</span>
+          </label>
+        </div>
+
+        <div v-if="selectedKataloge.some(id => KATALOGE.find(k => k.id === id)?.jeAbschnitt)" class="lernplattform-row">
+          <label class="lernplattform-label">Schuljahresabschnitt (Abteilungen)</label>
+          <Select
+            v-if="schuleStore.loaded"
+            v-model="selectedAbschnittId"
+            :options="schuleStore.abschnitteOptions"
+            optionLabel="label"
+            optionValue="id"
+            placeholder="Abschnitt wählen"
+            size="small"
+            style="width: 240px"
+          />
+          <InputNumber
+            v-else
+            v-model="selectedAbschnittId"
+            :min="1"
+            placeholder="Abschnitt-ID"
+            size="small"
+            style="width: 140px"
+          />
+        </div>
+
+        <div class="lernplattform-row">
+          <Button
+            :label="selectedKataloge.length === 1 ? '1 Katalog als JSON exportieren' : `${selectedKataloge.length} Kataloge als JSON exportieren`"
+            icon="pi pi-download"
+            size="small"
+            :loading="katalogLoading"
+            :disabled="selectedKataloge.length === 0"
+            @click="doKatalogExport"
+          />
+          <span v-if="katalogLoading && katalogAktuell" class="progress-text">Lade {{ katalogAktuell }}…</span>
+        </div>
+
+        <Message v-if="katalogErfolg" severity="success" :closable="true" @close="katalogErfolg = ''">
+          {{ katalogErfolg }}
+        </Message>
+        <Message v-if="katalogFehler.length > 0" severity="error" :closable="true" @close="katalogFehler = []">
+          Nicht exportiert:
+          <ul class="katalog-fehler">
+            <li v-for="f in katalogFehler" :key="f">{{ f }}</li>
+          </ul>
+        </Message>
+      </div>
+
+      <!-- SVWS-Server -->
+      <div v-if="selectedTile === 'svws-server'" class="config-section">
+        <h3 class="section-title">
+          Dateien des SVWS-Servers
+          <span v-if="serverVersion" class="count-badge">Version {{ serverVersion }}</span>
+        </h3>
+        <div class="server-dateien">
+          <div v-for="d in SERVER_DATEIEN" :key="d.id" class="server-datei">
+            <i class="pi pi-file server-datei-icon" />
+            <div class="server-datei-text">
+              <strong>{{ d.label }}</strong>
+              <span>{{ d.beschreibung }}</span>
+            </div>
+            <Button
+              label="Herunterladen"
+              icon="pi pi-download"
+              size="small"
+              :loading="serverLaedt === d.id"
+              :disabled="serverLaedt !== null"
+              @click="doServerDownload(d)"
+            />
+          </div>
+        </div>
+        <Message v-if="serverFehler" severity="error" :closable="true" @close="serverFehler = ''">
+          {{ serverFehler }}
+        </Message>
+      </div>
+
       <!-- Lernplattformen -->
       <div v-if="selectedTile === 'lernplattformen'" class="config-section">
         <h3 class="section-title">Lernplattform exportieren</h3>
@@ -242,7 +351,7 @@
               optionValue="id"
               placeholder="Abschnitt wählen"
               size="small"
-              style="width: 200px"
+              style="width: 240px"
             />
             <InputNumber
               v-else
@@ -250,7 +359,7 @@
               :min="1"
               placeholder="Abschnitt-ID"
               size="small"
-              style="width: 120px"
+              style="width: 140px"
             />
           </div>
 
@@ -265,7 +374,7 @@
                 optionValue="id"
                 placeholder="Lernplattform wählen"
                 size="small"
-                style="width: 250px"
+                style="width: 300px"
                 :loading="lpListLoading"
                 :disabled="lpListe.length === 0"
               />
@@ -340,7 +449,7 @@
               optionValue="value"
               placeholder="Sichtbarkeit"
               size="small"
-              style="width: 130px"
+              style="width: 160px"
             />
             <MultiSelect
               v-model="lehrerPersonalTypFilter"
@@ -349,7 +458,7 @@
               optionValue="value"
               placeholder="Personaltyp"
               size="small"
-              style="width: 130px"
+              style="width: 160px"
             />
             <Button
               icon="pi pi-refresh"
@@ -411,12 +520,92 @@
         </DataTable>
       </div>
 
+      <!-- Betriebsliste -->
+      <div v-if="selectedTile === 'betriebe'" class="config-section">
+        <div class="section-header">
+          <h3 class="section-title">
+            Betriebsliste
+            <span v-if="betriebeListe.length > 0" class="count-badge">
+              {{ filteredBetriebe.length }} von {{ betriebeListe.length }}
+              <template v-if="selectedBetriebe.length > 0"> · {{ selectedBetriebe.length }} ausgewählt</template>
+            </span>
+          </h3>
+          <div class="section-actions">
+            <InputText
+              v-model="betriebeNameSearch"
+              placeholder="Name / Ort suchen…"
+              size="small"
+              class="schueler-name-search"
+            />
+            <MultiSelect
+              v-model="betriebeSichtbarFilter"
+              :options="LEHRER_SICHTBAR_OPTIONS"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Sichtbarkeit"
+              size="small"
+              style="width: 150px"
+            />
+            <Button
+              icon="pi pi-refresh"
+              severity="secondary"
+              text
+              size="small"
+              :loading="betriebeListLoading"
+              v-tooltip.top="'Betriebsliste neu laden'"
+              @click="reloadBetriebeListe"
+            />
+          </div>
+        </div>
+        <div v-if="betriebeListLoading" class="list-empty">
+          <i class="pi pi-spin pi-spinner" />
+          <span>Betriebe werden geladen…</span>
+        </div>
+        <div v-else-if="betriebeListError" class="list-error">
+          <i class="pi pi-exclamation-triangle" />
+          <span>{{ betriebeListError }}</span>
+        </div>
+        <DataTable
+          v-else
+          v-model:selection="selectedBetriebe"
+          :value="filteredBetriebe"
+          dataKey="id"
+          paginator
+          :rows="50"
+          :rowsPerPageOptions="[25, 50, 100, 200]"
+          paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown CurrentPageReport"
+          currentPageReportTemplate="{first}–{last} von {totalRecords}"
+          size="small"
+          sortMode="single"
+          class="compact-table"
+        >
+          <Column selectionMode="multiple" style="width: 3rem; flex: none" />
+          <Column field="id"      header="ID"      sortable style="width: 80px" />
+          <Column field="name"    header="Name"    sortable style="min-width: 200px" />
+          <Column field="branche" header="Branche" sortable style="min-width: 140px" />
+          <Column field="ort"     header="Ort"     sortable style="min-width: 140px" />
+          <Column header="Sichtbar" sortField="istSichtbar" sortable style="min-width: 110px">
+            <template #body="{ data: row }">
+              <span :class="['status-badge', row.istSichtbar ? 'sichtbar-ja' : 'sichtbar-nein']">
+                {{ row.istSichtbar ? 'Sichtbar' : 'Versteckt' }}
+              </span>
+            </template>
+          </Column>
+          <template #empty>
+            <span style="color: var(--p-text-muted-color); font-size: 0.875rem;">
+              Keine Betriebe für den gewählten Filter.
+            </span>
+          </template>
+        </DataTable>
+      </div>
+
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import TooltipDirective from 'primevue/tooltip'
 import Button from 'primevue/button'
 
@@ -431,9 +620,12 @@ import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
-import { fetchForExport, fetchSchuelerAuswahlliste, enrichSchueler, enrichRecords, fetchOrteById, fetchReligionenById, fetchSchulenById, fetchJahrgaengeById, fetchEinschulungsartenById, fetchUebergangsempfehlungenById, fetchKindergartenbesuchsdauerById, fetchKindergartenById, fetchLernplattformen, downloadLernplattformExport, type SchuelerAuswahl, type LernplattformEintrag } from '@/services/svwsService'
+import { fetchForExport, fetchSchuelerAuswahlliste, enrichSchueler, enrichRecords, fetchOrteById, fetchReligionenById, fetchSchulenById, fetchJahrgaengeById, fetchEinschulungsartenById, fetchUebergangsempfehlungenById, fetchKindergartenbesuchsdauerById, fetchKindergartenById, fetchLernplattformen, downloadLernplattformExport, fetchErzieherFuerSchueler, fetchErzieherartenById, fetchOrtsteileById, fetchBetriebe, fetchBetriebsartenById, fetchKatalog, fetchServerVersion, fetchServerDatei, type SchuelerAuswahl, type LernplattformEintrag } from '@/services/svwsService'
 import type { OrtKatalogEintrag, ReligionKatalogEintrag } from '@/models/ImportSchema'
-import { exportAsCsv, exportAsJson } from '@/utils/exportUtils'
+import { fetchNationalitaetenIso3ById } from '@/services/katalogService'
+import { gruppiereErzieherEintraege, type ErzieherStammdaten } from '@/models/SchuelerErzieher'
+import type { BetriebDetails } from '@/models/Betriebe'
+import { exportAsCsv, exportAsJson, exportRawJson, downloadBlob } from '@/utils/exportUtils'
 import { useSchuleStore } from '@/stores/schule'
 import { useAuthStore } from '@/stores/auth'
 
@@ -497,6 +689,7 @@ const TILES: ExportTile[] = [
     ],
     fields: [
       // ── Stammdaten ──────────────────────────────────────────────────────────
+      { key: 'id',                             label: 'Schüler-ID',                  section: 'Stammdaten', group: 'Personendaten' },
       { key: 'nachname',                       label: 'Nachname',                    section: 'Stammdaten', group: 'Personendaten' },
       { key: 'vorname',                        label: 'Vorname',                     section: 'Stammdaten', group: 'Personendaten' },
       { key: 'alleVornamen',                   label: 'Alle Vornamen',               section: 'Stammdaten', group: 'Personendaten' },
@@ -640,20 +833,148 @@ const TILES: ExportTile[] = [
     label: 'Erzieherdaten',
     description: 'Erziehungsberechtigte exportieren',
     icon: 'pi pi-heart',
-    comingSoon: true,
+    // Spaltenüberschriften so gewählt, dass die Datei wieder in den Erzieher-Import eingelesen werden kann
+    fields: [
+      { key: 'schuelerId',            label: 'Schüler-ID',                    group: 'Schüler' },
+      { key: 'nachname',              label: 'Nachname',                      group: 'Schüler' },
+      { key: 'vorname',               label: 'Vorname',                       group: 'Schüler' },
+      { key: 'geburtsdatum',          label: 'Geburtsdatum',                  group: 'Schüler' },
+      { key: 'klasse',                label: 'Klasse',                        group: 'Schüler' },
+      { key: 'jahrgang',              label: 'Jahrgang',                      group: 'Schüler' },
+      { key: 'erzieherId',            label: 'Erzieher-ID',                   group: 'Eintrag' },
+      { key: 'erzieherart',           label: 'Erzieherart',                   group: 'Eintrag' },
+      { key: 'erhaeltAnschreiben',    label: 'Anschreiben',                   group: 'Eintrag' },
+      { key: 'bemerkungen',           label: 'Bemerkungen',                   group: 'Eintrag' },
+      { key: 'anrede1',               label: 'Anrede 1. Person',              group: '1. Person' },
+      { key: 'titel1',                label: 'Titel 1. Person',               group: '1. Person' },
+      { key: 'nachname1',             label: 'Nachname 1. Person',            group: '1. Person' },
+      { key: 'vorname1',              label: 'Vorname 1. Person',             group: '1. Person' },
+      { key: 'email1',                label: 'E-Mail 1. Person',              group: '1. Person' },
+      { key: 'staatsangehoerigkeit1', label: 'Staatsangehörigkeit 1. Person', group: '1. Person' },
+      { key: 'anrede2',               label: 'Anrede 2. Person',              group: '2. Person' },
+      { key: 'titel2',                label: 'Titel 2. Person',               group: '2. Person' },
+      { key: 'nachname2',             label: 'Nachname 2. Person',            group: '2. Person' },
+      { key: 'vorname2',              label: 'Vorname 2. Person',             group: '2. Person' },
+      { key: 'email2',                label: 'E-Mail 2. Person',              group: '2. Person' },
+      { key: 'staatsangehoerigkeit2', label: 'Staatsangehörigkeit 2. Person', group: '2. Person' },
+      { key: 'strassenname',          label: 'Straße',                        group: 'Adresse' },
+      { key: 'hausnummer',            label: 'Hausnummer',                    group: 'Adresse' },
+      { key: 'hausnummerZusatz',      label: 'Hausnummerzusatz',              group: 'Adresse' },
+      { key: 'plz',                   label: 'PLZ',                           group: 'Adresse' },
+      { key: 'ort',                   label: 'Ort',                           group: 'Adresse' },
+      { key: 'ortsteil',              label: 'Ortsteil',                      group: 'Adresse' },
+    ],
   },
   {
     id: 'betriebe',
     label: 'Betriebe',
     description: 'Ausbildungsbetriebe exportieren',
     icon: 'pi pi-building',
-    comingSoon: true,
+    // Spaltenüberschriften so gewählt, dass die Datei wieder in den Betriebe-Import eingelesen werden kann
+    fields: [
+      { key: 'id',                                      label: 'Betrieb-ID',                   group: 'Betrieb' },
+      { key: 'name',                                    label: 'Name',                         group: 'Betrieb' },
+      { key: 'nameZusatz',                              label: 'Namenszusatz',                 group: 'Betrieb' },
+      { key: 'branche',                                 label: 'Branche',                      group: 'Betrieb' },
+      { key: 'betriebsart',                             label: 'Betriebsart',                  group: 'Betrieb' },
+      { key: 'bemerkungen',                             label: 'Bemerkungen',                  group: 'Betrieb' },
+      { key: 'strasse',                                 label: 'Straße',                       group: 'Adresse' },
+      { key: 'hausnummer',                              label: 'Hausnummer',                   group: 'Adresse' },
+      { key: 'hausnummerZusatz',                        label: 'Hausnummerzusatz',             group: 'Adresse' },
+      { key: 'plz',                                     label: 'PLZ',                          group: 'Adresse' },
+      { key: 'ort',                                     label: 'Ort',                          group: 'Adresse' },
+      { key: 'telefon1',                                label: 'Telefon 1',                    group: 'Kontakt' },
+      { key: 'telefon2',                                label: 'Telefon 2',                    group: 'Kontakt' },
+      { key: 'fax',                                     label: 'Fax',                          group: 'Kontakt' },
+      { key: 'eMail',                                   label: 'E-Mail',                       group: 'Kontakt' },
+      { key: 'istAusbildungsbetrieb',                   label: 'Ausbildungsbetrieb',           group: 'Merkmale' },
+      { key: 'istMassnahmentraeger',                    label: 'Maßnahmenträger',              group: 'Merkmale' },
+      { key: 'bietetPraktikumsplaetzeAn',               label: 'Praktikumsplätze',             group: 'Merkmale' },
+      { key: 'belehrungNachISGErforderlich',            label: 'Belehrung nach ISG',           group: 'Merkmale' },
+      { key: 'erweitertesFuehrungszeugnisErforderlich', label: 'Erweitertes Führungszeugnis',  group: 'Merkmale' },
+      { key: 'istSichtbar',                             label: 'Sichtbar',                     group: 'Merkmale' },
+      { key: 'sortierung',                              label: 'Sortierung',                   group: 'Merkmale' },
+    ],
+  },
+  {
+    id: 'kataloge',
+    label: 'Kataloge',
+    description: 'Schulinterne Kataloge als JSON exportieren',
+    icon: 'pi pi-book',
+  },
+  {
+    id: 'svws-server',
+    label: 'SVWS-Server',
+    description: 'Open-API-Spezifikation und Statistikkataloge des Servers herunterladen',
+    icon: 'pi pi-server',
   },
   {
     id: 'lernplattformen',
     label: 'Lernplattformen',
     description: 'Zugangsdaten für Lernplattformen exportieren',
     icon: 'pi pi-desktop',
+  },
+]
+
+interface KatalogDef {
+  id: string
+  label: string
+  endpoint: string
+  /** Endpunkt erwartet die ID des Schuljahresabschnitts als letzten Pfadteil */
+  jeAbschnitt?: boolean
+}
+
+/** Schulinterne Kataloge wie im SVWS-Client unter Schule > Kataloge */
+const KATALOGE: KatalogDef[] = [
+  { id: 'abteilungen',         label: 'Abteilungen',         endpoint: '/schule/abteilungen', jeAbschnitt: true },
+  { id: 'ankreuzkompetenzen',  label: 'Ankreuzkompetenzen',  endpoint: '/schule/ankreuzkompetenzen' },
+  { id: 'betriebe',            label: 'Betriebe',            endpoint: '/schule/betriebe' },
+  { id: 'betriebsarten',       label: 'Betriebsarten',       endpoint: '/schule/betriebsarten' },
+  { id: 'einwilligungsarten',  label: 'Einwilligungsarten',  endpoint: '/schule/einwilligungsarten' },
+  { id: 'entlassgruende',      label: 'Entlassgründe',       endpoint: '/entlassgruende' },
+  { id: 'erzieherarten',       label: 'Erzieherarten',       endpoint: '/schule/erzieherarten' },
+  { id: 'faecher',             label: 'Fächer',              endpoint: '/faecher' },
+  { id: 'fahrschuelerarten',   label: 'Fahrschülerarten',    endpoint: '/schueler/fahrschuelerarten' },
+  { id: 'floskelgruppen',      label: 'Floskelgruppen',      endpoint: '/schule/floskelgruppen' },
+  { id: 'floskeln',            label: 'Floskeln',            endpoint: '/schule/floskeln' },
+  { id: 'foerderschwerpunkte', label: 'Förderschwerpunkte',  endpoint: '/foerderschwerpunkte' },
+  { id: 'haltestellen',        label: 'Haltestellen',        endpoint: '/haltestellen' },
+  { id: 'jahrgaenge',          label: 'Jahrgänge',           endpoint: '/jahrgaenge' },
+  { id: 'konfessionen',        label: 'Konfessionen',        endpoint: '/schule/religionen' },
+  { id: 'leitungsfunktionen',  label: 'Leitungsfunktionen',  endpoint: '/schule/leitungsfunktionen' },
+  { id: 'lernplattformen',     label: 'Lernplattformen',     endpoint: '/schule/lernplattformen' },
+  { id: 'orte',                label: 'Orte',                endpoint: '/orte' },
+  { id: 'ortsteile',           label: 'Ortsteile',           endpoint: '/ortsteile' },
+  { id: 'schulen',             label: 'Schulen',             endpoint: '/schule/schulen' },
+  { id: 'teilleistungsarten',  label: 'Teilleistungsarten',  endpoint: '/teilleistungsarten' },
+  { id: 'telefonarten',        label: 'Telefonarten',        endpoint: '/schule/telefonarten' },
+  { id: 'vermerkarten',        label: 'Vermerkarten',        endpoint: '/schule/vermerkarten' },
+]
+
+interface ServerDatei {
+  id: string
+  label: string
+  beschreibung: string
+  /** Pfad relativ zur Server-URL (ohne /db/{schema}) */
+  pfad: string
+  /** Dateiname ohne Endung; die Serverversion wird angehängt */
+  dateiname: string
+}
+
+const SERVER_DATEIEN: ServerDatei[] = [
+  {
+    id: 'openapi',
+    label: 'Open-API-Spezifikation',
+    beschreibung: 'Schnittstellenbeschreibung aller REST-Endpunkte (server.json)',
+    pfad: '/openapi/server.json',
+    dateiname: 'server',
+  },
+  {
+    id: 'allinone',
+    label: 'Statistikkataloge',
+    beschreibung: 'Alle Statistikkataloge des Servers in einer Datei (allinone.json)',
+    pfad: '/types/allinone.json',
+    dateiname: 'allinone',
   },
 ]
 
@@ -720,6 +1041,11 @@ const LEHRER_BOOL_FIELDS = new Set([
   'istAktiv', 'istSichtbar', 'istRelevantFuerStatistik',
 ])
 
+const BETRIEB_BOOL_FIELDS = new Set([
+  'istAusbildungsbetrieb', 'istMassnahmentraeger', 'bietetPraktikumsplaetzeAn',
+  'belehrungNachISGErforderlich', 'erweitertesFuehrungszeugnisErforderlich', 'istSichtbar',
+])
+
 function formatLehrerValue(key: string, value: unknown): unknown {
   if (key === 'geschlecht') return GESCHLECHT_LABELS[value as number] ?? String(value ?? '')
   if (LEHRER_BOOL_FIELDS.has(key)) return value === true ? 'Ja' : value === false ? 'Nein' : ''
@@ -727,6 +1053,8 @@ function formatLehrerValue(key: string, value: unknown): unknown {
   return value
 }
 
+const route       = useRoute()
+const router      = useRouter()
 const schuleStore = useSchuleStore()
 const authStore   = useAuthStore()
 
@@ -748,6 +1076,7 @@ const listError               = ref('')
 const exportProgress          = ref(0)
 const exportDone              = ref(0)
 const exportTotal             = ref(0)
+const exportInfo              = ref('')
 const lehrerListe             = ref<Record<string, unknown>[]>([])
 const selectedLehrer          = ref<Record<string, unknown>[]>([])
 const lehrerListLoading       = ref(false)
@@ -755,6 +1084,23 @@ const lehrerListError         = ref('')
 const lehrerSichtbarFilter    = ref<boolean[]>([true])
 const lehrerPersonalTypFilter = ref<string[]>([])
 const lehrerNameSearch        = ref('')
+/** Betriebe inkl. aufgelöstem PLZ/Ort (für Anzeige, Suche und Export) */
+const betriebeListe           = ref<(BetriebDetails & { plz: string; ort: string })[]>([])
+const selectedBetriebe        = ref<(BetriebDetails & { plz: string; ort: string })[]>([])
+const betriebeListLoading     = ref(false)
+const betriebeListError       = ref('')
+const betriebeSichtbarFilter  = ref<boolean[]>([])
+const betriebeNameSearch      = ref('')
+
+const selectedKataloge = ref<string[]>([])
+const katalogLoading   = ref(false)
+const katalogAktuell   = ref('')
+const katalogErfolg    = ref('')
+const katalogFehler    = ref<string[]>([])
+
+const serverVersion = ref('')
+const serverLaedt   = ref<string | null>(null)
+const serverFehler  = ref('')
 
 const lpListe        = ref<LernplattformEintrag[]>([])
 const lpSelectedId   = ref<number | null>(null)
@@ -766,6 +1112,16 @@ const lpLoading      = ref(false)
 const lpError        = ref('')
 
 const activeTile = computed(() => TILES.find(t => t.id === selectedTile.value))
+
+/** Kacheln ohne Format- und Feldauswahl */
+const hatEigenenExportBereich = computed(() =>
+  selectedTile.value === 'lernplattformen' || selectedTile.value === 'kataloge' || selectedTile.value === 'svws-server',
+)
+
+/** Kacheln, deren Export über die Schülerliste (Auswahl + Filter) gesteuert wird */
+const istSchuelerAuswahlTile = computed(() =>
+  selectedTile.value === 'schueler' || selectedTile.value === 'erzieher',
+)
 
 const hasSections = computed(() =>
   (activeTile.value?.fields ?? []).some(f => f.section),
@@ -806,6 +1162,18 @@ const loadBtnLabel = computed(() => {
       : filteredSchueler.value.length
     return count > 0 ? `${count} Schüler exportieren` : 'Exportieren'
   }
+  if (selectedTile.value === 'erzieher') {
+    const count = selectedSchueler.value.length > 0
+      ? selectedSchueler.value.length
+      : filteredSchueler.value.length
+    return count > 0 ? `Erzieher von ${count} Schülern exportieren` : 'Exportieren'
+  }
+  if (selectedTile.value === 'betriebe') {
+    const count = selectedBetriebe.value.length > 0
+      ? selectedBetriebe.value.length
+      : filteredBetriebe.value.length
+    return count > 0 ? `${count} Betriebe exportieren` : 'Exportieren'
+  }
   if (selectedTile.value === 'lehrer') {
     const count = selectedLehrer.value.length > 0
       ? selectedLehrer.value.length
@@ -824,6 +1192,17 @@ const filteredLehrer = computed(() => {
     (!typSet      || typSet.has(l.personTyp as string)) &&
     (!nameQ       || (l.nachname as string).toLowerCase().includes(nameQ) ||
                      (l.vorname  as string).toLowerCase().includes(nameQ)),
+  )
+})
+
+const filteredBetriebe = computed(() => {
+  const sichtbarSet = betriebeSichtbarFilter.value.length > 0 ? new Set(betriebeSichtbarFilter.value) : null
+  const q           = betriebeNameSearch.value.trim().toLowerCase()
+  return betriebeListe.value.filter(b =>
+    (!sichtbarSet || sichtbarSet.has(b.istSichtbar !== false)) &&
+    (!q           || (b.name ?? '').toLowerCase().includes(q) ||
+                     (b.nameZusatz ?? '').toLowerCase().includes(q) ||
+                     b.ort.toLowerCase().includes(q)),
   )
 })
 
@@ -850,24 +1229,37 @@ const filteredSchueler = computed(() => {
   )
 })
 
-onMounted(() => {
-  if (schuleStore.aktuellerAbschnittId !== null) {
-    selectedAbschnittId.value = schuleStore.aktuellerAbschnittId
-    lpAbschnittId.value = schuleStore.aktuellerAbschnittId
-  }
-})
+// Vor dem Routen-Watch setzen, damit die Schülerliste beim direkten Aufruf sofort laden kann
+if (schuleStore.aktuellerAbschnittId !== null) {
+  selectedAbschnittId.value = schuleStore.aktuellerAbschnittId
+  lpAbschnittId.value = schuleStore.aktuellerAbschnittId
+}
 
 watch(selectedAbschnittId, (newId, oldId) => {
-  if (newId !== null && oldId !== null && selectedTile.value === 'schueler') {
+  if (newId !== null && oldId !== null && istSchuelerAuswahlTile.value) {
     reloadAuswahlliste()
   }
 })
+
+// Die gewählte Kachel kommt aus der Route (/export/:tile); ohne Parameter wird die Übersicht gezeigt
+watch(
+  () => route.params.tile,
+  (param) => {
+    const id = typeof param === 'string' ? param : ''
+    if (!id) { selectedTile.value = null; return }
+    const tile = TILES.find(t => t.id === id)
+    if (!tile || tile.comingSoon) { router.replace({ name: 'export' }); return }
+    selectTile(id)
+  },
+  { immediate: true },
+)
 
 function selectTile(id: string): void {
   if (selectedTile.value === id) return
   selectedTile.value = id
   data.value = []
   loadError.value = ''
+  exportInfo.value = ''
   schuelerAuswahl.value = []
   selectedSchueler.value = []
   jahrgangFilter.value = []
@@ -876,10 +1268,21 @@ function selectTile(id: string): void {
   lehrerListe.value = []
   selectedLehrer.value = []
   lehrerListError.value = ''
+  betriebeListe.value = []
+  selectedBetriebe.value = []
+  betriebeListError.value = ''
+  katalogErfolg.value = ''
+  katalogFehler.value = []
   const tile = TILES.find(t => t.id === id)
   selectedFields.value = tile?.fields?.map(f => f.key) ?? []
-  if (id === 'schueler')      reloadAuswahlliste()
+  if (id === 'schueler' || id === 'erzieher') reloadAuswahlliste()
   if (id === 'lehrer')        reloadLehrerListe()
+  if (id === 'betriebe')      reloadBetriebeListe()
+  if (id === 'svws-server') {
+    serverFehler.value = ''
+    // Version nur für Anzeige und Dateinamen — ohne sie funktioniert der Download trotzdem
+    fetchServerVersion().then(v => { serverVersion.value = v }).catch(() => { serverVersion.value = '' })
+  }
   if (id === 'lernplattformen') {
     lpListe.value = []
     lpSelectedId.value = null
@@ -924,6 +1327,78 @@ async function reloadLehrerListe(): Promise<void> {
     lehrerListe.value = []
   } finally {
     lehrerListLoading.value = false
+  }
+}
+
+async function reloadBetriebeListe(): Promise<void> {
+  betriebeListLoading.value = true
+  betriebeListError.value = ''
+  selectedBetriebe.value = []
+  try {
+    const [betriebe, orteById] = await Promise.all([
+      fetchBetriebe(),
+      // Ortskatalog optional: ohne ihn bleiben PLZ/Ort leer
+      fetchOrteById().catch(() => new Map<number, OrtKatalogEintrag>()),
+    ])
+    betriebeListe.value = betriebe.map(b => {
+      const ort = b.idOrt != null ? orteById.get(b.idOrt) : undefined
+      return { ...b, plz: ort?.plz ?? '', ort: ort?.ortsname ?? '' }
+    })
+  } catch (e) {
+    betriebeListError.value = e instanceof Error ? e.message : 'Fehler beim Laden der Betriebe'
+    betriebeListe.value = []
+  } finally {
+    betriebeListLoading.value = false
+  }
+}
+
+async function doKatalogExport(): Promise<void> {
+  katalogErfolg.value = ''
+  katalogFehler.value = []
+  const auswahl = KATALOGE.filter(k => selectedKataloge.value.includes(k.id))
+  const date = new Date().toISOString().slice(0, 10)
+  let exportiert = 0
+
+  katalogLoading.value = true
+  try {
+    for (const k of auswahl) {
+      katalogAktuell.value = k.label
+      if (k.jeAbschnitt && selectedAbschnittId.value === null) {
+        katalogFehler.value.push(`${k.label}: kein Schuljahresabschnitt gewählt`)
+        continue
+      }
+      const endpoint = k.jeAbschnitt ? `${k.endpoint}/${selectedAbschnittId.value}` : k.endpoint
+      try {
+        const daten = await fetchKatalog(endpoint)
+        const suffix = k.jeAbschnitt ? `_abschnitt-${selectedAbschnittId.value}` : ''
+        exportRawJson(daten, `katalog_${k.id}${suffix}_${date}.json`)
+        exportiert++
+        // Kurze Pause, damit der Browser mehrere Downloads nacheinander annimmt
+        if (auswahl.length > 1) await new Promise(r => setTimeout(r, 300))
+      } catch (e) {
+        katalogFehler.value.push(`${k.label}: ${e instanceof Error ? e.message : 'Fehler beim Laden'}`)
+      }
+    }
+    if (exportiert > 0) {
+      katalogErfolg.value = exportiert === 1 ? '1 Katalog exportiert.' : `${exportiert} Kataloge exportiert.`
+    }
+  } finally {
+    katalogLoading.value = false
+    katalogAktuell.value = ''
+  }
+}
+
+async function doServerDownload(d: ServerDatei): Promise<void> {
+  serverFehler.value = ''
+  serverLaedt.value = d.id
+  try {
+    const blob = await fetchServerDatei(d.pfad)
+    const suffix = serverVersion.value ? `_${serverVersion.value}` : ''
+    downloadBlob(blob, `${d.dateiname}${suffix}.json`)
+  } catch (e) {
+    serverFehler.value = `${d.label}: ${e instanceof Error ? e.message : 'Fehler beim Herunterladen'}`
+  } finally {
+    serverLaedt.value = null
   }
 }
 
@@ -977,6 +1452,7 @@ async function loadData(): Promise<void> {
   const tile = activeTile.value
   if (!tile) return
   loadError.value = ''
+  exportInfo.value = ''
 
   if (tile.id === 'schueler') {
     const students = selectedSchueler.value.length > 0
@@ -1086,6 +1562,16 @@ async function loadData(): Promise<void> {
     return
   }
 
+  if (tile.id === 'erzieher') {
+    await exportErzieher(tile)
+    return
+  }
+
+  if (tile.id === 'betriebe') {
+    await exportBetriebe(tile)
+    return
+  }
+
   if (tile.id === 'lehrer') {
     const teachers = selectedLehrer.value.length > 0 ? selectedLehrer.value : filteredLehrer.value
     if (teachers.length === 0) { loadError.value = 'Keine Lehrkräfte zum Exportieren vorhanden.'; return }
@@ -1162,6 +1648,151 @@ async function loadData(): Promise<void> {
   }
 }
 
+async function exportErzieher(tile: ExportTile): Promise<void> {
+  const students = selectedSchueler.value.length > 0 ? selectedSchueler.value : filteredSchueler.value
+  if (students.length === 0) { loadError.value = 'Keine Schüler zum Exportieren vorhanden.'; return }
+  if (selectedFields.value.length === 0) { loadError.value = 'Bitte mindestens ein Feld auswählen.'; return }
+
+  loading.value = true
+  exportProgress.value = 0
+  exportDone.value = 0
+  exportTotal.value = students.length
+  try {
+    const sf = selectedFields.value
+    const needsArt       = sf.includes('erzieherart')
+    const needsOrt       = sf.some(f => f === 'plz' || f === 'ort')
+    const needsOrtsteil  = sf.includes('ortsteil')
+    const needsNationen  = sf.some(f => f === 'staatsangehoerigkeit1' || f === 'staatsangehoerigkeit2')
+
+    const nm = <T>() => Promise.resolve(null as unknown as Map<number, T>)
+    const [erzieherJeSchueler, artenById, orteById, ortsteileById, nationenById] = await Promise.all([
+      fetchErzieherFuerSchueler(
+        students,
+        (done, total) => { exportDone.value = done; exportTotal.value = total; exportProgress.value = done / total },
+      ),
+      needsArt      ? fetchErzieherartenById()        : nm<string>(),
+      needsOrt      ? fetchOrteById()                 : nm<OrtKatalogEintrag>(),
+      needsOrtsteil ? fetchOrtsteileById()            : nm<string>(),
+      // Katalog optional: ohne allinone.json bleibt die Staatsangehörigkeit leer
+      needsNationen ? fetchNationalitaetenIso3ById().catch(() => new Map<number, string>()) : nm<string>(),
+    ])
+
+    const nation = (p: ErzieherStammdaten | null) =>
+      p?.idStaatsangehoerigkeit != null ? nationenById?.get(p.idStaatsangehoerigkeit) ?? '' : ''
+
+    // Eine Zeile je Erzieher-Eintrag; Schüler ohne Erzieher werden nicht exportiert
+    const rows: Record<string, unknown>[] = []
+    let ohneErzieher = 0
+    students.forEach((s, i) => {
+      const eintraege = gruppiereErzieherEintraege(erzieherJeSchueler[i])
+      if (eintraege.length === 0) { ohneErzieher++; return }
+      for (const { id, person1: p1, person2: p2 } of eintraege) {
+        const ort = p1.wohnortID != null ? orteById?.get(p1.wohnortID) : undefined
+        rows.push({
+          schuelerId:            s.id,
+          nachname:              s.nachname,
+          vorname:               s.vorname,
+          geburtsdatum:          s.geburtsdatum ?? '',
+          klasse:                s.klasse ?? '',
+          jahrgang:              s.jahrgang ?? '',
+          erzieherId:            id,
+          erzieherart:           p1.idErzieherArt != null ? artenById?.get(p1.idErzieherArt) ?? '' : '',
+          erhaeltAnschreiben:    p1.erhaeltAnschreiben === true ? 'Ja' : p1.erhaeltAnschreiben === false ? 'Nein' : '',
+          bemerkungen:           p1.bemerkungen ?? '',
+          anrede1:               p1.anrede ?? '',
+          titel1:                p1.titel ?? '',
+          nachname1:             p1.nachname ?? '',
+          vorname1:              p1.vorname ?? '',
+          email1:                p1.eMail ?? '',
+          staatsangehoerigkeit1: nation(p1),
+          anrede2:               p2?.anrede ?? '',
+          titel2:                p2?.titel ?? '',
+          nachname2:             p2?.nachname ?? '',
+          vorname2:              p2?.vorname ?? '',
+          email2:                p2?.eMail ?? '',
+          staatsangehoerigkeit2: nation(p2),
+          strassenname:          p1.strassenname ?? '',
+          hausnummer:            p1.hausnummer ?? '',
+          hausnummerZusatz:      p1.hausnummerZusatz ?? '',
+          plz:                   ort?.plz ?? '',
+          ort:                   ort?.ortsname ?? '',
+          ortsteil:              p1.ortsteilID != null ? ortsteileById?.get(p1.ortsteilID) ?? '' : '',
+        })
+      }
+    })
+
+    if (rows.length === 0) {
+      loadError.value = 'Für die gewählten Schüler sind keine Erzieher eingetragen.'
+      return
+    }
+
+    const fieldLabelMap = Object.fromEntries((tile.fields ?? []).map(f => [f.key, f.label]))
+    const exportCols = sf.map(k => fieldLabelMap[k] ?? k)
+    const exportData = rows.map(row => {
+      const r: Record<string, unknown> = {}
+      for (const k of sf) r[fieldLabelMap[k] ?? k] = row[k]
+      return r
+    })
+
+    const date = new Date().toISOString().slice(0, 10)
+    const filename = `erzieher_export_${date}`
+    format.value === 'csv'
+      ? exportAsCsv(exportData, exportCols, `${filename}.csv`)
+      : exportAsJson(exportData, exportCols, `${filename}.json`)
+
+    exportInfo.value = `${rows.length} Erzieher-Einträge zu ${students.length - ohneErzieher} Schülern exportiert.`
+      + (ohneErzieher > 0 ? ` ${ohneErzieher} Schüler ohne Erzieher wurden übersprungen.` : '')
+  } catch (e) {
+    loadError.value = e instanceof Error ? e.message : 'Fehler beim Exportieren'
+  } finally {
+    loading.value = false
+    exportProgress.value = 0
+    exportDone.value = 0
+    exportTotal.value = 0
+  }
+}
+
+async function exportBetriebe(tile: ExportTile): Promise<void> {
+  const betriebe = selectedBetriebe.value.length > 0 ? selectedBetriebe.value : filteredBetriebe.value
+  if (betriebe.length === 0) { loadError.value = 'Keine Betriebe zum Exportieren vorhanden.'; return }
+  if (selectedFields.value.length === 0) { loadError.value = 'Bitte mindestens ein Feld auswählen.'; return }
+
+  loading.value = true
+  try {
+    const sf = selectedFields.value
+    const artenById = sf.includes('betriebsart')
+      ? await fetchBetriebsartenById().catch(() => new Map<number, string>())
+      : null
+
+    const fieldLabelMap = Object.fromEntries((tile.fields ?? []).map(f => [f.key, f.label]))
+    const exportCols = sf.map(k => fieldLabelMap[k] ?? k)
+    const exportData = betriebe.map(b => {
+      const row: Record<string, unknown> = {
+        ...b,
+        betriebsart: b.idBetriebsart != null ? artenById?.get(b.idBetriebsart) ?? '' : '',
+      }
+      const r: Record<string, unknown> = {}
+      for (const k of sf) {
+        const v = row[k]
+        r[fieldLabelMap[k] ?? k] = BETRIEB_BOOL_FIELDS.has(k)
+          ? (v === true ? 'Ja' : v === false ? 'Nein' : '')
+          : v ?? ''
+      }
+      return r
+    })
+
+    const date = new Date().toISOString().slice(0, 10)
+    const filename = `betriebe_export_${date}`
+    format.value === 'csv'
+      ? exportAsCsv(exportData, exportCols, `${filename}.csv`)
+      : exportAsJson(exportData, exportCols, `${filename}.json`)
+  } catch (e) {
+    loadError.value = e instanceof Error ? e.message : 'Fehler beim Exportieren'
+  } finally {
+    loading.value = false
+  }
+}
+
 function doExport(): void {
   const tile = activeTile.value
   if (!tile || data.value.length === 0 || selectedFields.value.length === 0) return
@@ -1177,17 +1808,53 @@ function doExport(): void {
 
 <style scoped>
 .export-view {
-  padding: 0.375rem 1.25rem;
+  padding: 2rem 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.625rem;
+  gap: 1rem;
 }
 
-h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
+/* Exportseite: Abstände wie in den Import-Ansichten */
+.export-view.export-detail {
+  padding: 0.75rem 1.5rem;
+  gap: 0.75rem;
+}
+
+/* Kopf der Exportseite mit Zurück-Button (wie in den Import-Ansichten) */
+.table-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.table-header h2 {
+  max-width: none;
+  width: auto;
+  margin: 0;
+}
+
+/* Kopf und Kacheln in derselben zentrierten Spalte wie in ImportView (max-width 1040px abzüglich Padding) */
+h2,
+.subtitle,
+.export-cards {
+  max-width: calc(1040px - 3rem);
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+h2 { margin-top: 0; margin-bottom: 0; font-size: 1.6rem; font-weight: 600; }
 
 .subtitle {
-  margin: 0;
-  font-size: 0.75rem;
+  margin-top: -0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
   color: var(--p-text-muted-color);
 }
 
@@ -1196,7 +1863,15 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 .export-cards {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 0.625rem;
+  gap: 1rem;
+}
+
+@media (max-width: 900px) {
+  .export-cards { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 640px) {
+  .export-cards { grid-template-columns: repeat(2, 1fr); }
 }
 
 .export-card {
@@ -1205,10 +1880,11 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
   align-items: center;
   justify-content: center;
   text-align: center;
-  gap: 0.25rem;
-  padding: 0.75rem 0.5rem;
+  gap: 0.6rem;
+  min-height: 8rem;
+  padding: 1.25rem 0.75rem;
   border: 2px solid var(--p-surface-border);
-  border-radius: 10px;
+  border-radius: 12px;
   cursor: pointer;
   background: var(--p-surface-card);
   transition: border-color 0.15s, background 0.15s;
@@ -1234,23 +1910,23 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 }
 
 .card-icon {
-  font-size: 1.5rem;
+  font-size: 2.25rem;
   color: var(--p-primary-color);
 }
 
 .export-card.active .card-icon { color: var(--p-primary-700); }
 
-.export-card strong { display: block; font-size: 0.85rem; line-height: 1.2; }
+.export-card strong { display: block; font-size: 1.05rem; line-height: 1.25; }
 
 .coming-soon-badge {
   display: inline-block;
-  margin-top: 0.25rem;
-  font-size: 0.72rem;
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
   font-weight: 600;
   color: var(--p-text-muted-color);
   background: var(--p-surface-200, #e5e7eb);
   border-radius: 4px;
-  padding: 0.1rem 0.4rem;
+  padding: 0.15rem 0.5rem;
 }
 
 :global(.dark) .coming-soon-badge {
@@ -1262,11 +1938,11 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 .config-section {
   background: var(--p-surface-card);
   border: 1px solid var(--p-surface-border);
-  border-radius: 8px;
-  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.75rem;
 }
 
 .section-header {
@@ -1278,13 +1954,13 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 
 .section-title {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: 1.1rem;
   font-weight: 600;
 }
 
 .section-actions {
   display: flex;
-  gap: 0.35rem;
+  gap: 0.5rem;
   align-items: center;
   flex-wrap: wrap;
 }
@@ -1293,11 +1969,11 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 .field-section {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 .field-section-header {
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: var(--p-primary-color);
   padding: 0.25rem 0 0.15rem;
@@ -1314,7 +1990,7 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 .groups-grid {
   display: flex;
   flex-wrap: nowrap;
-  gap: 0.5rem;
+  gap: 0.75rem;
   align-items: start;
   overflow-x: auto;
   padding-bottom: 0.25rem;
@@ -1323,18 +1999,18 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 /* Einzelne Gruppen-Karte */
 .field-group-card {
   flex: 0 0 auto;
-  min-width: 190px;
+  min-width: 230px;
   border: 1px solid var(--p-surface-border);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--p-surface-ground);
-  padding: 0.4rem 0.6rem 0.5rem;
+  padding: 0.6rem 0.85rem 0.75rem;
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 0.45rem;
 }
 
 .field-group-card-header {
-  font-size: 0.68rem;
+  font-size: 0.8rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -1347,14 +2023,14 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 .field-list {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.35rem;
 }
 
 .field-label {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  font-size: 0.75rem;
+  gap: 0.5rem;
+  font-size: 0.9rem;
   cursor: pointer;
   user-select: none;
 }
@@ -1363,25 +2039,25 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 .format-row {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 1.5rem;
   flex-wrap: wrap;
 }
 
 .format-option {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.5rem;
   cursor: pointer;
-  font-size: 0.78rem;
+  font-size: 0.95rem;
   font-weight: 500;
 }
 
-.format-option i { color: var(--p-primary-color); font-size: 0.78rem; }
+.format-option i { color: var(--p-primary-color); font-size: 0.95rem; }
 
 .format-actions {
   margin-left: auto;
   display: flex;
-  gap: 0.375rem;
+  gap: 0.5rem;
   align-items: center;
 }
 
@@ -1389,8 +2065,8 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 .export-progress {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.72rem;
+  gap: 0.75rem;
+  font-size: 0.875rem;
   color: var(--p-text-muted-color);
 }
 
@@ -1401,16 +2077,16 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 .list-error {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
-  font-size: 0.75rem;
-  padding: 0.25rem 0;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  padding: 0.35rem 0;
 }
 
 .list-empty { color: var(--p-text-muted-color); }
 .list-error { color: var(--p-red-500, #ef4444); }
 
 .count-badge {
-  font-size: 0.72rem;
+  font-size: 0.875rem;
   font-weight: 400;
   color: var(--p-text-muted-color);
   margin-left: 0.35rem;
@@ -1418,9 +2094,9 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 
 .status-badge {
   display: inline-block;
-  padding: 0.1rem 0.35rem;
+  padding: 0.15rem 0.45rem;
   border-radius: 4px;
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   font-weight: 600;
 }
 
@@ -1460,13 +2136,13 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 
 :deep(.p-datatable thead th),
 :deep(.p-datatable tbody td) {
-  font-size: 0.72rem;
-  padding: 0.2rem 0.5rem;
+  font-size: 0.875rem;
+  padding: 0.35rem 0.6rem;
 }
 
 :deep(.p-datatable .p-paginator) {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.72rem;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.875rem;
 }
 
 :deep(.p-datatable .p-paginator .p-paginator-page),
@@ -1474,40 +2150,40 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 :deep(.p-datatable .p-paginator .p-paginator-prev),
 :deep(.p-datatable .p-paginator .p-paginator-next),
 :deep(.p-datatable .p-paginator .p-paginator-last) {
-  min-width: 1.6rem;
-  height: 1.6rem;
-  font-size: 0.72rem;
+  min-width: 2rem;
+  height: 2rem;
+  font-size: 0.875rem;
 }
 
 :deep(.p-datatable .p-paginator .p-paginator-current) {
-  font-size: 0.72rem;
+  font-size: 0.875rem;
 }
 
 :deep(.p-datatable .p-paginator .p-select) {
-  font-size: 0.72rem;
+  font-size: 0.875rem;
 }
 
 :deep(.p-datatable .p-checkbox) {
-  width: 14px;
-  height: 14px;
+  width: 17px;
+  height: 17px;
 }
 :deep(.p-datatable .p-checkbox .p-checkbox-box) {
-  width: 14px;
-  height: 14px;
+  width: 17px;
+  height: 17px;
 }
 :deep(.p-datatable .p-checkbox .p-checkbox-icon) {
-  font-size: 0.6rem;
-  width: 0.6rem;
-  height: 0.6rem;
+  font-size: 0.7rem;
+  width: 0.7rem;
+  height: 0.7rem;
 }
 
 :deep(.p-checkbox) {
-  width: 13px;
-  height: 13px;
+  width: 16px;
+  height: 16px;
 }
 :deep(.p-checkbox .p-checkbox-box) {
-  width: 13px;
-  height: 13px;
+  width: 16px;
+  height: 16px;
 }
 :deep(.p-checkbox .p-checkbox-icon) {
   display: none;
@@ -1518,49 +2194,105 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 
 :deep(.section-actions .p-select .p-select-label),
 :deep(.section-actions .p-multiselect .p-multiselect-label) {
-  font-size: 0.72rem;
-  padding: 0.2rem 0.25rem;
+  font-size: 0.875rem;
+  padding: 0.3rem 0.4rem;
 }
 :deep(.section-actions .p-select .p-select-dropdown),
 :deep(.section-actions .p-multiselect .p-multiselect-dropdown) {
-  width: 1.25rem;
+  width: 1.75rem;
 }
 :deep(.section-actions .p-select .p-select-dropdown .p-icon),
 :deep(.section-actions .p-multiselect .p-multiselect-dropdown .p-icon) {
-  width: 0.6rem;
-  height: 0.6rem;
+  width: 0.75rem;
+  height: 0.75rem;
 }
 
 
 :deep(.schueler-name-search) {
-  width: 200px;
-  font-size: 0.72rem;
-  padding: 0.2rem 0.35rem;
+  width: 240px;
+  font-size: 0.875rem;
+  padding: 0.3rem 0.5rem;
 }
 
 :deep(.format-actions .p-button),
 :deep(.section-actions .p-button) {
-  font-size: 0.75rem;
-  padding: 0.2rem 0.5rem;
+  font-size: 0.9rem;
+  padding: 0.35rem 0.75rem;
 }
 :deep(.format-actions .p-button .p-button-icon),
 :deep(.section-actions .p-button .p-button-icon) {
-  font-size: 0.75rem;
+  font-size: 0.9rem;
 }
 
 /* Extra-kompakte Schülertabelle — Spezifität muss >= .p-datatable.p-datatable-sm .p-datatable-tbody > tr > td sein */
 :global(.p-datatable.p-datatable-sm.compact-table .p-datatable-tbody > tr > td) {
-  font-size: 0.75rem;
-  padding: 0.1rem 0.4rem;
+  font-size: 0.875rem;
+  padding: 0.25rem 0.5rem;
 }
 :global(.p-datatable.p-datatable-sm.compact-table .p-datatable-thead > tr > th) {
-  font-size: 0.75rem;
-  padding: 0.15rem 0.4rem;
+  font-size: 0.875rem;
+  padding: 0.35rem 0.5rem;
 }
 :global(.p-datatable.compact-table) {
-  --p-checkbox-width: 1rem;
-  --p-checkbox-height: 1rem;
-  --p-checkbox-icon-size: 0.55rem;
+  --p-checkbox-width: 1.1rem;
+  --p-checkbox-height: 1.1rem;
+  --p-checkbox-icon-size: 0.7rem;
+}
+
+/* ── SVWS-Server ─────────────────────────────────────────────────────────── */
+
+.server-dateien {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.server-datei {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  border: 1px solid var(--p-surface-border);
+  border-radius: 8px;
+  background: var(--p-surface-ground);
+  padding: 0.6rem 0.85rem;
+}
+
+.server-datei-icon {
+  font-size: 1.4rem;
+  color: var(--p-primary-color);
+}
+
+.server-datei-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  flex: 1;
+  font-size: 0.95rem;
+}
+
+.server-datei-text span {
+  font-size: 0.85rem;
+  color: var(--p-text-muted-color);
+}
+
+/* ── Kataloge ────────────────────────────────────────────────────────────── */
+
+.katalog-hint {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--p-text-muted-color);
+}
+
+.katalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.5rem 1rem;
+  padding: 0.25rem 0 0.5rem;
+}
+
+.katalog-fehler {
+  margin: 0.25rem 0 0;
+  padding-left: 1.25rem;
 }
 
 /* ── Lernplattformen ─────────────────────────────────────────────────────── */
@@ -1568,7 +2300,7 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 .lernplattform-config {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.85rem;
   padding-top: 0.25rem;
 }
 
@@ -1580,16 +2312,16 @@ h2 { margin: 0; font-size: 0.9rem; font-weight: 600; }
 }
 
 .lernplattform-label {
-  font-size: 0.78rem;
+  font-size: 0.95rem;
   font-weight: 500;
-  min-width: 160px;
+  min-width: 190px;
   color: var(--p-text-color);
 }
 
 .lernplattform-select-row {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.5rem;
 }
 
 .lp-format-options {

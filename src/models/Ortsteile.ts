@@ -1,12 +1,14 @@
 export interface OrtsteilApiPayload {
-  ortsteil: string | null
-  ort_id: number | null
+  ortsteil: string
+  idOrt: number
+  sortierung: number
+  istSichtbar: boolean
 }
 
 export interface OrtsteilDetails {
   id: number
   ortsteil: string | null
-  ort_id: number | null
+  idOrt: number | null
   bezeichnungOrt: string | null
   plzOrt: string | null
   sortierung: number
@@ -28,10 +30,12 @@ export interface OrtsteilImportRow {
 
 export function ortsteilImportToApi(
   row: OrtsteilImportRow,
-  ortId: number | null,
+  ortId: number,
 ): OrtsteilApiPayload {
   return {
-    ortsteil: row.ortsteil.trim() || null,
-    ort_id: ortId,
+    ortsteil: row.ortsteil.trim(),
+    idOrt: ortId,
+    sortierung: 32000,
+    istSichtbar: true,
   }
 }

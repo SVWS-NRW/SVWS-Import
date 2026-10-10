@@ -4,7 +4,6 @@
       <div class="header-left">
         <Button
           icon="pi pi-arrow-left"
-          size="small"
           text
           rounded
           @click="router.push({ name: 'import' })"
@@ -109,7 +108,7 @@ import Message from 'primevue/message'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
 import { useJahrgaengeStore } from '@/stores/jahrgaenge'
-import { type JahrgangImportRow } from '@/models/Jahrgaenge'
+import { type JahrgangImportRow, type JahrgangDetails } from '@/models/Jahrgaenge'
 import ImportStats from '@/components/ImportStats.vue'
 import { useDarkMode } from '@/composables/useDarkMode'
 import { parseJahrgaengeCsv } from '@/utils/csvParser'
@@ -173,20 +172,40 @@ const defaultColDef: ColDef = {
   minWidth: 80,
 }
 
-const existingColDefs: ColDef[] = [
-  { field: 'id',               headerName: 'ID',           width: 80 },
-  { field: 'kuerzel',          headerName: 'Kürzel',       width: 110 },
+// CoreType-ID → Kürzel, um idSchulgliederung lesbar anzuzeigen
+function reverseLookup(map: Map<string, number> | undefined, id: unknown): string {
+  if (typeof id !== 'number' || !map) return ''
+  for (const [kuerzel, value] of map) if (value === id) return kuerzel
+  return String(id)
+}
+
+const existingColDefs: ColDef<JahrgangDetails>[] = [
+  { field: 'id',              headerName: 'ID',            width: 80 },
+  { field: 'kuerzel',         headerName: 'Kürzel',        width: 110 },
+  { field: 'kurzbezeichnung', headerName: 'Kurzbez.',      width: 100 },
+  { field: 'bezeichnung',     headerName: 'Bezeichnung',   flex: 1 },
   { field: 'kuerzelStatistik', headerName: 'Statistik-Kz.', width: 130 },
-  { field: 'bezeichnung',      headerName: 'Bezeichnung',  flex: 1 },
-  { field: 'gliederung',       headerName: 'Gliederung',   width: 120 },
+  { headerName: 'Gliederung',    width: 120,
+    valueGetter: (p) => reverseLookup(store.kataloge?.schulgliederungen, p.data?.idSchulgliederung) },
+  { field: 'sortierung',      headerName: 'Sortierung',    width: 110 },
+  { field: 'istSichtbar',     headerName: 'Sichtbar',      width: 100 },
 ]
 
 const importColDefs: ColDef<JahrgangImportRow>[] = [
   { field: 'kuerzel',          headerName: 'Kürzel',        width: 110,
     checkboxSelection: true, headerCheckboxSelection: true,
     cellStyle: (p) => p.data?._errors.some(e => e.includes('Kürzel')) ? { background: isDark.value ? '#7f1d1d' : '#fee2e2' } : null },
-  { field: 'kuerzelStatistik', headerName: 'Statistik-Kz.', width: 130 },
-  { field: 'gliederung',       headerName: 'Gliederung',    flex: 1 },
+  { field: 'kurzbezeichnung',        headerName: 'Kurzbez.',       width: 100 },
+  { field: 'bezeichnung',            headerName: 'Bezeichnung',    flex: 1, minWidth: 160 },
+  { field: 'kuerzelStatistik',       headerName: 'Statistik-Kz.',  width: 130 },
+  { field: 'kuerzelSchulgliederung', headerName: 'Gliederung',     width: 110 },
+  { field: 'sortierung',             headerName: 'Sortierung',     width: 110 },
+  { field: 'istSichtbar',            headerName: 'Sichtbar',       width: 100 },
+  { field: 'anzahlRestabschnitte',   headerName: 'Restabschn.',    width: 115 },
+  { field: 'idBildungsstufe',        headerName: 'Bildungsstufe',  width: 125 },
+  { field: 'idFolgejahrgang',        headerName: 'Folgejahrgang',  width: 125 },
+  { field: 'gueltigVon',             headerName: 'Gültig von',     width: 110 },
+  { field: 'gueltigBis',             headerName: 'Gültig bis',     width: 110 },
   {
     headerName: 'Status',
     width: 110,
@@ -263,8 +282,8 @@ function confirmClear(): void {
   display: flex;
   flex-direction: column;
   height: 100%;
-  gap: 0.375rem;
-  padding: 0.375rem 1rem;
+  gap: 0.75rem;
+  padding: 0.75rem 1.5rem;
 }
 
 .table-header {
@@ -282,13 +301,13 @@ function confirmClear(): void {
 
 h2 {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 1.6rem;
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
+  gap: 0.5rem;
   margin-left: auto;
 }
 
@@ -315,22 +334,22 @@ h2 {
 
 :deep(.header-actions .p-button),
 :deep(.p-fileupload-basic .p-button) {
-  padding: 0.2rem 0.5rem;
-  font-size: 0.75rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.9rem;
 }
 
 :deep(.header-actions .p-button .p-button-icon),
 :deep(.p-fileupload-basic .p-button .p-button-icon) {
-  font-size: 0.75rem;
+  font-size: 0.9rem;
 }
 
 :deep(.p-fileupload-label),
 :deep(.p-fileupload-basic-content > span:not([class*="p-button"])) {
-  font-size: 0.72rem;
+  font-size: 0.9rem;
   color: var(--p-text-muted-color);
 }
 :deep(.p-fileupload-basic .p-button .p-button-icon) {
-  font-size: 0.75rem;
+  font-size: 0.9rem;
 }
 
 .data-table {

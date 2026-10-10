@@ -304,7 +304,7 @@ function rowLabel(row: MappedRow): string {
   display: flex;
   flex-direction: column;
   gap: 0.625rem;
-  max-width: 600px;
+  max-width: 760px;
 }
 
 /* ── Zusammenfassung ──────────────────────────────────────────────────────── */
@@ -320,24 +320,24 @@ function rowLabel(row: MappedRow): string {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.3rem 0.75rem;
+  padding: 0.45rem 0.9rem;
   border-bottom: 1px solid var(--p-surface-border);
-  font-size: 0.75rem;
+  font-size: 0.9rem;
 }
 
 .summary-row:last-child { border-bottom: none; }
 
 .summary-label {
-  width: 90px;
+  width: 120px;
   flex-shrink: 0;
   color: var(--p-text-muted-color);
-  font-size: 0.72rem;
+  font-size: 0.9rem;
 }
 
 .summary-value { font-weight: 500; }
 .summary-value.ready { color: var(--p-green-500); }
 .summary-value.error { color: var(--p-red-500); }
-.summary-value.muted { color: var(--p-text-muted-color); font-weight: 400; font-size: 0.72rem; }
+.summary-value.muted { color: var(--p-text-muted-color); font-weight: 400; font-size: 0.9rem; }
 
 /* ── Kontext ──────────────────────────────────────────────────────────────── */
 
@@ -349,7 +349,7 @@ function rowLabel(row: MappedRow): string {
 
 .section-title {
   font-weight: 600;
-  font-size: 0.68rem;
+  font-size: 0.85rem;
   color: var(--p-text-muted-color);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -363,7 +363,7 @@ function rowLabel(row: MappedRow): string {
 }
 
 .context-label {
-  font-size: 0.72rem;
+  font-size: 0.9rem;
   font-weight: 500;
   white-space: nowrap;
   flex-shrink: 0;
@@ -371,7 +371,7 @@ function rowLabel(row: MappedRow): string {
 
 .context-hint {
   color: var(--p-text-muted-color);
-  font-size: 0.68rem;
+  font-size: 0.85rem;
 }
 
 /* ── Fortschritt ──────────────────────────────────────────────────────────── */
@@ -386,7 +386,7 @@ function rowLabel(row: MappedRow): string {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 0.75rem;
+  font-size: 0.9rem;
 }
 
 .progress-label { color: var(--p-text-muted-color); }
@@ -397,7 +397,7 @@ function rowLabel(row: MappedRow): string {
   gap: 0.25rem;
   color: var(--p-green-500);
   font-weight: 600;
-  font-size: 0.75rem;
+  font-size: 0.9rem;
 }
 
 .error-list {
@@ -411,8 +411,8 @@ function rowLabel(row: MappedRow): string {
   display: flex;
   align-items: center;
   gap: 0.3rem;
-  padding: 0.3rem 0.625rem;
-  font-size: 0.72rem;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: var(--p-red-500);
   border-bottom: 1px solid color-mix(in srgb, var(--p-red-500) 20%, var(--p-surface-border));
@@ -421,8 +421,8 @@ function rowLabel(row: MappedRow): string {
 .error-item {
   display: flex;
   gap: 0.5rem;
-  padding: 0.25rem 0.625rem;
-  font-size: 0.72rem;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.9rem;
   border-bottom: 1px solid var(--p-surface-border);
 }
 
@@ -431,7 +431,7 @@ function rowLabel(row: MappedRow): string {
 .error-item-label {
   font-weight: 500;
   flex-shrink: 0;
-  min-width: 90px;
+  min-width: 120px;
 }
 
 .error-item-msg { color: var(--p-red-600); }
@@ -453,7 +453,7 @@ function rowLabel(row: MappedRow): string {
 
 .action-hint {
   color: var(--p-text-muted-color);
-  font-size: 0.72rem;
+  font-size: 0.9rem;
 }
 
 .action-hint.error { color: var(--p-red-500); }
@@ -465,15 +465,15 @@ function rowLabel(row: MappedRow): string {
 }
 
 :deep(.p-button) {
-  font-size: 0.75rem;
-  padding: 0.2rem 0.5rem;
+  font-size: 0.9rem;
+  padding: 0.35rem 0.75rem;
 }
 :deep(.p-button .p-button-icon) {
-  font-size: 0.75rem;
+  font-size: 0.9rem;
 }
 :deep(.p-select .p-select-label) {
-  font-size: 0.72rem;
-  padding: 0.2rem 0.25rem;
+  font-size: 0.9rem;
+  padding: 0.35rem 0.5rem;
 }
 :deep(.p-select .p-select-dropdown) {
   width: 1.25rem;
@@ -483,7 +483,7 @@ function rowLabel(row: MappedRow): string {
   height: 0.6rem;
 }
 :deep(.p-tag) {
-  font-size: 0.65rem;
-  padding: 0.1rem 0.3rem;
+  font-size: 0.8rem;
+  padding: 0.15rem 0.45rem;
 }
 </style>

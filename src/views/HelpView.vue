@@ -17,6 +17,7 @@
       <button @click="scrollTo('hinweise')">Allgemeine Hinweise</button>
       <button @click="scrollTo('schueler')">Schüler Stammdaten</button>
       <button @click="scrollTo('schulbesuch')">Schulbesuch</button>
+      <button @click="scrollTo('erzieher')">Erzieherdaten</button>
       <button @click="scrollTo('lehrer')">Lehrkräfte</button>
       <button @click="scrollTo('klassen')">Klassen</button>
       <button @click="scrollTo('faecher')">Fächer</button>
@@ -106,7 +107,9 @@
       </h3>
       <p class="section-desc">
         Pflichtfelder sind mit <span class="required-badge">Pflicht</span> gekennzeichnet.
-        Beispieldatei: <code>schueler-stammdaten.csv</code>
+        Beispieldatei: <code>schueler-stammdaten.csv</code>.
+        Im Direktimport kann gewählt werden, ob bereits vorhandene Schüler übersprungen, überschrieben oder neu angelegt werden.
+        Abgeglichen wird über die optionale Spalte <code>Schüler-ID</code>, sonst über Nachname, Vorname und Geburtsdatum.
       </p>
       <table class="field-table">
         <thead>
@@ -355,6 +358,48 @@
       </table>
     </div>
 
+    <!-- ── Schüler Erzieherdaten ──────────────────────────────────────────── -->
+    <div id="erzieher" class="format-section">
+      <h3>
+        <i class="pi pi-users section-icon" /> Schüler Erzieherdaten
+        <span class="path-badge direct">Direktimport</span>
+      </h3>
+      <p class="section-desc">
+        Erziehungsberechtigte zu vorhandenen Schülern. Eine Zeile ist ein Erzieher-Eintrag mit bis zu zwei Personen
+        und gemeinsamer Adresse; mehrere Zeilen pro Schüler sind möglich. Schüler werden anhand von
+        <code>Nachname</code>, <code>Vorname</code> und <code>Geburtsdatum</code> zugeordnet — oder, falls vorhanden,
+        über die <code>Schüler-ID</code> (z.&nbsp;B. aus dem Erzieher-Export).
+        Unterstützt wird auch der Schild-NRW-Export <code>SchuelerErzieher.dat</code> (Spalten wie <code>Nachname 1.Person</code>).
+        Beispieldatei: <code>schueler-erzieher.csv</code>
+      </p>
+      <table class="field-table">
+        <thead>
+          <tr><th>Spaltenname</th><th>Kategorie</th><th>Typ</th><th>Hinweis</th></tr>
+        </thead>
+        <tbody>
+          <tr class="cat-row"><td colspan="4">Schüler-Identifikation</td></tr>
+          <tr><td><code>schuelerId</code> / <code>Schüler-ID</code></td><td>Identifikation</td><td>Zahl</td><td>Optional. Hat Vorrang vor Name + Geburtsdatum; sind diese zusätzlich angegeben, müssen sie zum Schüler passen</td></tr>
+          <tr><td><code>nachname</code> <span class="required-badge">Pflicht*</span></td><td>Identifikation</td><td>Text</td><td>Zum Abgleich mit vorhandenem Schüler — *nicht Pflicht, wenn eine Schüler-ID angegeben ist</td></tr>
+          <tr><td><code>vorname</code> <span class="required-badge">Pflicht*</span></td><td>Identifikation</td><td>Text</td><td></td></tr>
+          <tr><td><code>geburtsdatum</code> <span class="required-badge">Pflicht*</span></td><td>Identifikation</td><td>Datum</td><td><code>TT.MM.JJJJ</code> oder <code>JJJJ-MM-TT</code></td></tr>
+          <tr class="cat-row"><td colspan="4">Erzieher-Eintrag</td></tr>
+          <tr><td><code>erzieherart</code></td><td>Eintrag</td><td>Text</td><td>z.&nbsp;B. <code>Eltern</code>, <code>Mutter</code>, <code>Schüler ist volljährig</code> — unbekannte Arten werden im Katalog angelegt</td></tr>
+          <tr><td><code>anrede1</code>, <code>titel1</code></td><td>1. Person</td><td>Text</td><td>z.&nbsp;B. <code>Frau</code>, <code>Dr.</code></td></tr>
+          <tr><td><code>nachname1</code> / <code>vorname1</code> <span class="required-badge">Pflicht</span></td><td>1. Person</td><td>Text</td><td>Mindestens einer der beiden Namen</td></tr>
+          <tr><td><code>email1</code></td><td>1. Person</td><td>Text</td><td></td></tr>
+          <tr><td><code>staatsangehoerigkeit1</code></td><td>1. Person</td><td>Text</td><td>ISO-3-Code (<code>DEU</code>), DEStatis-Schlüssel (<code>000</code>), Bezeichnung (<code>deutsch</code>) oder Katalog-ID aus <code>allinone.json</code></td></tr>
+          <tr><td><code>anrede2</code>, <code>titel2</code>, <code>nachname2</code>, <code>vorname2</code>, <code>email2</code>, <code>staatsangehoerigkeit2</code></td><td>2. Person</td><td>Text</td><td>Optional — leer lassen, wenn es nur eine Person gibt</td></tr>
+          <tr class="cat-row"><td colspan="4">Gemeinsame Adresse</td></tr>
+          <tr><td><code>strasse</code></td><td>Adresse</td><td>Text</td><td>Ohne Spalte <code>hausnummer</code> wird die Hausnummer automatisch abgetrennt</td></tr>
+          <tr><td><code>hausnummer</code>, <code>hausnummerzusatz</code></td><td>Adresse</td><td>Text</td><td></td></tr>
+          <tr><td><code>plz</code>, <code>ort</code></td><td>Adresse</td><td>Text</td><td>Muss im Ortskatalog vorhanden sein, sonst ohne Wohnort gespeichert</td></tr>
+          <tr><td><code>ortsteil</code></td><td>Adresse</td><td>Text</td><td>Ortsteil des Wohnorts aus dem Ortsteil-Katalog</td></tr>
+          <tr><td><code>anschreiben</code></td><td>Eintrag</td><td>Boolean</td><td><code>J</code>/<code>N</code>, <code>ja</code>/<code>nein</code>, <code>true</code>/<code>false</code></td></tr>
+          <tr><td><code>bemerkungen</code></td><td>Eintrag</td><td>Text</td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+
     <!-- ── Lehrkräfte ────────────────────────────────────────────────────── -->
     <div id="lehrer" class="format-section">
       <h3>
@@ -596,17 +641,17 @@
         </thead>
         <tbody>
           <tr><td><code>kuerzel</code> <span class="required-badge">Pflicht</span></td><td>Text</td><td>z.&nbsp;B. <code>05</code>, <code>EF</code>, <code>Q1</code></td></tr>
-          <tr><td><code>kurzbezeichnung</code></td><td>Text</td><td>Kurze Anzeigenbezeichnung, z.&nbsp;B. <code>Jg. 05</code></td></tr>
-          <tr><td><code>kuerzelStatistik</code></td><td>Text</td><td>Amtliches Statistikkürzel</td></tr>
+          <tr><td><code>kurzbezeichnung</code></td><td>Text</td><td>Kurze Anzeigenbezeichnung, max. 2 Zeichen, z.&nbsp;B. <code>05</code></td></tr>
+          <tr><td><code>kuerzelStatistik</code> <span class="required-badge">Pflicht</span></td><td>Text</td><td>Kürzel des ASD-Jahrgangs aus dem Katalog, z.&nbsp;B. <code>05</code>, <code>EF</code></td></tr>
           <tr><td><code>bezeichnung</code> <span class="required-badge">Pflicht</span></td><td>Text</td><td>Vollständige Bezeichnung, z.&nbsp;B. <code>Jahrgang 5</code></td></tr>
           <tr><td><code>sortierung</code></td><td>Zahl</td><td>Anzeigereihenfolge</td></tr>
-          <tr><td><code>kuerzelSchulgliederung</code></td><td>Text</td><td>Zugeordnete Schulgliederung, z.&nbsp;B. <code>***</code></td></tr>
+          <tr><td><code>kuerzelSchulgliederung</code></td><td>Text</td><td>Kürzel der Schulgliederung aus dem Katalog, z.&nbsp;B. <code>***</code></td></tr>
           <tr><td><code>istSichtbar</code></td><td>Boolean</td><td>Standard: <code>true</code></td></tr>
-          <tr><td><code>anzahlRestabschnitte</code></td><td>Zahl</td><td>Verbleibende Schulabschnitte bis zum Abschluss</td></tr>
+          <tr><td><code>anzahlRestabschnitte</code></td><td>Zahl</td><td>Verbleibende Schulabschnitte bis zum Abschluss (0–41)</td></tr>
           <tr><td><code>idBildungsstufe</code></td><td>Zahl</td><td>Interne ID der Bildungsstufe</td></tr>
           <tr><td><code>idFolgejahrgang</code></td><td>Zahl</td><td>Interne ID des Folgejahrgangs</td></tr>
-          <tr><td><code>gueltigVon</code></td><td>Text</td><td>Schuljahr (Beginn der Gültigkeit)</td></tr>
-          <tr><td><code>gueltigBis</code></td><td>Text</td><td>Schuljahr (Ende der Gültigkeit)</td></tr>
+          <tr><td><code>gueltigVon</code></td><td>Zahl</td><td>ID des ersten gültigen Schuljahresabschnitts</td></tr>
+          <tr><td><code>gueltigBis</code></td><td>Zahl</td><td>ID des letzten gültigen Schuljahresabschnitts</td></tr>
         </tbody>
       </table>
     </div>

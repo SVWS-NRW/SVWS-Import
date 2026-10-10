@@ -3,10 +3,10 @@ import { toAppError } from './errorService'
 import type { SchuelerNeu, SchuelerImportRow } from '@/models/Schueler'
 import type { LehrerStammdaten, LehrerImportRow } from '@/models/Lehrer'
 import type { KlasseImportRow, KlasseDetails } from '@/models/Klassen'
-import type { JahrgangImportRow, JahrgangDetails } from '@/models/Jahrgaenge'
+import type { JahrgangImportRow, JahrgangDetails, JahrgangAsdKataloge } from '@/models/Jahrgaenge'
 import type { FachImportRow, FachDetails } from '@/models/Faecher'
 import type { SchuleStammdaten, Schuljahresabschnitt } from '@/models/Schule'
-import { schuelerImportToApi } from '@/models/Schueler'
+import { schuelerImportToApi, schuelerStammdatenUpdatePatch } from '@/models/Schueler'
 import { lehrerImportToApi } from '@/models/Lehrer'
 import { klasseImportToApi } from '@/models/Klassen'
 import { jahrgangImportToApi } from '@/models/Jahrgaenge'
@@ -14,8 +14,9 @@ import { fachImportToApi } from '@/models/Faecher'
 import type { ImportModule, MappedRow, ImportContext, EntityType, OrtKatalogEintrag, ReligionKatalogEintrag } from '@/models/ImportSchema'
 import { betriebImportToApi, ansprechpartnerImportToApi, type BetriebImportRow, type BetriebDetails, type AnsprechpartnerImportRow } from '@/models/Betriebe'
 import { ortsteilImportToApi, type OrtsteilImportRow, type OrtsteilDetails } from '@/models/Ortsteile'
-import { resolveWohnortId, resolveReligionId, resolveNationalitaetId, resolveVerkehrsspracheId, fetchSchulReligionen } from './katalogService'
+import { resolveWohnortId, resolveReligionId, resolveNationalitaetId, resolveVerkehrsspracheId, fetchSchulReligionen, fetchJahrgangAsdKataloge } from './katalogService'
 import type { Floskelgruppe, Floskel, FloskelApiPayload } from '@/models/Floskel'
+import type { ErzieherStammdatenPayload, ErzieherStammdaten } from '@/models/SchuelerErzieher'
 import type {
   Ankreuzkompetenz,
   AnkreuzkompetenzCreatePayload,
@@ -105,7 +106,7 @@ export async function addAnkreuzkompetenzJahrgangszuordnungen(
   payload: AnkreuzkompetenzJahrgangszuordnungPayload[],
 ): Promise<UploadResult> {
   try {
-    await getApiClient().post('/schule/ankreuzkompetenzen/jahrgangzuordnung', payload)
+    await getApiClient().post('/schule/ankreuzkompetenzen/jahrgangzuordnung/multiple', payload)
     return { success: true }
   } catch (error: unknown) {
     return { success: false, error: toAppError(error).messageUser }
@@ -174,13 +175,60 @@ const ENTITY_ENDPOINTS: Partial<Record<EntityType, string>> = {
   faecher: '/faecher/create',
 }
 
-export async function testConnection(): Promise<boolean> {
-  try {
-    await getApiClient().get('/lehrer')
-    return true
-  } catch {
-    return false
+/** Wirft bei Fehlern, damit der Aufrufer die Ursache (401, Netzwerk, …) unterscheiden kann. */
+export async function testConnection(): Promise<void> {
+  await getApiClient().get('/lehrer')
+}
+
+export interface ConnectionDiagnosis {
+  message: string
+  /** URL, die der Nutzer im Browser öffnen kann, um das Server-Zertifikat zu prüfen bzw. zu akzeptieren */
+  certCheckUrl?: string
+}
+
+/**
+ * Grenzt einen Netzwerkfehler ohne HTTP-Antwort (axios ERR_NETWORK) weiter ein.
+ * Browser verraten JavaScript nicht, ob ein TLS-Fehler vorlag. Ein no-cors-Request
+ * scheitert aber nur, wenn keine Verbindung zustande kommt (Server nicht erreichbar
+ * oder Zertifikat nicht vertrauenswürdig) – nicht bei CORS-Problemen.
+ */
+export async function diagnoseConnectionError(baseUrl: string): Promise<ConnectionDiagnosis> {
+  const isHttps = baseUrl.toLowerCase().startsWith('https://')
+
+  if (window.location.protocol === 'https:' && !isHttps) {
+    return {
+      message: 'Die App läuft über HTTPS, der SVWS-Server aber über HTTP. Der Browser blockiert solche Verbindungen. ' +
+        'Bitte die Server-URL mit https:// angeben.',
+    }
   }
+
+  const statusUrl = `${baseUrl}/status/alive`
+  let reachable: boolean
+  try {
+    await fetch(statusUrl, { mode: 'no-cors', cache: 'no-store', signal: AbortSignal.timeout(10000) })
+    reachable = true
+  } catch {
+    reachable = false
+  }
+
+  if (reachable) {
+    return {
+      message: 'Der SVWS-Server ist erreichbar, der Browser hat die Anfrage aber blockiert (z. B. CORS). ' +
+        'Details stehen in der Browser-Konsole (F12).',
+    }
+  }
+
+  if (isHttps) {
+    return {
+      message: 'Keine Verbindung zum SVWS-Server. Häufigste Ursache: Der Browser vertraut dem Zertifikat des Servers nicht ' +
+        '(z. B. selbstsigniertes Zertifikat). Öffnen Sie den folgenden Link, bestätigen Sie die Sicherheitswarnung ' +
+        '(„Erweitert“ → „Weiter zu … (unsicher)“) und verbinden Sie sich danach erneut. ' +
+        'Erscheint keine Warnung und keine Seite, ist der Server unter dieser Adresse nicht erreichbar.',
+      certCheckUrl: statusUrl,
+    }
+  }
+
+  return { message: 'Server nicht erreichbar – Adresse, Port und Netzwerkverbindung prüfen' }
 }
 
 /**
@@ -320,107 +368,139 @@ async function patchSchuelerAfterCreate(
 
 // ── Veraltete, typenspezifische Funktionen (für SchuelerView / LehrerView) ──
 
+/** Kataloge, mit denen Klartextwerte einer Schülerzeile in IDs aufgelöst werden */
+export interface SchuelerKataloge {
+  orte?: Map<string, OrtKatalogEintrag>
+  religionen?: Map<string, ReligionKatalogEintrag>
+  klassen?: Map<string, number>
+  jahrgaenge?: Map<string, number>
+  nationalitaetenById?: Map<string, number>
+  verkehrssprachenById?: Map<string, number>
+}
+
+/** Stammdaten über die Grunddaten hinaus (Adresse, Kontakt, Religion, Herkunft); leere Werte werden nicht gesendet */
+function schuelerZusatzPatch(row: SchuelerImportRow, k: SchuelerKataloge): Record<string, unknown> {
+  const stammdatenPatch: Record<string, unknown> = {}
+  // Personaldaten
+  if (row.geburtsname)              stammdatenPatch.geburtsname             = row.geburtsname
+  if (row.geburtsort)               stammdatenPatch.geburtsort              = row.geburtsort
+  // Staatsangehörigkeit, Geburtsländer, Verkehrssprache als Katalog-IDs
+  const rowStr = (key: string) => String(row[key as keyof SchuelerImportRow] ?? '').trim()
+  Object.assign(stammdatenPatch, herkunftIdPatch(rowStr, k.nationalitaetenById, k.verkehrssprachenById))
+  const drucke = parseBoolean(row.druckeKonfessionAufZeugnisse)
+  if (drucke !== null)              stammdatenPatch.druckeKonfessionAufZeugnisse = drucke
+  if (row.religionanmeldung)        stammdatenPatch.religionanmeldung       = row.religionanmeldung
+  if (row.religionabmeldung)        stammdatenPatch.religionabmeldung       = row.religionabmeldung
+  // Herkunft / Migration
+  if (row.zuzugsjahr)               stammdatenPatch.zuzugsjahr              = parseInt(row.zuzugsjahr, 10) || null
+  // hatMigrationshintergrund: true wenn Herkunftsfelder gesetzt, sonst expliziten Wert nehmen
+  const hasMigrationData = !!(row.zuzugsjahr || row.geburtsland || row.verkehrspracheFamilie || row.geburtslandVater || row.geburtslandMutter)
+  if (hasMigrationData) {
+    stammdatenPatch.hatMigrationshintergrund = true
+  } else {
+    const migration = parseBoolean(row.hatMigrationshintergrund)
+    if (migration !== null) stammdatenPatch.hatMigrationshintergrund = migration
+  }
+  // Adresse
+  if (row.strassenname)             stammdatenPatch.strassenname            = row.strassenname
+  if (row.hausnummer)               stammdatenPatch.hausnummer              = row.hausnummer
+  if (row.hausnummerZusatz)         stammdatenPatch.hausnummerZusatz        = row.hausnummerZusatz
+  // Kontakt
+  if (row.telefon)                  stammdatenPatch.telefon                 = row.telefon
+  if (row.telefonMobil)             stammdatenPatch.telefonMobil            = row.telefonMobil
+  if (row.email)                    stammdatenPatch.emailPrivat             = row.email
+  if (row.emailSchule)              stammdatenPatch.emailSchule             = row.emailSchule
+  // Sonstiges
+  if (row.externeSchulNr)           stammdatenPatch.externeSchulNr          = row.externeSchulNr
+  if (row.beruf)                    stammdatenPatch.beruf                   = row.beruf
+  const masern = parseBoolean(row.hatMasernimpfnachweis)
+  if (masern !== null)              stammdatenPatch.hatMasernimpfnachweis   = masern
+  const keineAuskunft = parseBoolean(row.keineAuskunftAnDritte)
+  if (keineAuskunft !== null)       stammdatenPatch.keineAuskunftAnDritte   = keineAuskunft
+  const bafoeg = parseBoolean(row.erhaeltSchuelerBAFOEG)
+  if (bafoeg !== null)              stammdatenPatch.erhaeltSchuelerBAFOEG   = bafoeg
+  const meisterBafoeg = parseBoolean(row.erhaeltMeisterBAFOEG)
+  if (meisterBafoeg !== null)       stammdatenPatch.erhaeltMeisterBAFOEG    = meisterBafoeg
+
+  if (k.orte) {
+    const wohnortID = resolveWohnortId(k.orte, row.plz, row.ort)
+    if (wohnortID !== null) {
+      // wohnortID und ortsteilID müssen immer zusammen gepatcht werden (API-Anforderung)
+      stammdatenPatch.wohnortID  = wohnortID
+      stammdatenPatch.ortsteilID = null
+    }
+  }
+
+  if (k.religionen) {
+    const religionID = resolveReligionId(k.religionen, row.religionKuerzel, row.religionID)
+    if (religionID !== null) stammdatenPatch.religionID = religionID
+  }
+  return stammdatenPatch
+}
+
+/** Klasse und Jahrgang im Lernabschnitt des gewählten Schuljahresabschnitts setzen */
+async function patchSchuelerLernabschnitt(
+  idSchueler: number,
+  idSchuljahresabschnitt: number,
+  row: SchuelerImportRow,
+  k: SchuelerKataloge,
+): Promise<void> {
+  const lernabschnittPatch: Record<string, unknown> = {}
+  if (k.klassen) {
+    const klassenID = resolveByKuerzel(k.klassen, row.klasse)
+    if (klassenID !== null) lernabschnittPatch.klassenID = klassenID
+  }
+  if (k.jahrgaenge) {
+    const jahrgangID = resolveByKuerzel(k.jahrgaenge, row.jahrgang)
+    if (jahrgangID !== null) lernabschnittPatch.jahrgangID = jahrgangID
+  }
+  if (Object.keys(lernabschnittPatch).length === 0) return
+
+  const laResp = await getApiClient().get<SchuelerLernabschnitt[]>(
+    `/schueler/lernabschnittsdaten/${idSchueler}/${idSchuljahresabschnitt}`,
+  )
+  const lernabschnitt = laResp.data.find(la => la.wechselNr === 0) ?? laResp.data[0]
+  if (lernabschnitt?.id) {
+    await getApiClient().patch(`/schueler/lernabschnittsdaten/${lernabschnitt.id}`, lernabschnittPatch)
+  }
+}
+
 export async function createSchueler(
   row: SchuelerImportRow,
   idSchuljahresabschnitt: number,
-  orteKatalog?: Map<string, import('@/models/ImportSchema').OrtKatalogEintrag>,
-  religionenKatalog?: Map<string, import('@/models/ImportSchema').ReligionKatalogEintrag>,
-  klassenMap?: Map<string, number>,
-  jahrgaengeMap?: Map<string, number>,
-  nationalitaetenById?: Map<string, number>,
-  verkehrssprachenById?: Map<string, number>,
+  kataloge: SchuelerKataloge,
 ): Promise<UploadResult> {
   try {
     const payload: SchuelerNeu = schuelerImportToApi(row, idSchuljahresabschnitt)
     const response = await getApiClient().post('/schueler/create', payload)
     const newId: number = response.data.id
 
-    // ── Stammdaten-Patch (Adresse, Kontakt, Religion, Herkunft) ─────────────
-    const stammdatenPatch: Record<string, unknown> = {}
-    // Personaldaten
-    if (row.geburtsname)              stammdatenPatch.geburtsname             = row.geburtsname
-    if (row.geburtsort)               stammdatenPatch.geburtsort              = row.geburtsort
-    // Staatsangehörigkeit, Geburtsländer, Verkehrssprache als Katalog-IDs
-    const rowStr = (key: string) => String(row[key as keyof SchuelerImportRow] ?? '').trim()
-    Object.assign(stammdatenPatch, herkunftIdPatch(rowStr, nationalitaetenById, verkehrssprachenById))
-    const drucke = parseBoolean(row.druckeKonfessionAufZeugnisse)
-    if (drucke !== null)              stammdatenPatch.druckeKonfessionAufZeugnisse = drucke
-    if (row.religionanmeldung)        stammdatenPatch.religionanmeldung       = row.religionanmeldung
-    if (row.religionabmeldung)        stammdatenPatch.religionabmeldung       = row.religionabmeldung
-    // Herkunft / Migration
-    if (row.zuzugsjahr)               stammdatenPatch.zuzugsjahr              = parseInt(row.zuzugsjahr, 10) || null
-    // hatMigrationshintergrund: true wenn Herkunftsfelder gesetzt, sonst expliziten Wert nehmen
-    const hasMigrationData = !!(row.zuzugsjahr || row.geburtsland || row.verkehrspracheFamilie || row.geburtslandVater || row.geburtslandMutter)
-    if (hasMigrationData) {
-      stammdatenPatch.hatMigrationshintergrund = true
-    } else {
-      const migration = parseBoolean(row.hatMigrationshintergrund)
-      if (migration !== null) stammdatenPatch.hatMigrationshintergrund = migration
-    }
-    // Adresse
-    if (row.strassenname)             stammdatenPatch.strassenname            = row.strassenname
-    if (row.hausnummer)               stammdatenPatch.hausnummer              = row.hausnummer
-    if (row.hausnummerZusatz)         stammdatenPatch.hausnummerZusatz        = row.hausnummerZusatz
-    // Kontakt
-    if (row.telefon)                  stammdatenPatch.telefon                 = row.telefon
-    if (row.telefonMobil)             stammdatenPatch.telefonMobil            = row.telefonMobil
-    if (row.email)                    stammdatenPatch.emailPrivat             = row.email
-    if (row.emailSchule)              stammdatenPatch.emailSchule             = row.emailSchule
-    // Sonstiges
-    if (row.externeSchulNr)           stammdatenPatch.externeSchulNr          = row.externeSchulNr
-    if (row.beruf)                    stammdatenPatch.beruf                   = row.beruf
-    const masern = parseBoolean(row.hatMasernimpfnachweis)
-    if (masern !== null)              stammdatenPatch.hatMasernimpfnachweis   = masern
-    const keineAuskunft = parseBoolean(row.keineAuskunftAnDritte)
-    if (keineAuskunft !== null)       stammdatenPatch.keineAuskunftAnDritte   = keineAuskunft
-    const bafoeg = parseBoolean(row.erhaeltSchuelerBAFOEG)
-    if (bafoeg !== null)              stammdatenPatch.erhaeltSchuelerBAFOEG   = bafoeg
-    const meisterBafoeg = parseBoolean(row.erhaeltMeisterBAFOEG)
-    if (meisterBafoeg !== null)       stammdatenPatch.erhaeltMeisterBAFOEG    = meisterBafoeg
-
-    if (orteKatalog) {
-      const wohnortID = resolveWohnortId(orteKatalog, row.plz, row.ort)
-      if (wohnortID !== null) {
-        // wohnortID und ortsteilID müssen immer zusammen gepatcht werden (API-Anforderung)
-        stammdatenPatch.wohnortID  = wohnortID
-        stammdatenPatch.ortsteilID = null
-      }
-    }
-
-    if (religionenKatalog) {
-      const religionID = resolveReligionId(religionenKatalog, row.religionKuerzel, row.religionID)
-      if (religionID !== null) stammdatenPatch.religionID = religionID
-    }
-
+    const stammdatenPatch = schuelerZusatzPatch(row, kataloge)
     if (Object.keys(stammdatenPatch).length > 0) {
       await getApiClient().patch(`/schueler/${newId}/stammdaten`, stammdatenPatch)
     }
-
-    // ── Lernabschnitt-Patch (Klasse + Jahrgang) ──────────────────────────────
-    const lernabschnittPatch: Record<string, unknown> = {}
-    if (klassenMap) {
-      const klassenID = resolveByKuerzel(klassenMap, row.klasse)
-      if (klassenID !== null) lernabschnittPatch.klassenID = klassenID
-    }
-    if (jahrgaengeMap) {
-      const jahrgangID = resolveByKuerzel(jahrgaengeMap, row.jahrgang)
-      if (jahrgangID !== null) lernabschnittPatch.jahrgangID = jahrgangID
-    }
-
-    if (Object.keys(lernabschnittPatch).length > 0) {
-      const laResp = await getApiClient().get<SchuelerLernabschnitt[]>(
-        `/schueler/lernabschnittsdaten/${newId}/${idSchuljahresabschnitt}`,
-      )
-      const lernabschnitt = laResp.data.find(la => la.wechselNr === 0) ?? laResp.data[0]
-      if (lernabschnitt?.id) {
-        await getApiClient().patch(
-          `/schueler/lernabschnittsdaten/${lernabschnitt.id}`,
-          lernabschnittPatch,
-        )
-      }
-    }
+    await patchSchuelerLernabschnitt(newId, idSchuljahresabschnitt, row, kataloge)
 
     return { success: true, id: newId }
+  } catch (error: unknown) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}
+
+/** Überschreibt einen vorhandenen Schüler mit den nicht leeren Werten der Zeile */
+export async function updateSchueler(
+  idSchueler: number,
+  row: SchuelerImportRow,
+  idSchuljahresabschnitt: number,
+  kataloge: SchuelerKataloge,
+): Promise<UploadResult> {
+  try {
+    const patch = { ...schuelerStammdatenUpdatePatch(row), ...schuelerZusatzPatch(row, kataloge) }
+    if (Object.keys(patch).length > 0) {
+      await getApiClient().patch(`/schueler/${idSchueler}/stammdaten`, patch)
+    }
+    await patchSchuelerLernabschnitt(idSchueler, idSchuljahresabschnitt, row, kataloge)
+    return { success: true, id: idSchueler }
   } catch (error: unknown) {
     return { success: false, error: toAppError(error).messageUser }
   }
@@ -457,14 +537,23 @@ export async function fetchLehrkraefte(): Promise<LehrkraftListEntry[]> {
   return Array.isArray(response.data) ? response.data : []
 }
 
+/** Lädt die Jahrgänge der Schule und ergänzt kuerzelStatistik über idJahrgang aus dem ASD-Katalog. */
 export async function fetchJahrgaenge(): Promise<JahrgangDetails[]> {
   const response = await getApiClient().get('/jahrgaenge')
-  return Array.isArray(response.data) ? response.data : []
+  const jahrgaenge: JahrgangDetails[] = Array.isArray(response.data) ? response.data : []
+  try {
+    const { jahrgaenge: asd } = await fetchJahrgangAsdKataloge()
+    const kuerzelById = new Map([...asd].map(([kuerzel, id]) => [id, kuerzel]))
+    for (const j of jahrgaenge) {
+      if (typeof j.idJahrgang === 'number') j.kuerzelStatistik = kuerzelById.get(j.idJahrgang) ?? null
+    }
+  } catch { /* Katalog nicht verfügbar → Abgleich nur über kuerzel */ }
+  return jahrgaenge
 }
 
-export async function createJahrgang(row: JahrgangImportRow): Promise<UploadResult> {
+export async function createJahrgang(row: JahrgangImportRow, kataloge: JahrgangAsdKataloge): Promise<UploadResult> {
   try {
-    const payload = jahrgangImportToApi(row)
+    const payload = jahrgangImportToApi(row, kataloge)
     const response = await getApiClient().post('/jahrgaenge/create', payload)
     return { success: true, id: response.data?.id }
   } catch (error: unknown) {
@@ -490,6 +579,15 @@ export async function createFach(row: FachImportRow): Promise<UploadResult> {
 export async function fetchBetriebe(): Promise<BetriebDetails[]> {
   const response = await getApiClient().get('/schule/betriebe')
   return Array.isArray(response.data) ? response.data : []
+}
+
+export async function fetchBetriebsartenById(): Promise<Map<number, string>> {
+  const response = await getApiClient().get<{ id: number; bezeichnung?: string | null }[]>('/schule/betriebsarten')
+  const map = new Map<number, string>()
+  for (const b of Array.isArray(response.data) ? response.data : []) {
+    if (b.id && b.bezeichnung) map.set(b.id, b.bezeichnung)
+  }
+  return map
 }
 
 export async function createBetrieb(
@@ -592,11 +690,16 @@ export async function createKlasse(row: KlasseImportRow, idSchuljahresabschnitt:
     const response = await getApiClient().post('/klassen/create', payload)
     const newId: number = response.data?.id
     if (newId && row.idKlassenlehrer !== null) {
-      await getApiClient().patch(`/klassen/${newId}`, { klassenLeitungen: [row.idKlassenlehrer] })
+      try {
+        await getApiClient().patch(`/klassen/${newId}`, { klassenLeitungen: [row.idKlassenlehrer] })
+      } catch (error: unknown) {
+        // Klasse ist angelegt, nur die Klassenleitung fehlt
+        return { success: false, id: newId, error: `Klasse angelegt, Klassenleitung fehlgeschlagen – ${toAppError(error).messageUser}` }
+      }
     }
     return { success: true, id: newId }
   } catch (error: unknown) {
-    return { success: false, error: toAppError(error).messageUser }
+    return { success: false, error: `Anlegen fehlgeschlagen – ${toAppError(error).messageUser}` }
   }
 }
 
@@ -611,6 +714,9 @@ export async function createOrtsteil(
 ): Promise<UploadResult> {
   try {
     const ortId = orteMap ? resolveWohnortId(orteMap, row.plz, row.ort) : null
+    if (ortId === null) {
+      return { success: false, error: `Ort nicht im Katalog gefunden (PLZ "${row.plz}", Ort "${row.ort}")` }
+    }
     const payload = ortsteilImportToApi(row, ortId)
     const response = await getApiClient().post('/ortsteile/create', payload)
     return { success: true, id: response.data?.id }
@@ -695,6 +801,33 @@ export async function fetchForExport(endpoint: string): Promise<Record<string, u
   return Array.isArray(response.data) ? response.data : []
 }
 
+/** Lädt einen Katalog unverändert; 404 („keine Einträge“) ergibt eine leere Liste */
+export async function fetchKatalog(endpoint: string): Promise<unknown[]> {
+  try {
+    const response = await getApiClient().get(endpoint)
+    return Array.isArray(response.data) ? response.data : []
+  } catch (error: unknown) {
+    if ((error as { response?: { status?: number } })?.response?.status === 404) return []
+    throw new Error(toAppError(error).messageUser)
+  }
+}
+
+/** Version des verbundenen SVWS-Servers (z. B. „1.5.0“) */
+export async function fetchServerVersion(): Promise<string> {
+  const response = await getRootClient().get('/status/version')
+  return typeof response.data === 'string' ? response.data : String(response.data ?? '')
+}
+
+/** Lädt eine Datei des SVWS-Servers (z. B. /openapi/server.json) unverändert als Blob */
+export async function fetchServerDatei(pfad: string): Promise<Blob> {
+  try {
+    const response = await getRootClient().get(pfad, { responseType: 'blob', timeout: 120000 })
+    return response.data as Blob
+  } catch (error: unknown) {
+    throw new Error(toAppError(error).messageUser)
+  }
+}
+
 export interface SchuelerAuswahl {
   id: number
   nachname: string
@@ -762,9 +895,10 @@ export async function fetchSchuelerAuswahlliste(abschnittId: number): Promise<Sc
     }
   }
 
+  // idKlasse -1 = keine Klasse zugeordnet
   return schueler.map(s => ({
     ...s,
-    klasse: klassenMap.get(s.idKlasse as number) ?? (s.idKlasse != null ? String(s.idKlasse) : ''),
+    klasse: klassenMap.get(s.idKlasse as number) ?? (s.idKlasse != null && s.idKlasse >= 0 ? String(s.idKlasse) : ''),
   }))
 }
 
@@ -916,11 +1050,13 @@ export interface SchuelerListeEintrag {
   status?: number
 }
 
-export async function fetchSchuelerAktuell(): Promise<SchuelerListeEintrag[]> {
+/** strict: Fehler weiterwerfen statt leerer Liste (z. B. für die Duplikaterkennung beim Import) */
+export async function fetchSchuelerAktuell(strict = false): Promise<SchuelerListeEintrag[]> {
   try {
     const response = await getApiClient().get<SchuelerListeEintrag[]>('/schueler/aktuell')
     return Array.isArray(response.data) ? response.data : []
-  } catch {
+  } catch (error: unknown) {
+    if (strict) throw new Error(toAppError(error).messageUser)
     return []
   }
 }
@@ -1141,3 +1277,113 @@ export async function downloadLernplattformExport(
   return { blob: response.data as Blob, filename }
 }
 
+
+// ── Erzieher ─────────────────────────────────────────────────────────────────
+
+export interface ErzieherartEintrag {
+  id: number
+  bezeichnung: string
+}
+
+export async function fetchErzieherarten(): Promise<ErzieherartEintrag[]> {
+  const response = await getApiClient().get<ErzieherartEintrag[]>('/schule/erzieherarten')
+  return Array.isArray(response.data) ? response.data : []
+}
+
+export async function createErzieherart(bezeichnung: string): Promise<{ id: number } | { error: string }> {
+  try {
+    const resp = await getApiClient().post<ErzieherartEintrag>('/schule/erzieherart/new', {
+      bezeichnung,
+      sortierung: 32000,
+      istSichtbar: true,
+    })
+    return { id: resp.data.id }
+  } catch (error: unknown) {
+    return { error: toAppError(error).messageUser }
+  }
+}
+
+export interface ErzieherVorhanden {
+  id: number
+  nachname?: string | null
+  vorname?: string | null
+}
+
+/** Vorhandene Erzieher eines Schülers; 404 bedeutet „keine Erzieher“ */
+export async function fetchSchuelerErzieher(idSchueler: number): Promise<ErzieherVorhanden[]> {
+  try {
+    const response = await getApiClient().get<ErzieherVorhanden[]>(`/schueler/${idSchueler}/erzieher`)
+    return Array.isArray(response.data) ? response.data : []
+  } catch (error: unknown) {
+    if ((error as { response?: { status?: number } })?.response?.status === 404) return []
+    throw error
+  }
+}
+
+export async function fetchErzieherartenById(): Promise<Map<number, string>> {
+  const map = new Map<number, string>()
+  for (const a of await fetchErzieherarten()) {
+    if (a.id && a.bezeichnung) map.set(a.id, a.bezeichnung)
+  }
+  return map
+}
+
+export async function fetchOrtsteileById(): Promise<Map<number, string>> {
+  const map = new Map<number, string>()
+  for (const ot of await fetchOrtsteile()) {
+    if (ot.id && ot.ortsteil) map.set(ot.id, ot.ortsteil)
+  }
+  return map
+}
+
+/** Lädt die Erzieher (Personen mit vollständigen Stammdaten) zu jedem Schüler; Reihenfolge wie `students` */
+export async function fetchErzieherFuerSchueler(
+  students: SchuelerAuswahl[],
+  onProgress: (done: number, total: number) => void,
+  concurrency = 15,
+): Promise<ErzieherStammdaten[][]> {
+  const results: ErzieherStammdaten[][] = new Array(students.length)
+  let cursor = 0
+  let done = 0
+
+  async function work(): Promise<void> {
+    while (cursor < students.length) {
+      const i = cursor++
+      results[i] = await fetchSchuelerErzieher(students[i].id) as ErzieherStammdaten[]
+      onProgress(++done, students.length)
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(concurrency, students.length) }, work))
+  return results
+}
+
+/** Legt einen neuen Erzieher-Eintrag mit der 1. Person an */
+export async function createErzieher(idSchueler: number, payload: ErzieherStammdatenPayload): Promise<UploadResult> {
+  try {
+    const resp = await getApiClient().post(`/schueler/erzieher/new/${idSchueler}/1`, payload)
+    return { success: true, id: resp.data?.id }
+  } catch (error: unknown) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}
+
+/** Ergänzt die 2. Person im Erzieher-Eintrag (id = ID aus createErzieher) */
+export async function patchErzieherZweitePerson(idErzieher: number, payload: ErzieherStammdatenPayload): Promise<UploadResult> {
+  try {
+    await getApiClient().patch(`/erzieher/${idErzieher}/stammdaten/2`, payload)
+    return { success: true }
+  } catch (error: unknown) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}
+
+/** Überschreibt die Stammdaten eines vorhandenen Erziehers (id aus GET /schueler/{id}/erzieher) */
+export async function patchErzieher(idErzieher: number, payload: Partial<ErzieherStammdatenPayload>): Promise<UploadResult> {
+  try {
+    await getApiClient().patch(`/erzieher/${idErzieher}/stammdaten`, payload)
+    return { success: true }
+  } catch (error: unknown) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}

@@ -17,6 +17,8 @@ function normalizeKey(key: string): string {
 
 // Alle bekannten (normalisierten) Alias-Spaltennamen für Schüler-Imports
 export const SCHUELER_KNOWN_KEYS = new Set([
+  // schuelerId (optional, z. B. aus dem Schülerexport)
+  'schuelerid', 'schülerid', 'idschueler', 'idschüler',
   // nachname
   'nachname', 'name', 'familienname', 'lastname',
   // vorname
@@ -122,6 +124,7 @@ export async function parseSchuelerCsv(file: File): Promise<{ rows: SchuelerImpo
             _errors: [],
             _sent: false,
             _rawData: record,
+            schuelerId:                  get(m, 'schuelerid', 'schülerid', 'idschueler', 'idschüler'),
             // Personaldaten
             nachname:                    get(m, 'nachname', 'name', 'familienname', 'last name', 'lastname'),
             vorname:                     get(m, 'vorname', 'firstname', 'first name', 'rufname'),
@@ -326,9 +329,18 @@ export async function parseJahrgaengeCsv(file: File): Promise<JahrgangImportRow[
             _valid: true,
             _errors: [],
             _sent: false,
-            kuerzel:          get(m, 'internkrz', 'kuerzel', 'kürzel', 'jahrgang', 'jg'),
-            kuerzelStatistik: get(m, 'statistikkrz', 'kuerzelstatistik', 'statistikkuerzel'),
-            gliederung:       get(m, 'gliederung'),
+            kuerzel:                get(m, 'internkrz', 'kuerzel', 'kürzel', 'jahrgang', 'jg'),
+            kurzbezeichnung:        get(m, 'kurzbezeichnung'),
+            kuerzelStatistik:       get(m, 'statistikkrz', 'kuerzelstatistik', 'statistikkuerzel'),
+            bezeichnung:            get(m, 'bezeichnung', 'beschreibung', 'name'),
+            sortierung:             get(m, 'sortierung'),
+            kuerzelSchulgliederung: get(m, 'kuerzelschulgliederung', 'schulgliederung', 'gliederung'),
+            istSichtbar:            get(m, 'istsichtbar', 'sichtbar'),
+            anzahlRestabschnitte:   get(m, 'anzahlrestabschnitte', 'restabschnitte'),
+            idBildungsstufe:        get(m, 'idbildungsstufe'),
+            idFolgejahrgang:        get(m, 'idfolgejahrgang'),
+            gueltigVon:             get(m, 'gueltigvon'),
+            gueltigBis:             get(m, 'gueltigbis'),
           }
         })
         resolve(rows)
@@ -435,8 +447,8 @@ export async function parseBetriebeCsv(file: File): Promise<BetriebImportRow[]> 
             istAusbildungsbetrieb:             get(m, 'ausbildungsbetrieb', 'istausbildungsbetrieb'),
             istMassnahmentraeger:              get(m, 'massnahmentraeger', 'istmassnahmentraeger', 'maßnahmenträger'),
             belehrungNachISGErforderlich:      get(m, 'belehrungisg', 'belehrungnachisg', 'belehrungnachisgerforderlich', 'isg'),
-            erweitertesFuehrungszeugnisErforderlich: get(m, 'erweitertesfuehrungszeugnis', 'fuehrungszeugnis', 'erwfuehrungszeugnis'),
-            bietetPraktikumsplaetzeAn:         get(m, 'praktikumsplaetze', 'bietetzpraktikumsplaetze', 'bietetzpraktikumsplaetzean'),
+            erweitertesFuehrungszeugnisErforderlich: get(m, 'erweitertesfuehrungszeugnis', 'erweitertesführungszeugnis', 'fuehrungszeugnis', 'führungszeugnis', 'erwfuehrungszeugnis'),
+            bietetPraktikumsplaetzeAn:         get(m, 'praktikumsplaetze', 'praktikumsplätze', 'bietetpraktikumsplaetzean', 'bietetzpraktikumsplaetze', 'bietetzpraktikumsplaetzean'),
           }
         })
         resolve(rows)
@@ -630,4 +642,83 @@ export function normalisiereDatum(raw: string): string {
   const mdy = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
   if (mdy) return `${mdy[3]}-${mdy[1].padStart(2, '0')}-${mdy[2].padStart(2, '0')}`
   return raw
+}
+
+/**
+ * Erzieherdaten — unterstützt die neue CSV (schueler-erzieher.csv) und den
+ * Schild-NRW-3-Export SchuelerErzieher.dat (Pipe-getrennt, Spalten „Nachname 1.Person“ usw.).
+ */
+export function parseSchuelerErzieherCsv(file: File): Promise<import('@/models/SchuelerErzieher').SchuelerErzieherImportRow[]> {
+  return new Promise((resolve, reject) => {
+    Papa.parse<Record<string, string>>(file, {
+      header: true,
+      skipEmptyLines: true,
+      delimiter: /\.dat$/i.test(file.name) ? '|' : '',
+      // Schild-Exporte beginnen mit BOM — sonst heißt die erste Spalte "\uFEFFNachname"
+      transformHeader: (h) => h.replace(/^\uFEFF/, ''),
+      complete(results) {
+        try {
+          const rows = results.data.map((record) => {
+            const m = buildLookup(record)
+            const t = (...keys: string[]) => get(m, ...keys).trim()
+            const strasseRaw = t('strassenname', 'strasse', 'straße', 'strae')
+            const hnrExplizit = t('hausnummer', 'hausnr', 'hnr')
+            const [strassenname, hausnummer] = hnrExplizit ? [strasseRaw, hnrExplizit] : splitStrasseHausnummer(strasseRaw)
+            return {
+              _id: generateId(),
+              _valid: false,
+              _errors: [] as string[],
+              _sent: false,
+              _schuelerId: null,
+              _lookupStatus: 'pending' as const,
+              _erzieherartStatus: 'empty' as const,
+              _wohnortStatus: 'empty' as const,
+              // Schüler (Schüler-ID optional, z. B. aus dem Erzieher-Export)
+              schuelerId:   t('schuelerid', 'schülerid', 'idschueler', 'idschüler'),
+              nachname:     t('nachname', 'name', 'familienname'),
+              vorname:      t('vorname', 'rufname'),
+              geburtsdatum: normalisiereDatum(t('geburtsdatum', 'geburtstag', 'geb')),
+              erzieherart:  t('erzieherart', 'art'),
+              // 1. Person (neue CSV: anrede1 …, Schild-Export: „Anrede 1.Person“ …)
+              anrede1:   t('anrede1', 'anrede1.person', 'anrede'),
+              titel1:    t('titel1', 'titel1.person', 'titel'),
+              nachname1: t('nachname1', 'nachname1.person'),
+              vorname1:  t('vorname1', 'vorname1.person'),
+              email1:    t('email1', 'email1.person', 'email'),
+              staatsangehoerigkeit1: t('staatsangehoerigkeit1', 'staatsangehörigkeit1', 'staatsangehoerigkeit1.person', 'staatsangehörigkeit1.person'),
+              // 2. Person
+              anrede2:   t('anrede2', 'anrede2.person'),
+              titel2:    t('titel2', 'titel2.person'),
+              nachname2: t('nachname2', 'nachname2.person'),
+              vorname2:  t('vorname2', 'vorname2.person'),
+              email2:    t('email2', 'email2.person'),
+              staatsangehoerigkeit2: t('staatsangehoerigkeit2', 'staatsangehörigkeit2', 'staatsangehoerigkeit2.person', 'staatsangehörigkeit2.person'),
+              // Adresse
+              strassenname,
+              hausnummer,
+              hausnummerZusatz:   t('hausnummerzusatz', 'hausnummernzusatz', 'hausnrzusatz'),
+              plz:                t('plz', 'postleitzahl'),
+              ort:                t('ort', 'wohnort'),
+              ortsteil:           t('ortsteil'),
+              erhaeltAnschreiben: t('anschreiben', 'erhaeltanschreiben'),
+              bemerkungen:        t('bemerkungen', 'bemerkung'),
+            }
+          })
+          resolve(rows)
+        } catch (e) {
+          reject(e)
+        }
+      },
+      error(err) {
+        reject(new Error(`CSV-Fehler: ${err.message}`))
+      },
+    })
+  })
+}
+
+/** Erkennt eine Erzieher-Datei (neue CSV oder SchuelerErzieher.dat) an typischen Spalten in der Kopfzeile. */
+export async function istErzieherDatei(file: File): Promise<boolean> {
+  const kopf = (await file.slice(0, 4096).text()).replace(/^﻿/, '').split(/\r?\n/)[0] ?? ''
+  const spalten = kopf.split(/[;|,\t]/).map(s => normalizeKey(s.replace(/"/g, '').trim()))
+  return spalten.some(s => ['erzieherart', 'nachname1', 'nachname1.person'].includes(s))
 }

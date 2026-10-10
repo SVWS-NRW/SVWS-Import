@@ -88,7 +88,7 @@ function onSelect(value: string | null | undefined) {
 
 <style scoped>
 .column-card {
-  padding: 0.35rem 0.625rem;
+  padding: 0.55rem 0.85rem;
   border: 2px solid var(--p-surface-border);
   border-radius: 6px;
   background: var(--p-surface-card);
@@ -115,8 +115,8 @@ function onSelect(value: string | null | undefined) {
 }
 
 .status-dot {
-  width: 7px;
-  height: 7px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   flex-shrink: 0;
   background: var(--p-surface-border);
@@ -128,7 +128,7 @@ function onSelect(value: string | null | undefined) {
 
 .col-name {
   font-weight: 600;
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -136,8 +136,8 @@ function onSelect(value: string | null | undefined) {
 }
 
 .type-chip {
-  font-size: 0.65rem;
-  padding: 0.1rem 0.3rem;
+  font-size: 0.8rem;
+  padding: 0.15rem 0.45rem;
   border-radius: 4px;
   background: var(--p-surface-ground);
   color: var(--p-text-muted-color);
@@ -148,7 +148,7 @@ function onSelect(value: string | null | undefined) {
 /* ── Samples ─────────────────────────────────────────────────────────────── */
 
 .card-samples {
-  font-size: 0.68rem;
+  font-size: 0.85rem;
   color: var(--p-text-muted-color);
   white-space: nowrap;
   overflow: hidden;
@@ -172,8 +172,8 @@ function onSelect(value: string | null | undefined) {
 }
 
 :deep(.p-select .p-select-label) {
-  font-size: 0.72rem;
-  padding: 0.18rem 0.25rem;
+  font-size: 0.9rem;
+  padding: 0.35rem 0.5rem;
 }
 
 :deep(.p-select .p-select-dropdown) {
@@ -186,7 +186,7 @@ function onSelect(value: string | null | undefined) {
 }
 
 :deep(.p-tag) {
-  font-size: 0.62rem;
-  padding: 0.1rem 0.25rem;
+  font-size: 0.8rem;
+  padding: 0.15rem 0.45rem;
 }
 </style>

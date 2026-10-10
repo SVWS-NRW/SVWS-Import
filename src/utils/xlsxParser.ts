@@ -60,6 +60,7 @@ export async function parseSchuelerXlsx(file: File): Promise<{ rows: SchuelerImp
       _errors: [],
       _sent: false,
       _rawData: rawData,
+      schuelerId:                  col(row, headerMap, 'schuelerid', 'schülerid', 'idschueler', 'idschüler'),
       // Personaldaten
       nachname:                    col(row, headerMap, 'nachname', 'name', 'familienname', 'last name', 'lastname'),
       vorname:                     col(row, headerMap, 'vorname', 'firstname', 'first name', 'rufname'),

@@ -6,7 +6,6 @@
           icon="pi pi-arrow-left"
           text
           rounded
-          size="small"
           @click="router.push({ name: 'import' })"
           aria-label="Zurück"
         />
@@ -23,6 +22,10 @@
         <Tab value="schulbesuch">
           Schulbesuch
           <Badge v-if="sbStore.totalCount > 0" :value="sbStore.totalCount" severity="secondary" class="tab-badge" />
+        </Tab>
+        <Tab value="erzieher">
+          Erzieherdaten
+          <Badge v-if="ezStore.totalCount > 0" :value="ezStore.totalCount" severity="secondary" class="tab-badge" />
         </Tab>
       </TabList>
 
@@ -67,6 +70,16 @@
                   :disabled="parsing"
                   @select="onFileSelect"
                 />
+                <Select
+                  v-model="duplikatModus"
+                  :options="SCHUELER_DUPLIKAT_OPTIONEN"
+                  optionLabel="label"
+                  optionValue="value"
+                  size="small"
+                  :disabled="store.uploading"
+                  v-tooltip.top="'Was passieren soll, wenn der Schüler bereits vorhanden ist (gleiche Schüler-ID oder gleicher Name und Geburtsdatum)'"
+                  style="width: 270px"
+                />
                 <Button
                   :label="store.uploading ? `${store.uploadProgress} / ${store.uploadTotal}` : selectedCount > 0 ? `${selectedCount} senden` : 'Alles senden'"
                   icon="pi pi-upload"
@@ -90,7 +103,9 @@
               {{ parseError }}
             </Message>
             <Message v-if="uploadResult" :severity="uploadResult.failed > 0 ? 'warn' : 'success'" :closable="true" @close="uploadResult = null">
-              {{ uploadResult.sent }} Datensätze übertragen
+              {{ uploadResult.sent }} Schüler angelegt
+              <span v-if="uploadResult.updated > 0">, {{ uploadResult.updated }} überschrieben</span>
+              <span v-if="uploadResult.skipped > 0">, {{ uploadResult.skipped }} übersprungen (bereits vorhanden)</span>
               <span v-if="uploadResult.failed > 0">, {{ uploadResult.failed }} fehlgeschlagen</span>
             </Message>
 
@@ -208,6 +223,110 @@
             />
           </div>
         </TabPanel>
+
+        <!-- ── Erzieherdaten ──────────────────────────────────────────── -->
+        <TabPanel value="erzieher">
+          <div class="tab-content">
+            <div class="tab-actions">
+              <ImportStats
+                :total="ezStore.totalCount"
+                :valid="ezStore.validCount"
+                :errors="ezStore.errorCount"
+                :sent="ezStore.sentCount"
+              />
+              <div class="action-buttons">
+                <Button
+                  v-tooltip.top="'Schülerliste und Erzieherarten neu aus Datenbank laden'"
+                  icon="pi pi-refresh"
+                  severity="secondary"
+                  size="small"
+                  text
+                  :loading="ezStore.lookupLoading"
+                  @click="handleEzReloadLookup"
+                />
+                <Select
+                  v-model="ezDuplikatModus"
+                  :options="EZ_DUPLIKAT_OPTIONEN"
+                  optionLabel="label"
+                  optionValue="value"
+                  size="small"
+                  :disabled="ezStore.uploading"
+                  v-tooltip.top="'Was passieren soll, wenn die 1. Person beim Schüler bereits als Erzieher eingetragen ist'"
+                  style="width: 270px"
+                />
+                <FileUpload
+                  :key="ezFileKey"
+                  mode="basic"
+                  :auto="false"
+                  :multiple="false"
+                  accept=".csv,.dat"
+                  chooseLabel="Datei laden"
+                  chooseIcon="pi pi-folder-open"
+                  :maxFileSize="10000000"
+                  :disabled="ezParsing"
+                  @select="onEzFileSelect"
+                />
+                <Button
+                  :label="ezStore.uploading ? `${ezStore.uploadProgress} / ${ezStore.uploadTotal}` : ezSelectedCount > 0 ? `${ezSelectedCount} senden` : 'Alles senden'"
+                  icon="pi pi-upload"
+                  size="small"
+                  :disabled="ezStore.validCount === 0 || ezStore.uploading"
+                  :loading="ezStore.uploading"
+                  @click="handleEzUploadAll"
+                />
+                <Button
+                  :label="ezStore.uploading ? 'Stoppen' : 'Leeren'"
+                  :icon="ezStore.uploading ? 'pi pi-stop' : 'pi pi-trash'"
+                  :severity="ezStore.uploading ? 'warn' : 'danger'"
+                  text
+                  size="small"
+                  @click="ezStore.uploading ? ezStore.stopUpload() : confirmEzClear()"
+                />
+              </div>
+            </div>
+
+            <Message v-if="ezInfo" severity="info" :closable="true" @close="ezInfo = ''">
+              {{ ezInfo }}
+            </Message>
+            <Message v-if="ezLookupError" severity="warn" :closable="true" @close="ezLookupError = ''">
+              {{ ezLookupError }}
+            </Message>
+            <Message v-if="ezParseError" severity="error" :closable="true" @close="ezParseError = ''">
+              {{ ezParseError }}
+            </Message>
+            <Message v-if="ezUploadResult" :severity="ezUploadResult.failed > 0 ? 'warn' : 'success'" :closable="true" @close="ezUploadResult = null">
+              {{ ezUploadResult.sent }} Erzieher-Einträge angelegt
+              <span v-if="ezUploadResult.updated > 0">, {{ ezUploadResult.updated }} überschrieben</span>
+              <span v-if="ezUploadResult.skipped > 0">, {{ ezUploadResult.skipped }} übersprungen (bereits vorhanden)</span>
+              <span v-if="ezUploadResult.failed > 0">, {{ ezUploadResult.failed }} fehlgeschlagen</span>
+            </Message>
+
+            <Message v-if="ezStore.rows.length === 0" severity="info" :closable="false" class="hint-msg">
+              CSV-Datei (z.&nbsp;B. <strong>schueler-erzieher.csv</strong>) oder den Schild-NRW-Export
+              <strong>SchuelerErzieher.dat</strong> laden. Der Schüler wird anhand von
+              <strong>Nachname</strong>, <strong>Vorname</strong> und <strong>Geburtsdatum</strong> gesucht.
+              Eine Zeile entspricht einem Erzieher-Eintrag mit bis zu zwei Personen.
+            </Message>
+
+            <ag-grid-vue
+              v-if="ezStore.rows.length > 0"
+              :class="[isDark ? 'ag-theme-quartz-dark' : 'ag-theme-quartz', 'data-table']"
+              :rowData="ezStore.rows"
+              :columnDefs="ezColumnDefs"
+              :defaultColDef="defaultColDef"
+              :tooltipShowDelay="400"
+              :rowClassRules="ezRowClassRules"
+              :getRowId="getEzRowId"
+              rowSelection="multiple"
+              :suppressRowClickSelection="true"
+              @cell-value-changed="onEzCellChanged"
+              @grid-ready="onEzGridReady"
+              @selection-changed="onEzSelectionChanged"
+              :animateRows="true"
+              :stopEditingWhenCellsLoseFocus="true"
+            />
+          </div>
+        </TabPanel>
       </TabPanels>
     </Tabs>
 
@@ -234,17 +353,19 @@ import TabPanels from 'primevue/tabpanels'
 import TabPanel from 'primevue/tabpanel'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
-import { useSchuelerStore } from '@/stores/schueler'
+import { useSchuelerStore, type SchuelerDuplikatModus, type SchuelerUploadErgebnis } from '@/stores/schueler'
 import { useSchuleStore } from '@/stores/schule'
 import { useSchulbesuchStore } from '@/stores/schulbesuch'
+import { useErzieherStore, type DuplikatModus } from '@/stores/erzieher'
 import { useDarkMode } from '@/composables/useDarkMode'
 import { type SchuelerImportRow } from '@/models/Schueler'
 import { type SchuelerSchulbesuchImportRow } from '@/models/SchuelerSchulbesuch'
+import { type SchuelerErzieherImportRow } from '@/models/SchuelerErzieher'
 import ImportStats from '@/components/ImportStats.vue'
 import ColumnMappingDialog from '@/components/ColumnMappingDialog.vue'
 import { parseSchuelerCsv } from '@/utils/csvParser'
 import { parseSchuelerXlsx } from '@/utils/xlsxParser'
-import { parseSchuelerSchulbesuchCsv } from '@/utils/csvParser'
+import { parseSchuelerSchulbesuchCsv, parseSchuelerErzieherCsv, istErzieherDatei } from '@/utils/csvParser'
 
 ModuleRegistry.registerModules([ClientSideRowModelModule])
 
@@ -252,6 +373,7 @@ const router = useRouter()
 const store = useSchuelerStore()
 const schuleStore = useSchuleStore()
 const sbStore = useSchulbesuchStore()
+const ezStore = useErzieherStore()
 const confirm = useConfirm()
 const { isDark } = useDarkMode()
 
@@ -259,7 +381,14 @@ const activeTab = ref('stammdaten')
 
 // ── Stammdaten ────────────────────────────────────────────────────────────────
 
-const uploadResult = ref<{ sent: number; failed: number } | null>(null)
+const uploadResult = ref<SchuelerUploadErgebnis | null>(null)
+
+const SCHUELER_DUPLIKAT_OPTIONEN: { label: string; value: SchuelerDuplikatModus }[] = [
+  { label: 'Vorhandene Schüler überspringen',  value: 'ueberspringen' },
+  { label: 'Vorhandene Schüler überschreiben', value: 'ueberschreiben' },
+  { label: 'Schüler immer neu anlegen',        value: 'neu' },
+]
+const duplikatModus = ref<SchuelerDuplikatModus>('ueberspringen')
 const parseError = ref('')
 const parsing = ref(false)
 const fileKey = ref(0)
@@ -278,6 +407,14 @@ function onSelectionChanged(): void {
 async function onFileSelect(event: { files: File[] }): Promise<void> {
   const file = event.files[0]
   if (!file) return
+  // Erzieher-Datei versehentlich bei den Stammdaten geladen → im Tab „Erzieherdaten“ einlesen
+  if (!/\.(xlsx|xls)$/i.test(file.name) && await istErzieherDatei(file)) {
+    fileKey.value++
+    activeTab.value = 'erzieher'
+    await onEzFileSelect({ files: [file] })
+    ezInfo.value = `„${file.name}“ enthält Erzieherdaten und wurde deshalb im Tab „Erzieherdaten“ geladen.`
+    return
+  }
   parsing.value = true
   parseError.value = ''
   try {
@@ -336,6 +473,8 @@ const columnDefs = computed<ColDef<SchuelerImportRow>[]>(() => {
       cellStyle: (p) => p.data?._errors.some(e => e.includes('Vorname')) ? { background: '#fee2e2' } : null,
     },
     { field: 'geburtsdatum',              headerName: 'Geburtsdatum',           width: 140, pinned: 'left' },
+    { field: 'schuelerId',                headerName: 'Schüler-ID',             width: 110, pinned: 'left', hide: !has('schuelerId'),
+      cellStyle: (p) => p.data?._errors.some(e => e.startsWith('Schüler-ID')) ? { background: '#fee2e2' } : null },
     { field: 'alleVornamen',              headerName: 'Alle Vornamen',          width: 150 },
     { field: 'geburtsname',               headerName: 'Geburtsname',            width: 130 },
     { field: 'geburtsort',                headerName: 'Geburtsort',             width: 120 },
@@ -392,11 +531,14 @@ const columnDefs = computed<ColDef<SchuelerImportRow>[]>(() => {
     { field: 'erhaeltMeisterBAFOEG',      headerName: 'Meister-BAföG',          width: 130,  hide: !has('erhaeltMeisterBAFOEG') },
     {
       headerName: 'Importstatus',
-      width: 100,
+      width: 140,
       editable: false,
       cellRenderer: (params: { data: SchuelerImportRow }) => {
-        if (params.data._sent) return '<span style="color:#22c55e">✔ Gesendet</span>'
-        if (!params.data._valid) return `<span style="color:#ef4444" title="${params.data._errors.join('; ')}">✖ Fehler</span>`
+        const title = params.data._errors.join('; ').replace(/"/g, '&quot;')
+        if (params.data._result === 'uebersprungen') return `<span style="color:#f59e0b" title="${title}">⏭ Übersprungen</span>`
+        if (params.data._result === 'ueberschrieben') return '<span style="color:#3b82f6">✎ Überschrieben</span>'
+        if (params.data._sent) return '<span style="color:#22c55e">✔ Angelegt</span>'
+        if (params.data._errors.length > 0) return `<span style="color:#ef4444" title="${title}">✖ Fehler</span>`
         return '<span style="color:#f59e0b">● Bereit</span>'
       },
     },
@@ -452,7 +594,7 @@ async function handleUploadAll(): Promise<void> {
   uploadResult.value = null
   const selected = gridApi.value?.getSelectedRows() ?? []
   const selectedIds = selected.length > 0 ? new Set(selected.map((r: { _id: string }) => r._id)) : undefined
-  uploadResult.value = await store.uploadAll(selectedIds)
+  uploadResult.value = await store.uploadAll(selectedIds, duplikatModus.value)
 }
 
 function confirmClear(): void {
@@ -770,6 +912,189 @@ const sbColumnDefs = computed<ColDef<SchuelerSchulbesuchImportRow>[]>(() => {
     },
   ])
 })
+
+// ── Erzieherdaten ─────────────────────────────────────────────────────────────
+
+const ezParseError = ref('')
+const ezParsing = ref(false)
+const ezLookupError = ref('')
+const ezUploadResult = ref<{ sent: number; updated: number; skipped: number; failed: number } | null>(null)
+const EZ_DUPLIKAT_OPTIONEN: { label: string; value: DuplikatModus }[] = [
+  { label: 'Vorhandene Erzieher überspringen',  value: 'ueberspringen' },
+  { label: 'Vorhandene Erzieher überschreiben', value: 'ueberschreiben' },
+  { label: 'Erzieher zusätzlich anlegen',       value: 'zusaetzlich' },
+]
+const ezDuplikatModus = ref<DuplikatModus>('ueberspringen')
+const ezGridApi = ref<GridApi | null>(null)
+const ezFileKey = ref(0)
+const ezSelectedCount = ref(0)
+const ezInfo = ref('')
+
+function onEzGridReady(params: GridReadyEvent): void {
+  ezGridApi.value = params.api
+}
+
+function onEzSelectionChanged(): void {
+  ezSelectedCount.value = ezGridApi.value?.getSelectedRows().length ?? 0
+}
+
+async function onEzFileSelect(event: { files: File[] }): Promise<void> {
+  const file = event.files[0]
+  if (!file) return
+  ezParsing.value = true
+  ezParseError.value = ''
+  ezLookupError.value = ''
+  ezInfo.value = ''
+  try {
+    const rows = await parseSchuelerErzieherCsv(file)
+    if (rows.length === 0) throw new Error('Keine Datensätze gefunden')
+    if (!ezStore.lookupLoaded) {
+      const result = await ezStore.loadSchuelerLookup()
+      if (result.error) ezLookupError.value = `Schülerliste konnte nicht geladen werden: ${result.error} — Abgleich nicht möglich.`
+    }
+    ezStore.setRows(rows)
+  } catch (e) {
+    ezParseError.value = e instanceof Error ? e.message : 'Fehler beim Einlesen der Datei'
+  } finally {
+    ezParsing.value = false
+  }
+}
+
+async function handleEzReloadLookup(): Promise<void> {
+  ezLookupError.value = ''
+  const result = await ezStore.loadSchuelerLookup(true)
+  if (result.error) {
+    ezLookupError.value = result.error
+  } else if (ezStore.rows.length > 0) {
+    ezStore.resolveAndValidate()
+  }
+}
+
+async function handleEzUploadAll(): Promise<void> {
+  ezUploadResult.value = null
+  const selected = ezGridApi.value?.getSelectedRows() ?? []
+  const selectedIds = selected.length > 0 ? new Set(selected.map((r: { _id: string }) => r._id)) : undefined
+  ezUploadResult.value = await ezStore.uploadAll(selectedIds, ezDuplikatModus.value)
+  ezGridApi.value?.refreshCells({ force: true })
+}
+
+function confirmEzClear(): void {
+  confirm.require({
+    message: 'Alle Erzieher-Importdaten verwerfen?',
+    header: 'Bestätigung',
+    icon: 'pi pi-exclamation-triangle',
+    acceptLabel: 'Ja, leeren',
+    rejectLabel: 'Abbrechen',
+    accept: () => { ezStore.clear(); ezFileKey.value++ },
+  })
+}
+
+function onEzCellChanged(event: CellValueChangedEvent<SchuelerErzieherImportRow>): void {
+  if (event.data) {
+    ezStore.updateRow(event.data._id, { [event.colDef.field as string]: event.newValue })
+    ezGridApi.value?.refreshCells({ force: true })
+  }
+}
+
+;(window as unknown as Record<string, unknown>).__deleteErzieher = (id: string) => {
+  ezStore.deleteRow(id)
+}
+
+function getEzRowId(params: GetRowIdParams<SchuelerErzieherImportRow>): string {
+  return params.data._id
+}
+
+const ezRowClassRules = {
+  'row-sent':  (params: { data: SchuelerErzieherImportRow }) => params.data._sent,
+  'row-error': (params: { data: SchuelerErzieherImportRow }) => !params.data._valid && !params.data._sent,
+}
+
+const ezColumnDefs = computed<ColDef<SchuelerErzieherImportRow>[]>(() => {
+  const has = (field: keyof SchuelerErzieherImportRow) => ezStore.rows.some(r => !!r[field])
+  return withHeaderTooltips([
+    {
+      field: 'nachname', headerName: 'Nachname', pinned: 'left', width: 140,
+      checkboxSelection: true, headerCheckboxSelection: true,
+      cellStyle: (p) => p.data?._errors.some(e => e.includes('Nachname des Schülers')) ? { background: '#fee2e2' } : null,
+    },
+    { field: 'vorname',      headerName: 'Vorname',      pinned: 'left', width: 130 },
+    { field: 'geburtsdatum', headerName: 'Geburtsdatum', pinned: 'left', width: 130 },
+    { field: 'schuelerId',   headerName: 'Schüler-ID',   pinned: 'left', width: 110, hide: !has('schuelerId'),
+      cellStyle: (p) => p.data?._errors.some(e => e.startsWith('Schüler-ID')) ? { background: '#fee2e2' } : null },
+    {
+      headerName: 'Abgleich', width: 120, pinned: 'left', editable: false, sortable: false, filter: false,
+      cellRenderer: (params: { data: SchuelerErzieherImportRow }) => {
+        switch (params.data._lookupStatus) {
+          case 'ok':        return `<span style="color:#22c55e" title="ID: ${params.data._schuelerId}">✔ Gefunden</span>`
+          case 'not_found': return '<span style="color:#ef4444">✖ Nicht gefunden</span>'
+          case 'ambiguous': return '<span style="color:#f59e0b">⚠ Nicht eindeutig</span>'
+          case 'mismatch':  return '<span style="color:#ef4444" title="Name/Geburtsdatum passen nicht zur Schüler-ID">✖ ID passt nicht</span>'
+          default:          return '<span style="color:#94a3b8">⋯ Ausstehend</span>'
+        }
+      },
+    },
+    {
+      field: 'erzieherart', headerName: 'Erzieherart', width: 170,
+      cellRenderer: (params: { data: SchuelerErzieherImportRow; value: string }) => {
+        if (params.data._erzieherartStatus === 'new')
+          return `<span style="color:#3b82f6" title="Unbekannte Erzieherart — wird beim Senden im Katalog angelegt">${params.value} ✚</span>`
+        return params.value ?? ''
+      },
+    },
+    // 1. Person
+    { field: 'anrede1',   headerName: 'Anrede 1',   width: 100 },
+    { field: 'titel1',    headerName: 'Titel 1',    width: 90,  hide: !has('titel1') },
+    { field: 'nachname1', headerName: 'Nachname 1', width: 140,
+      cellStyle: (p) => p.data?._errors.some(e => e.includes('1. Person')) ? { background: '#fee2e2' } : null },
+    { field: 'vorname1',  headerName: 'Vorname 1',  width: 130 },
+    { field: 'email1',    headerName: 'E-Mail 1',   width: 180, hide: !has('email1') },
+    { field: 'staatsangehoerigkeit1', headerName: 'Staatsang. 1', width: 120, hide: !has('staatsangehoerigkeit1'),
+      cellStyle: (p) => p.data?._errors.some(e => e.includes('(1. Person)')) ? { background: '#fee2e2' } : null },
+    // 2. Person
+    { field: 'anrede2',   headerName: 'Anrede 2',   width: 100, hide: !has('anrede2') },
+    { field: 'titel2',    headerName: 'Titel 2',    width: 90,  hide: !has('titel2') },
+    { field: 'nachname2', headerName: 'Nachname 2', width: 140, hide: !has('nachname2') },
+    { field: 'vorname2',  headerName: 'Vorname 2',  width: 130, hide: !has('vorname2') },
+    { field: 'email2',    headerName: 'E-Mail 2',   width: 180, hide: !has('email2') },
+    { field: 'staatsangehoerigkeit2', headerName: 'Staatsang. 2', width: 120, hide: !has('staatsangehoerigkeit2'),
+      cellStyle: (p) => p.data?._errors.some(e => e.includes('(2. Person)')) ? { background: '#fee2e2' } : null },
+    // Adresse
+    { field: 'strassenname',     headerName: 'Straße',         width: 180 },
+    { field: 'hausnummer',       headerName: 'Hausnr.',        width: 90 },
+    { field: 'hausnummerZusatz', headerName: 'Hausnr. Zusatz', width: 120, hide: !has('hausnummerZusatz') },
+    { field: 'plz',              headerName: 'PLZ',            width: 80 },
+    {
+      field: 'ort', headerName: 'Ort', width: 140,
+      cellRenderer: (params: { data: SchuelerErzieherImportRow; value: string }) => {
+        if (params.data._wohnortStatus === 'not_found')
+          return `<span style="color:#f59e0b" title="PLZ/Ort nicht im Ortskatalog — Adresse wird ohne Wohnort gespeichert">${params.value} ⚠</span>`
+        return params.value ?? ''
+      },
+    },
+    { field: 'ortsteil',           headerName: 'Ortsteil',     width: 120, hide: !has('ortsteil') },
+    { field: 'erhaeltAnschreiben', headerName: 'Anschreiben',  width: 115 },
+    { field: 'bemerkungen',        headerName: 'Bemerkungen',  width: 180, hide: !has('bemerkungen') },
+    {
+      headerName: 'Importstatus', width: 130, editable: false,
+      cellRenderer: (params: { data: SchuelerErzieherImportRow }) => {
+        const title = params.data._errors.join('; ').replace(/"/g, '&quot;')
+        if (params.data._result === 'uebersprungen') return `<span style="color:#f59e0b" title="${title}">⏭ Übersprungen</span>`
+        if (params.data._sent && params.data._errors.length) return `<span style="color:#f59e0b" title="${title}">⚠ Teilweise</span>`
+        if (params.data._result === 'ueberschrieben') return '<span style="color:#3b82f6">✎ Überschrieben</span>'
+        if (params.data._sent) return '<span style="color:#22c55e">✔ Gesendet</span>'
+        if (!params.data._valid) return `<span style="color:#ef4444" title="${title}">✖ Fehler</span>`
+        return '<span style="color:#f59e0b">● Bereit</span>'
+      },
+    },
+    {
+      headerName: '', width: 60, editable: false, sortable: false, filter: false,
+      cellRenderer: (params: { data: SchuelerErzieherImportRow }) =>
+        params.data._sent
+          ? ''
+          : `<button onclick="window.__deleteErzieher('${params.data._id}')" style="border:none;background:none;cursor:pointer;color:#ef4444;font-size:1rem" title="Zeile löschen">✕</button>`,
+    },
+  ])
+})
 </script>
 
 <style scoped>
@@ -777,8 +1102,8 @@ const sbColumnDefs = computed<ColDef<SchuelerSchulbesuchImportRow>[]>(() => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  gap: 0.375rem;
-  padding: 0.375rem 1rem;
+  gap: 0.75rem;
+  padding: 0.75rem 1.5rem;
   padding-bottom: 1.5rem;
 }
 
@@ -793,19 +1118,19 @@ const sbColumnDefs = computed<ColDef<SchuelerSchulbesuchImportRow>[]>(() => {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.5rem;
 }
 
 h2 {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 1.6rem;
   white-space: nowrap;
   font-weight: 600;
 }
 
 .tab-badge {
   margin-left: 0.4rem;
-  font-size: 0.7rem;
+  font-size: 0.8rem;
 }
 
 .tab-content {
@@ -842,27 +1167,27 @@ h2 {
 
 :deep(.action-buttons .p-button),
 :deep(.p-fileupload-basic .p-button) {
-  padding: 0.2rem 0.5rem;
-  font-size: 0.75rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.9rem;
 }
 
 :deep(.action-buttons .p-button .p-button-icon),
 :deep(.p-fileupload-basic .p-button .p-button-icon) {
-  font-size: 0.75rem;
+  font-size: 0.9rem;
 }
 
 :deep(.p-fileupload-label),
 :deep(.p-fileupload-basic-content > span:not([class*="p-button"])) {
-  font-size: 0.72rem;
+  font-size: 0.9rem;
   color: var(--p-text-muted-color);
 }
 
 :deep(.tab-actions .p-select) {
-  font-size: 0.72rem;
+  font-size: 0.9rem;
 }
 :deep(.tab-actions .p-select .p-select-label) {
-  font-size: 0.72rem;
-  padding: 0.2rem 0.25rem;
+  font-size: 0.9rem;
+  padding: 0.35rem 0.5rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

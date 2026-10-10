@@ -13,6 +13,161 @@
     "basicAuth" : [ ]
   } ],
   "paths" : {
+    "/db/{schema}/abschluesse/schueler/{id}/abschnitt/{abschnitt}" : {
+      "get" : {
+        "tags" : [ "Server" ],
+        "summary" : "Liefert zu der ID des Schülers und des Schuljahresabschnittes die zugehörigen Informationen zum erreichten Schulabschluss.",
+        "description" : "Liest die Informationen zum erreichten Schulabschluss des Schülers zu der angegebenen ID und dem angegeben Schuljahresabschnittaus der Datenbank und liefert diese zurück. Dabei wird geprüft, ob der SVWS-Benutzer die notwendige Berechtigung zum Ansehen von Schülerdaten besitzt.",
+        "operationId" : "getSchuelerAbschlussinformationen",
+        "parameters" : [ {
+          "name" : "schema",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "nullable" : true
+          }
+        }, {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "name" : "abschnitt",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Die Informationen zum erreichten Schulabschluss des Schülers in dem Schuljahresabschnitt",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Abschlussdaten"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Der SVWS-Benutzer hat keine Rechte, um die Schülerdaten anzusehen."
+          },
+          "404" : {
+            "description" : "Kein Schüler-Eintrag mit der angegebenen ID bzw. kein Lernabschnitt in dem angegeben Schujahresabschnitt gefunden"
+          }
+        }
+      }
+    },
+    "/db/{schema}/abschluesse/schueler/lernabschnittsdaten/{abschnitt}" : {
+      "get" : {
+        "tags" : [ "Server" ],
+        "summary" : "Liefert zu der ID des Schülerlernabschnittes die zugehörigen Informationen zum erreichten Schulabschluss.",
+        "description" : "Liest die Informationen zum erreichten Schulabschluss des Schülers zu der angegebenen ID aus der Datenbank und liefert diese zurück. Dabei wird geprüft, ob der SVWS-Benutzer die notwendige Berechtigung zum Ansehen von Schülerdaten besitzt.",
+        "operationId" : "getSchuelerAbschlussinformationenByLernabschnittID",
+        "parameters" : [ {
+          "name" : "schema",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "nullable" : true
+          }
+        }, {
+          "name" : "abschnitt",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Die Informationen zum erreichten Schulabschluss in dem Lernabschnitt des Schülers",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Abschlussdaten"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Der SVWS-Benutzer hat keine Rechte, um die Schülerdaten anzusehen."
+          },
+          "404" : {
+            "description" : "Kein Eintrag mit Schüler-Lernabschnittsdaten mit der angegebenen ID gefunden"
+          }
+        }
+      },
+      "patch" : {
+        "tags" : [ "Server" ],
+        "summary" : "Passt die Informationen zum Schulabschluss in dem Lernabschnitt mit der angegebenen ID an.",
+        "description" : "Passt die Informationen zum Schulabschluss in dem Lernabschnitt mit der angegebenen ID an. Dabei wird geprüft, ob der SVWS-Benutzer die notwendige Berechtigung zum Ändern der Abschlussinformationen besitzt.",
+        "operationId" : "patchSchuelerAbschlussinformationen",
+        "parameters" : [ {
+          "name" : "schema",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "nullable" : true
+          }
+        }, {
+          "name" : "abschnitt",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "description" : "Der Patch für die Schülerlernabschnittsdaten",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Abschlussdaten"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Der Patch wurde erfolgreich integriert.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Abschlussdaten"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Der Patch ist fehlerhaft aufgebaut."
+          },
+          "403" : {
+            "description" : "Der SVWS-Benutzer hat keine Rechte, um die Daten zu ändern."
+          },
+          "404" : {
+            "description" : "Kein Eintrag mit der angegebenen ID gefunden"
+          },
+          "409" : {
+            "description" : "Der Patch ist fehlerhaft, da zumindest eine Rahmenbedingung für einen Wert nicht erfüllt wurde (z.B. eine negative ID)"
+          },
+          "500" : {
+            "description" : "Unspezifizierter Fehler (z.B. beim Datenbankzugriff)"
+          }
+        }
+      }
+    },
     "/db/{schema}/schule/abteilungen/{idSchuljahresabschnitt}" : {
       "get" : {
         "tags" : [ "Server" ],
@@ -9518,8 +9673,8 @@
     "/db/{schema}/gost/schueler/{schuelerid}/gklwahl" : {
       "get" : {
         "tags" : [ "Server" ],
-        "summary" : "Liest für die gymnasiale Oberstufe die Wahlen zu den Gleichwertig Komplexen Lernleistungen von dem angegebenen Schüler aus.",
-        "description" : "Liest für die gymnasiale Oberstufe die Wahlen zu den Gleichwertig Komplexen Lernleistungen von dem angegebenen Schüler aus. Dabei wird geprüft, ob der SVWS-Benutzer die notwendige Berechtigung zum Auslesen der Wahlen besitzt.",
+        "summary" : "Liest für die gymnasiale Oberstufe die Wahlen zu den gleichwertigen komplexen Leistungsnachweisen von dem angegebenen Schüler aus.",
+        "description" : "Liest für die gymnasiale Oberstufe die Wahlen zu den gleichwertigen komplexen Leistungsnachweisen von dem angegebenen Schüler aus. Dabei wird geprüft, ob der SVWS-Benutzer die notwendige Berechtigung zum Auslesen der Wahlen besitzt.",
         "operationId" : "getGostSchuelerGKLWahl",
         "parameters" : [ {
           "name" : "schema",
@@ -9540,7 +9695,7 @@
         } ],
         "responses" : {
           "200" : {
-            "description" : "Die Wahlen zu den Gleichwertig Komplexen Lernleistungen der gymnasialen Oberstufe für den angegebenen Schüler",
+            "description" : "Die Wahlen zu den gleichwertigen komplexen Leistungsnachweisen der gymnasialen Oberstufe für den angegebenen Schüler",
             "content" : {
               "application/json" : {
                 "schema" : {
@@ -9550,7 +9705,7 @@
             }
           },
           "403" : {
-            "description" : "Der SVWS-Benutzer hat keine Rechte, um die Wahlen zu den Gleichwertig Komplexen Lernleistungender Gymnasialen Oberstufe eines Schülers auszulesen."
+            "description" : "Der SVWS-Benutzer hat keine Rechte, um die Wahlen zu den gleichwertigen komplexen Leistungsnachweisender Gymnasialen Oberstufe eines Schülers auszulesen."
           },
           "404" : {
             "description" : "Kein Eintrag für einen Schüler mit Laufbahnplanungsdaten der gymnasialen Oberstufe für die angegebene ID gefunden"
@@ -9920,8 +10075,8 @@
     "/db/{schema}/gost/schueler/fachwahl" : {
       "put" : {
         "tags" : [ "Server" ],
-        "summary" : "Passt die Wahl eines Schüler in Bezug die Gleichwertig Komplexen Lernleistungen der Gymnasiale Oberstufe an.",
-        "description" : "Passt die Wahl eines Schüler in Bezug die Gleichwertig Komplexen Lernleistungen der Gymnasiale Oberstufe an. Dabei wird geprüft, ob der SVWS-Benutzer die notwendige Berechtigung zum Anpassen der Wahlen besitzt.",
+        "summary" : "Passt die Wahl eines Schüler in Bezug die gleichwertigen komplexen Leistungsnachweise der Gymnasiale Oberstufe an.",
+        "description" : "Passt die Wahl eines Schüler in Bezug die gleichwertigen komplexen Leistungsnachweise der Gymnasiale Oberstufe an. Dabei wird geprüft, ob der SVWS-Benutzer die notwendige Berechtigung zum Anpassen der Wahlen besitzt.",
         "operationId" : "putGostSchuelerGKLWahl",
         "parameters" : [ {
           "name" : "schema",
@@ -14781,11 +14936,11 @@
               }
             }
           },
+          "400" : {
+            "description" : "Die Eingabedaten sind fehlerhaft."
+          },
           "403" : {
             "description" : "Der SVWS-Benutzer hat keine Rechte, um einen Jahrgang für die Schule anzulegen."
-          },
-          "404" : {
-            "description" : "Die Jahrgangsdaten wurden nicht gefunden"
           },
           "500" : {
             "description" : "Unspezifizierter Fehler (z.B. beim Datenbankzugriff)"
@@ -14797,7 +14952,7 @@
       "delete" : {
         "tags" : [ "Server" ],
         "summary" : "Entfernt mehrere Jahrgänge.",
-        "description" : "Entfernt mehrere Jahrgänge. Dabei wird geprüft, ob der SVWS-Benutzer die notwendige Berechtigung zum Bearbeiten von Jahrgängen hat.",
+        "description" : "Entfernt mehrere Jahrgänge, insofern die notwendigen Berechtigungen vorhanden sind. Referenzierte Jahrgänge werden nicht entfernt.",
         "operationId" : "deleteJahrgaenge",
         "parameters" : [ {
           "name" : "schema",
@@ -14825,7 +14980,7 @@
         },
         "responses" : {
           "200" : {
-            "description" : "Die Jahrgänge wurde erfolgreich entfernt.",
+            "description" : "Die Lösch-Operationen wurden ausgeführt. Das Ergebnis jeder einzelnen Operation ist in der Liste enthalten.",
             "content" : {
               "application/json" : {
                 "schema" : {
@@ -14838,13 +14993,7 @@
             }
           },
           "403" : {
-            "description" : "Der SVWS-Benutzer hat keine Rechte, um einen Jahrgang zu bearbeiten."
-          },
-          "404" : {
-            "description" : "Ein Jahrgang oder mehrere Jahrgänge nicht vorhanden"
-          },
-          "409" : {
-            "description" : "Die übergebenen Daten sind fehlerhaft"
+            "description" : "Der SVWS-Benutzer hat keine Rechte, um Jahrgänge zu entfernen."
           },
           "500" : {
             "description" : "Unspezifizierter Fehler (z.B. beim Datenbankzugriff)"
@@ -14852,12 +15001,12 @@
         }
       }
     },
-    "/db/{schema}/jahrgaenge/{id}" : {
+    "/db/{schema}/jahrgaenge" : {
       "get" : {
         "tags" : [ "Server" ],
-        "summary" : "Liefert zu der ID des Jahrgangs die zugehörigen Daten.",
-        "description" : "Liest die Daten des Jahrgangs zu der angegebenen ID aus der Datenbank und liefert diese zurück. Dabei wird geprüft, ob der SVWS-Benutzer die notwendige Berechtigung zum Ansehen von Jahrgangsdaten besitzt.",
-        "operationId" : "getJahrgang",
+        "summary" : "Gibt eine Übersicht von allen Jahrgangsdaten zurück.",
+        "description" : "Erstellt eine Liste aller in der Datenbank vorhanden Jahrgangsdaten insofern der SVWS-Benutzer die notwendige Berechtigung besitzt.",
+        "operationId" : "getJahrgaenge",
         "parameters" : [ {
           "name" : "schema",
           "in" : "path",
@@ -14866,22 +15015,17 @@
             "type" : "string",
             "nullable" : true
           }
-        }, {
-          "name" : "id",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "integer",
-            "format" : "int64"
-          }
         } ],
         "responses" : {
           "200" : {
-            "description" : "Die Daten des Jahrgangs",
+            "description" : "Eine Liste von Jahrgangs-Listen-Einträgen",
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/JahrgangsDaten"
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/JahrgangsDaten"
+                  }
                 }
               }
             }
@@ -14890,57 +15034,12 @@
             "description" : "Der SVWS-Benutzer hat keine Rechte, um Jahrgangsdaten anzusehen."
           },
           "404" : {
-            "description" : "Kein Jahrgangs-Eintrag mit der angegebenen ID gefunden"
+            "description" : "Keine Jahrgangs-Einträge gefunden"
           }
         }
-      },
-      "delete" : {
-        "tags" : [ "Server" ],
-        "summary" : "Entfernt einen Jahrgang.",
-        "description" : "Entfernt einen Jahrgang. Dabei wird geprüft, ob der SVWS-Benutzer die notwendige Berechtigung zum Bearbeiten von Jahrgänge hat.",
-        "operationId" : "deleteJahrgang",
-        "parameters" : [ {
-          "name" : "schema",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string",
-            "nullable" : true
-          }
-        }, {
-          "name" : "id",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "integer",
-            "format" : "int64"
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "description" : "Der Jahrgang wurde erfolgreich entfernt.",
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/JahrgangsDaten"
-                }
-              }
-            }
-          },
-          "403" : {
-            "description" : "Der SVWS-Benutzer hat keine Rechte, um einen Jahrgang zu bearbeiten."
-          },
-          "404" : {
-            "description" : "Kein Jahrgang vorhanden"
-          },
-          "409" : {
-            "description" : "Die übergebenen Daten sind fehlerhaft"
-          },
-          "500" : {
-            "description" : "Unspezifizierter Fehler (z.B. beim Datenbankzugriff)"
-          }
-        }
-      },
+      }
+    },
+    "/db/{schema}/jahrgaenge/{id}" : {
       "patch" : {
         "tags" : [ "Server" ],
         "summary" : "Passt den Jahrgang mit der angebenen ID an.",
@@ -14987,125 +15086,8 @@
           "404" : {
             "description" : "Kein Eintrag mit der angegebenen ID gefunden"
           },
-          "409" : {
-            "description" : "Der Patch ist fehlerhaft, da zumindest eine Rahmenbedingung für einen Wert nicht erfüllt wurde (z.B. eine negative ID)"
-          },
           "500" : {
             "description" : "Unspezifizierter Fehler (z.B. beim Datenbankzugriff)"
-          }
-        }
-      }
-    },
-    "/db/{schema}/jahrgaenge" : {
-      "get" : {
-        "tags" : [ "Server" ],
-        "summary" : "Gibt eine Übersicht von allen Jahrgängen zurück.",
-        "description" : "Erstellt eine Liste aller in der Datenbank vorhanden Jahrgänge unter Angabe der ID, des Kürzels, des verwendeten Statistik-Kürzels, der Bezeichnung des Jahrgangs, die Schulgliederung zu der der Jahrgang gehört, die ID eines Folgejahrgangs, sofern definiert, einer Sortierreihenfolge und ob sie in der Anwendung sichtbar sein sollen. Dabei wird geprüft, ob der SVWS-Benutzer die notwendige Berechtigung zum Ansehen von Jahrgangsdaten besitzt.",
-        "operationId" : "getJahrgaenge",
-        "parameters" : [ {
-          "name" : "schema",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string",
-            "nullable" : true
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "description" : "Eine Liste von Jahrgangs-Listen-Einträgen",
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/JahrgangsDaten"
-                  }
-                }
-              }
-            }
-          },
-          "403" : {
-            "description" : "Der SVWS-Benutzer hat keine Rechte, um Jahrgangsdaten anzusehen."
-          },
-          "404" : {
-            "description" : "Keine Jahrgangs-Einträge gefunden"
-          }
-        }
-      }
-    },
-    "/db/{schema}/jahrgaenge/jahrgangsdaten" : {
-      "get" : {
-        "tags" : [ "Server" ],
-        "summary" : "Gibt eine Übersicht von allen Jahrgangsdaten zurück.",
-        "description" : "Erstellt eine Liste aller in der Datenbank vorhanden Jahrgangsdaten insofern der SVWS-Benutzer die notwendige Berechtigung besitzt.",
-        "operationId" : "getJahrgangsdaten",
-        "parameters" : [ {
-          "name" : "schema",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string",
-            "nullable" : true
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "description" : "Eine Liste von Jahrgangs-Listen-Einträgen",
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/JahrgangsDaten"
-                  }
-                }
-              }
-            }
-          },
-          "403" : {
-            "description" : "Der SVWS-Benutzer hat keine Rechte, um Jahrgangsdaten anzusehen."
-          },
-          "404" : {
-            "description" : "Keine Jahrgangs-Einträge gefunden"
-          }
-        }
-      }
-    },
-    "/db/{schema}/jahrgaenge/allgemein/jahrgaenge" : {
-      "get" : {
-        "tags" : [ "Server" ],
-        "summary" : "Gibt den Katalog der in den einzelnen Schulformen gültigen Jahrgänge zurück.",
-        "description" : "Erstellt eine Liste aller in dem Katalog vorhanden in den einzelnen Schulformen gültigen Jahrgänge. Dabei wird geprüft, ob der SVWS-Benutzer die notwendige Berechtigung zum Ansehen von Katalogen besitzt.",
-        "operationId" : "getKatalogJahrgaenge",
-        "parameters" : [ {
-          "name" : "schema",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string",
-            "nullable" : true
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "description" : "Eine Liste von Jahrgangs-Katalog-Einträgen",
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/JahrgaengeKatalogEintrag"
-                  }
-                }
-              }
-            }
-          },
-          "403" : {
-            "description" : "Der SVWS-Benutzer hat keine Rechte, um Katalog-Einträge anzusehen."
-          },
-          "404" : {
-            "description" : "Keine Jahrgangs-Katalog-Einträge gefunden"
           }
         }
       }
@@ -18691,6 +18673,63 @@
             "description" : "Unspezifizierter Fehler (z.B. beim Datenbankzugriff)"
           }
         }
+      },
+      "delete" : {
+        "tags" : [ "Server" ],
+        "summary" : "Entfernt den Lehramtseintrag in den Personaldaten des Lehrers.",
+        "description" : "Entfernt den Lehramtseintrag in den Personaldaten des Lehrers aus der Datenbank. Dabei wird geprüft, ob der SVWS-Benutzer die notwendige Berechtigung zum Ändern von Lehrer-Personaldaten besitzt.",
+        "operationId" : "deleteLehrerLehraemter",
+        "parameters" : [ {
+          "name" : "schema",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "nullable" : true
+          }
+        } ],
+        "requestBody" : {
+          "description" : "Die IDs der Lehrerämter",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "array",
+                "items" : {
+                  "type" : "integer",
+                  "format" : "int64"
+                }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Die Lösch-Operationen wurden ausgeführt.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Einfache-Operation-Antwort"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Die Anfrage ist fehlerhaft."
+          },
+          "403" : {
+            "description" : "Der SVWS-Benutzer hat keine Rechte, um die Daten zu entfernen."
+          },
+          "404" : {
+            "description" : "Kein Eintrag mit den angegebenen IDs gefunden"
+          },
+          "500" : {
+            "description" : "Unspezifizierter Fehler (z.B. beim Datenbankzugriff)"
+          }
+        }
       }
     },
     "/db/{schema}/lehrer/personaldaten/lehramt/lehrbefaehigung" : {
@@ -19722,156 +19761,6 @@
           },
           "404" : {
             "description" : "Keine Lehrerfunktion mit der angegebenen ID gefunden."
-          }
-        }
-      }
-    },
-    "/db/{schema}/lehrer/personaldaten/lehramt/{idLehramt}" : {
-      "get" : {
-        "tags" : [ "Server" ],
-        "summary" : "Liefert zu der ID des Lehramtes eines Lehrers die zugehörigen Daten.",
-        "description" : "Liest die Daten des Lehramtes eines Lehrers zu der angegebenen ID aus der Datenbank und liefert diese zurück. Dabei wird geprüft, ob der SVWS-Benutzer die notwendige Berechtigung zum Ansehen von Lehrerpersonaldaten besitzt.",
-        "operationId" : "getLehrerLehramt",
-        "parameters" : [ {
-          "name" : "schema",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string",
-            "nullable" : true
-          }
-        }, {
-          "name" : "idLehramt",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "integer",
-            "format" : "int64"
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "description" : "Die Daten zu dem Lehramt",
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/LehrerLehramtEintrag"
-                }
-              }
-            }
-          },
-          "400" : {
-            "description" : "Die Anfrage ist fehlerhaft."
-          },
-          "403" : {
-            "description" : "Der SVWS-Benutzer hat keine Rechte, um Lehrerdaten anzusehen."
-          },
-          "404" : {
-            "description" : "Kein Lehramts-Eintrag mit der angegebenen ID gefunden"
-          },
-          "500" : {
-            "description" : "Unspezifizierter Fehler (z.B. beim Datenbankzugriff)"
-          }
-        }
-      },
-      "delete" : {
-        "tags" : [ "Server" ],
-        "summary" : "Entfernt den Lehramtseintrag in den Personaldaten des Lehrers.",
-        "description" : "Entfernt den Lehramtseintrag in den Personaldaten des Lehrers aus der Datenbank. Dabei wird geprüft, ob der SVWS-Benutzer die notwendige Berechtigung zum Ändern von Lehrer-Personaldaten besitzt.",
-        "operationId" : "deleteLehrerLehramt",
-        "parameters" : [ {
-          "name" : "schema",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string",
-            "nullable" : true
-          }
-        }, {
-          "name" : "idLehramt",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "integer",
-            "format" : "int64"
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "description" : "Der Datensatz wurde erfolgreich entfernt.",
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/LehrerLehramtEintrag"
-                }
-              }
-            }
-          },
-          "400" : {
-            "description" : "Die Anfrage ist fehlerhaft."
-          },
-          "403" : {
-            "description" : "Der SVWS-Benutzer hat keine Rechte, um die Daten zu entfernen."
-          },
-          "404" : {
-            "description" : "Kein Eintrag mit den angegebenen IDs gefunden"
-          },
-          "500" : {
-            "description" : "Unspezifizierter Fehler (z.B. beim Datenbankzugriff)"
-          }
-        }
-      },
-      "patch" : {
-        "tags" : [ "Server" ],
-        "summary" : "Führt einen Patch auf einem Lehramtseintrag in den Personaldaten des Lehrers durch.",
-        "description" : "Passt den Lehramtseintrag zu den angegebenen IDs an und speichert das Ergebnis in der Datenbank. Dabei wird geprüft, ob der SVWS-Benutzer die notwendige Berechtigung zum Ändern von Lehrer-Personaldaten besitzt.",
-        "operationId" : "patchLehrerLehramt",
-        "parameters" : [ {
-          "name" : "schema",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string",
-            "nullable" : true
-          }
-        }, {
-          "name" : "idLehramt",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "integer",
-            "format" : "int64"
-          }
-        } ],
-        "requestBody" : {
-          "description" : "Der Patch für den Lehramtseintrag",
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "$ref" : "#/components/schemas/LehrerLehramtEintrag"
-              }
-            }
-          },
-          "required" : true
-        },
-        "responses" : {
-          "200" : {
-            "description" : "Der Patch wurde erfolgreich integriert."
-          },
-          "400" : {
-            "description" : "Der Patch ist fehlerhaft aufgebaut."
-          },
-          "403" : {
-            "description" : "Der SVWS-Benutzer hat keine Rechte, um die Daten zu ändern."
-          },
-          "404" : {
-            "description" : "Kein Lehramts-Eintrag mit der angegebenen ID gefunden"
-          },
-          "409" : {
-            "description" : "Der Patch ist fehlerhaft, da zumindest eine Rahmenbedingung für einen Wert nicht erfüllt wurde"
-          },
-          "500" : {
-            "description" : "Unspezifizierter Fehler (z.B. beim Datenbankzugriff)"
           }
         }
       }
@@ -21379,52 +21268,6 @@
         }
       }
     },
-    "/db/{schema}/lehrer/{id}/personaldaten/lehraemter" : {
-      "get" : {
-        "tags" : [ "Server" ],
-        "summary" : "Liefert zu der ID des Lehrer die zugehörigen Daten zu den Lehrämtern.",
-        "description" : "Liest zugehörigen Daten zu den Lehrämtern des Lehrers mit der angegebenen ID aus der Datenbank und liefert diese zurück. Dabei wird geprüft, ob der SVWS-Benutzer die notwendige Berechtigung zum Ansehen von Lehrerpersonaldaten besitzt.",
-        "operationId" : "getLehrerLehraemter",
-        "parameters" : [ {
-          "name" : "schema",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string",
-            "nullable" : true
-          }
-        }, {
-          "name" : "id",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "integer",
-            "format" : "int64"
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "description" : "Die zugehörigen Daten zu den Lehrämtern des Lehrers",
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/LehrerLehramtEintrag"
-                  }
-                }
-              }
-            }
-          },
-          "403" : {
-            "description" : "Der SVWS-Benutzer hat keine Rechte, um Lehrerpersonaldaten anzusehen."
-          },
-          "404" : {
-            "description" : "Kein Lehrer-Eintrag mit der angegebenen ID gefunden"
-          }
-        }
-      }
-    },
     "/db/{schema}/lehrer/personaldaten/lehramt/fachrichtungen/{idLehramt}" : {
       "get" : {
         "tags" : [ "Server" ],
@@ -22004,6 +21847,62 @@
           },
           "404" : {
             "description" : "Kein Fachrichtungseintrag mit der angegebenen ID gefunden"
+          },
+          "409" : {
+            "description" : "Der Patch ist fehlerhaft, da zumindest eine Rahmenbedingung für einen Wert nicht erfüllt wurde"
+          },
+          "500" : {
+            "description" : "Unspezifizierter Fehler (z.B. beim Datenbankzugriff)"
+          }
+        }
+      }
+    },
+    "/db/{schema}/lehrer/personaldaten/lehramt/{idLehramt}" : {
+      "patch" : {
+        "tags" : [ "Server" ],
+        "summary" : "Führt einen Patch auf einem Lehramtseintrag in den Personaldaten des Lehrers durch.",
+        "description" : "Passt den Lehramtseintrag zu den angegebenen IDs an und speichert das Ergebnis in der Datenbank. Dabei wird geprüft, ob der SVWS-Benutzer die notwendige Berechtigung zum Ändern von Lehrer-Personaldaten besitzt.",
+        "operationId" : "patchLehrerLehramt",
+        "parameters" : [ {
+          "name" : "schema",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "nullable" : true
+          }
+        }, {
+          "name" : "idLehramt",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "description" : "Der Patch für den Lehramtseintrag",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/LehrerLehramtEintrag"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Der Patch wurde erfolgreich integriert."
+          },
+          "400" : {
+            "description" : "Der Patch ist fehlerhaft aufgebaut."
+          },
+          "403" : {
+            "description" : "Der SVWS-Benutzer hat keine Rechte, um die Daten zu ändern."
+          },
+          "404" : {
+            "description" : "Kein Lehramts-Eintrag mit der angegebenen ID gefunden"
           },
           "409" : {
             "description" : "Der Patch ist fehlerhaft, da zumindest eine Rahmenbedingung für einen Wert nicht erfüllt wurde"
@@ -24568,59 +24467,6 @@
           },
           "409" : {
             "description" : "Der Patch ist fehlerhaft, da zumindest eine Rahmenbedingung für einen Wert nicht erfüllt wurde"
-          },
-          "500" : {
-            "description" : "Unspezifizierter Fehler (z.B. beim Datenbankzugriff)"
-          }
-        }
-      }
-    },
-    "/db/{schema}/schueler/delete/multiple" : {
-      "delete" : {
-        "tags" : [ "Server" ],
-        "summary" : "Entfernt mehrere Schüler durch setzen eines Löschvermerks.",
-        "description" : "Entfernt mehrere Schüler durch setzen eines Löschvermerks. Dabei wird geprüft, ob alle Vorbedingungen zum Entfernender Schüler erfüllt sind und der SVWS-Benutzer die notwendige Berechtigung hat.",
-        "operationId" : "deleteSchueler",
-        "parameters" : [ {
-          "name" : "schema",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string",
-            "nullable" : true
-          }
-        } ],
-        "requestBody" : {
-          "description" : "Die IDs der zu löschenden Schüler",
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "type" : "array",
-                "items" : {
-                  "type" : "integer",
-                  "format" : "int64"
-                }
-              }
-            }
-          },
-          "required" : true
-        },
-        "responses" : {
-          "200" : {
-            "description" : "Die Lösch-Operationen wurden ausgeführt.",
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/Einfache-Operation-Antwort"
-                  }
-                }
-              }
-            }
-          },
-          "403" : {
-            "description" : "Der SVWS-Benutzer hat keine Rechte, um Schüler zu entfernen."
           },
           "500" : {
             "description" : "Unspezifizierter Fehler (z.B. beim Datenbankzugriff)"
@@ -27241,6 +27087,59 @@
           },
           "409" : {
             "description" : "Der Patch ist fehlerhaft, da zumindest eine Rahmenbedingung für einen Wert nicht erfüllt wurde (z.B. eine negative ID)"
+          },
+          "500" : {
+            "description" : "Unspezifizierter Fehler (z.B. beim Datenbankzugriff)"
+          }
+        }
+      }
+    },
+    "/db/{schema}/schueler/softdelete/multiple" : {
+      "delete" : {
+        "tags" : [ "Server" ],
+        "summary" : "Setzt den Löschvermerk bei mehreren Schülern.",
+        "description" : "Setzt den Löschvermerk bei mehreren Schülern, insofern der SVWS-Benutzer die notwendige Berechtigung hat.",
+        "operationId" : "softDeleteSchuelerStammdatenMultiple",
+        "parameters" : [ {
+          "name" : "schema",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "nullable" : true
+          }
+        } ],
+        "requestBody" : {
+          "description" : "Die IDs der zu löschenden Schüler",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "array",
+                "items" : {
+                  "type" : "integer",
+                  "format" : "int64"
+                }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Die Lösch-Operationen wurden ausgeführt.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Einfache-Operation-Antwort"
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Der SVWS-Benutzer hat keine Rechte, um Schüler zu entfernen."
           },
           "500" : {
             "description" : "Unspezifizierter Fehler (z.B. beim Datenbankzugriff)"
@@ -33366,6 +33265,481 @@
           },
           "500" : {
             "description" : "Unspezifizierter Fehler (z.B. beim Datenbankzugriff)"
+          }
+        }
+      }
+    },
+    "/db/{schema}/schulwechsel/abgaenge" : {
+      "get" : {
+        "tags" : [ "Server" ],
+        "summary" : "Gibt eine Übersicht aller Wechselvorgänge abgehender Schüler.",
+        "description" : "Erstellt eine Liste aller Wechselvorgänge abgehender Schüler und liefert diese zurück. Dabei wird geprüft, ob der SVWS-Benutzer die notwendige Berechtigung besitzt, um Wechselvorgänge anzusehen.",
+        "operationId" : "getSchulwechselAbgaenge",
+        "parameters" : [ {
+          "name" : "schema",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "nullable" : true
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Die Liste aller Wechselvorgänge abgehender Schüler.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/SchulwechselAbgang"
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Der SVWS-Benutzer hat keine Rechte, um Wechselvorgänge anzusehen."
+          },
+          "404" : {
+            "description" : "Keine Wechselvorgänge gefunden."
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Server" ],
+        "summary" : "Erstellt einen Wechselvorgang für den Abgang eines Schülers",
+        "description" : "Erstellt einen Wechselvorgang für den Abgang eines Schülers.Dabei wird geprüft, ob der SVWS-Benutzer die notwendige Berechtigung hat, um Wechselvorgänge zu erstellen.",
+        "operationId" : "createSchulwechselAbgang",
+        "parameters" : [ {
+          "name" : "schema",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "nullable" : true
+          }
+        } ],
+        "requestBody" : {
+          "description" : "Initiale Daten des Wechselvorgangs",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SchulwechselAbgang"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Wechselvorgang wurde erfolgreich erstellt.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Der SVWS-Benutzer hat keine Rechte, um Wechselvorgänge zu erstellen."
+          },
+          "409" : {
+            "description" : "Die übergebenen Daten sind fehlerhaft."
+          },
+          "500" : {
+            "description" : "Unspezifizierter Fehler (z.B. beim Datenbankzugriff)."
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "Server" ],
+        "summary" : "Entfernt den Wechselvorgang zum Abgang eines Schülers.",
+        "description" : "Entfernt den Wechselvorgang zum Abgang eines Schülers.Dabei wird geprüft, ob der SVWS-Benutzer die notwendige Berechtigung hat, um Wechselvorgänge zu entfernen.",
+        "operationId" : "deleteSchulwechselAbgang",
+        "parameters" : [ {
+          "name" : "schema",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "nullable" : true
+          }
+        } ],
+        "requestBody" : {
+          "description" : "Die IDs der zu löschenden Wechseldokumente",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "array",
+                "items" : {
+                  "type" : "integer",
+                  "format" : "int64"
+                }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Der Wechselvorgang wurde erfolgreich entfernt.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SchulwechselAbgang"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Der SVWS-Benutzer hat nicht die erforderlichen Rechte, um Wechselvorgänge zu entfernen."
+          },
+          "404" : {
+            "description" : "Wechselvorgang nicht vorhanden."
+          },
+          "409" : {
+            "description" : "Die übergebenen Daten sind fehlerhaft."
+          },
+          "500" : {
+            "description" : "Unspezifizierter Fehler (z.B. beim Datenbankzugriff)."
+          }
+        }
+      }
+    },
+    "/db/{schema}/schulwechsel/dokumente" : {
+      "get" : {
+        "tags" : [ "Server" ],
+        "summary" : "Gibt eine Übersicht aller Wechseldokumente wechselnder Schüler.",
+        "description" : "Erstellt eine Liste aller Wechseldokumente wechselnder Schüler und liefert diese zurück. Dabei wird geprüft, ob der SVWS-Benutzer die notwendige Berechtigung besitzt, um Wechseldokumente anzusehen.",
+        "operationId" : "getSchulwechselDokumente",
+        "parameters" : [ {
+          "name" : "schema",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "nullable" : true
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Die Liste aller Wechseldokumente wechselnder Schüler.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/SchulwechselDokument"
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Der SVWS-Benutzer hat keine Rechte, um Wechseldokumente anzusehen."
+          },
+          "404" : {
+            "description" : "Keine Wechseldokumente gefunden."
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Server" ],
+        "summary" : "Erstellt ein Wechseldokument zum Wechselvorgang eines Schülers",
+        "description" : "Erstellt ein Wechseldokument für den Wechselvorgang eines Schülers. Dabei wird geprüft, ob der SVWS-Benutzer die notwendige Berechtigung hat, um Wechseldokumente zu erstellen.",
+        "operationId" : "createSchulwechselDokument",
+        "parameters" : [ {
+          "name" : "schema",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "nullable" : true
+          }
+        } ],
+        "requestBody" : {
+          "description" : "Initiale Daten des Wechseldokuments",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SchulwechselDokument"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Wechseldokument wurde erfolgreich erstellt.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SchulwechselDokument"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Der SVWS-Benutzer hat keine Rechte, um Wechseldokumente zu erstellen."
+          },
+          "409" : {
+            "description" : "Die übergebenen Daten sind fehlerhaft."
+          },
+          "500" : {
+            "description" : "Unspezifizierter Fehler (z.B. beim Datenbankzugriff)."
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "Server" ],
+        "summary" : "Entfernt mehrere Wechseldokumente.",
+        "description" : "Entfernt die Wechseldokumente mit den übergebenen IDs. Dabei wird geprüft, ob der SVWS-Benutzer die notwendige Berechtigung hat, um Wechseldokumente zu entfernen.",
+        "operationId" : "deleteSchulwechselDokumente",
+        "parameters" : [ {
+          "name" : "schema",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "nullable" : true
+          }
+        } ],
+        "requestBody" : {
+          "description" : "Die IDs der zu löschenden Wechseldokumente",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "array",
+                "items" : {
+                  "type" : "integer",
+                  "format" : "int64"
+                }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Die Wechseldokumente wurden erfolgreich entfernt.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Einfache-Operation-Antwort"
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Der SVWS-Benutzer hat nicht die erforderlichen Rechte, um Wechseldokumente zu entfernen."
+          },
+          "404" : {
+            "description" : "Mindestens ein Wechseldokument wurde nicht gefunden."
+          },
+          "500" : {
+            "description" : "Unspezifizierter Fehler (z.B. beim Datenbankzugriff)."
+          }
+        }
+      }
+    },
+    "/db/{schema}/schulwechsel/abgaenge/{id}" : {
+      "get" : {
+        "tags" : [ "Server" ],
+        "summary" : "Liefert zur übergebenen ID den zugehörigen Wechselvorgang.",
+        "description" : "Liest die Wechselvorgangsdaten zu der angegebenen ID aus der Datenbank und liefert diese zurück. Dabei wird geprüft, ob der SVWS-Benutzer die notwendige Berechtigung besitzt, um Wechselvorgänge anzusehen.",
+        "operationId" : "getSchulwechselAbgang",
+        "parameters" : [ {
+          "name" : "schema",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "nullable" : true
+          }
+        }, {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Der Wechselvorgang mit der übergebenen ID.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/SchulwechselAbgang"
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Der SVWS-Benutzer hat keine Rechte, um Wechselvorgänge anzusehen."
+          },
+          "404" : {
+            "description" : "Kein Wechselvorgang mit der angegebenen ID gefunden."
+          }
+        }
+      },
+      "patch" : {
+        "tags" : [ "Server" ],
+        "summary" : "Passt die zu der ID des Wechselvorgangs zugehörigen Daten an.",
+        "description" : "Passt die Wechselvorgangsdaten zu der angegebenen ID an und speichert das Ergebnis in der Datenbank. Dabei wird geprüft, ob der SVWS-Benutzer die notwendige Berechtigung zum Ändern von Wechselvorgängen besitzt.",
+        "operationId" : "patchSchulwechselAbgang",
+        "parameters" : [ {
+          "name" : "schema",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "nullable" : true
+          }
+        }, {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "description" : "Der Patch für den Wechselvorgang",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SchulwechselAbgang"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Der Patch wurde erfolgreich in die Wechselvorgangsdaten integriert."
+          },
+          "400" : {
+            "description" : "Der Patch ist fehlerhaft aufgebaut."
+          },
+          "403" : {
+            "description" : "Der SVWS-Benutzer hat keine Rechte, um Wechselvorgänge zu ändern."
+          },
+          "404" : {
+            "description" : "Kein Wechselvorgang mit der angegebenen ID gefunden."
+          },
+          "409" : {
+            "description" : "Der Patch ist fehlerhaft, da zumindest eine Rahmenbedingung für einen Wert nicht erfüllt wurde (z.B. eine negative ID)."
+          },
+          "500" : {
+            "description" : "Unspezifizierter Fehler (z.B. beim Datenbankzugriff)."
+          }
+        }
+      }
+    },
+    "/db/{schema}/schulwechsel/dokumente/{id}" : {
+      "get" : {
+        "tags" : [ "Server" ],
+        "summary" : "Liefert zur übergebenen ID das zugehörige Wechseldokument.",
+        "description" : "Liest die Wechseldokumentsdaten zu der angegebenen ID aus der Datenbank und liefert diese zurück. Dabei wird geprüft, ob der SVWS-Benutzer die notwendige Berechtigung besitzt, um Wechselvorgänge anzusehen.",
+        "operationId" : "getSchulwechselDokument",
+        "parameters" : [ {
+          "name" : "schema",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "nullable" : true
+          }
+        }, {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Das Wechseldokument mit der übergebenen ID.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SchulwechselDokument"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Der SVWS-Benutzer hat keine Rechte, um Wechseldokumente anzusehen."
+          },
+          "404" : {
+            "description" : "Kein Wechseldokument mit der angegebenen ID gefunden."
+          }
+        }
+      },
+      "patch" : {
+        "tags" : [ "Server" ],
+        "summary" : "Passt die zu der ID des Wechseldokuments zugehörigen Daten an.",
+        "description" : "Passt die Wechseldokumentsdaten zu der angegebenen ID an und speichert das Ergebnis in der Datenbank. Dabei wird geprüft, ob der SVWS-Benutzer die notwendige Berechtigung zum Ändern von Wechseldokumenten besitzt.",
+        "operationId" : "patchSchulwechselDokument",
+        "parameters" : [ {
+          "name" : "schema",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "nullable" : true
+          }
+        }, {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "description" : "Der Patch für das Wechseldokument",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SchulwechselDokument"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Der Patch wurde erfolgreich in die Wechseldokumentsdaten integriert."
+          },
+          "400" : {
+            "description" : "Der Patch ist fehlerhaft aufgebaut."
+          },
+          "403" : {
+            "description" : "Der SVWS-Benutzer hat keine Rechte, um Wechseldokumente zu ändern."
+          },
+          "404" : {
+            "description" : "Kein Wechseldokument mit der angegebenen ID gefunden."
+          },
+          "409" : {
+            "description" : "Der Patch ist fehlerhaft, da zumindest eine Rahmenbedingung für einen Wert nicht erfüllt wurde (z.B. eine negative ID)."
+          },
+          "500" : {
+            "description" : "Unspezifizierter Fehler (z.B. beim Datenbankzugriff)."
           }
         }
       }
@@ -43783,6 +44157,130 @@
   },
   "components" : {
     "schemas" : {
+      "Abschlussdaten" : {
+        "type" : "object",
+        "properties" : {
+          "idLernabschnitt" : {
+            "type" : "integer",
+            "description" : "die ID des Lernabschnitts in der Datenbank",
+            "format" : "int64",
+            "example" : 126784
+          },
+          "pruefungsordnung" : {
+            "type" : "string",
+            "description" : "die Prüfungsordnung",
+            "nullable" : true,
+            "example" : "APO-SI20"
+          },
+          "idAbschluss" : {
+            "type" : "integer",
+            "description" : "die ID des erreichten allgemeinbildende Abschlusses",
+            "format" : "int64",
+            "nullable" : true
+          },
+          "idAbschlussBerufsbildend" : {
+            "type" : "integer",
+            "description" : "die ID des erreichten berufsbezogenen Abschlusses am Berufskolleg",
+            "format" : "int64",
+            "nullable" : true
+          },
+          "istAbschlussPrognose" : {
+            "type" : "boolean",
+            "description" : "gibt an, ob es sich bei dem Abschluss um eine Prognose handelt oder nicht",
+            "example" : false
+          },
+          "idAbschlussart" : {
+            "type" : "integer",
+            "description" : "die Art des Abschlusses für den Lernabschnitt (0 = Jahrgang ohne Abschluss, 1 = Abschluss erreicht, 2 = ohne Abschluss, 3 = ohne Abschluss mit Nachprüfung)",
+            "format" : "int64",
+            "nullable" : true
+          },
+          "textErgebnisPruefungsalgorithmus" : {
+            "type" : "string",
+            "description" : "die textuelle Ausgabe des Prüfungsalgorithmus für die Versetzungs-/Abschlussberechnung",
+            "nullable" : true,
+            "example" : "null"
+          },
+          "idAbschlussQuartalsprognose" : {
+            "type" : "integer",
+            "description" : "die ID des bei der auf Quartalsnoten basierenden Prognose erreichten allgemeinbildende Abschlusses",
+            "format" : "int64",
+            "nullable" : true
+          },
+          "textErgebniseQuartalsprognose" : {
+            "type" : "string",
+            "description" : "die textuelle Ausgabe des Prüfungsalgorithmus bei der auf Quartalsnoten basierenden Prognose für die Abschlussberechnung",
+            "nullable" : true,
+            "example" : "null"
+          }
+        },
+        "description" : "Die Informationen zu dem Abschluss in einem Lernabschnitt eines Schülers.",
+        "nullable" : true
+      },
+      "AbschlussPatchRequest" : {
+        "required" : [ "pruefungsordnung" ],
+        "type" : "object",
+        "properties" : {
+          "pruefungsordnung" : {
+            "$ref" : "#/components/schemas/JsonNullableString"
+          },
+          "idAbschluss" : {
+            "$ref" : "#/components/schemas/JsonNullableLong"
+          },
+          "idAbschlussBerufsbildend" : {
+            "$ref" : "#/components/schemas/JsonNullableLong"
+          },
+          "istAbschlussPrognose" : {
+            "$ref" : "#/components/schemas/JsonNullableBoolean"
+          },
+          "idAbschlussart" : {
+            "$ref" : "#/components/schemas/JsonNullableLong"
+          },
+          "textErgebnisPruefungsalgorithmus" : {
+            "$ref" : "#/components/schemas/JsonNullableString"
+          },
+          "idAbschlussQuartalsprognose" : {
+            "$ref" : "#/components/schemas/JsonNullableLong"
+          },
+          "textErgebniseQuartalsprognose" : {
+            "$ref" : "#/components/schemas/JsonNullableString"
+          }
+        },
+        "description" : "Der Patch für Informationen zu dem Abschluss in einem Lernabschnitt eines Schülers."
+      },
+      "JsonNullableBoolean" : {
+        "type" : "object",
+        "properties" : {
+          "undefined" : {
+            "type" : "boolean"
+          },
+          "present" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "JsonNullableLong" : {
+        "type" : "object",
+        "properties" : {
+          "undefined" : {
+            "type" : "boolean"
+          },
+          "present" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "JsonNullableString" : {
+        "type" : "object",
+        "properties" : {
+          "undefined" : {
+            "type" : "boolean"
+          },
+          "present" : {
+            "type" : "boolean"
+          }
+        }
+      },
       "Abteilung" : {
         "required" : [ "bezeichnung", "klassenzuordnungen" ],
         "type" : "object",
@@ -45016,17 +45514,6 @@
           },
           "textSonstiges" : {
             "$ref" : "#/components/schemas/JsonNullableString"
-          }
-        }
-      },
-      "JsonNullableString" : {
-        "type" : "object",
-        "properties" : {
-          "undefined" : {
-            "type" : "boolean"
-          },
-          "present" : {
-            "type" : "boolean"
           }
         }
       },
@@ -49145,17 +49632,6 @@
         },
         "description" : "Spezifiziert die Struktur von JSON-Daten zu den Zentralen Prüfungen der Klasse 10 für das Externe-Noten-Modul ENM."
       },
-      "JsonNullableBoolean" : {
-        "type" : "object",
-        "properties" : {
-          "undefined" : {
-            "type" : "boolean"
-          },
-          "present" : {
-            "type" : "boolean"
-          }
-        }
-      },
       "JsonNullableInteger" : {
         "type" : "object",
         "properties" : {
@@ -49502,11 +49978,12 @@
             "nullable" : true,
             "example" : "max@test.de"
           },
-          "staatsangehoerigkeitID" : {
-            "type" : "string",
+          "idStaatsangehoerigkeit" : {
+            "type" : "integer",
             "description" : "die ID der Staatsangehörigkeit",
+            "format" : "int64",
             "nullable" : true,
-            "example" : "000"
+            "example" : 68069085
           },
           "bemerkungen" : {
             "type" : "string",
@@ -50288,7 +50765,7 @@
         "properties" : {
           "id" : {
             "type" : "integer",
-            "description" : "Die ID der Definition der Gleichwertigen komplexen Lernleistung (GKL).",
+            "description" : "Die ID der Definition des gleichwertigen komplexen Leistungsnachweises (GKL).",
             "format" : "int64"
           },
           "idFach" : {
@@ -51097,7 +51574,7 @@
             "example" : 42
           }
         },
-        "description" : "Die Fachwahl eines Schüler zu den Gleichwertigen Komplexen Lernleistungen der gymnasialen Oberstufe.",
+        "description" : "Die Fachwahl eines Schüler zu den gleichwertigen komplexen Leistungsnachweisen der gymnasialen Oberstufe.",
         "nullable" : true
       },
       "GostLaufbahnplanungBeratungsdaten" : {
@@ -51279,6 +51756,9 @@
       "InputPart" : {
         "type" : "object",
         "properties" : {
+          "mediaType" : {
+            "$ref" : "#/components/schemas/MediaType"
+          },
           "bodyAsString" : {
             "type" : "string",
             "nullable" : true
@@ -51286,8 +51766,13 @@
           "contentTypeFromMessage" : {
             "type" : "boolean"
           },
-          "mediaType" : {
-            "$ref" : "#/components/schemas/MediaType"
+          "fileName" : {
+            "type" : "string",
+            "nullable" : true
+          },
+          "body" : {
+            "type" : "object",
+            "nullable" : true
           },
           "headers" : {
             "type" : "object",
@@ -51304,14 +51789,6 @@
                 "nullable" : true
               }
             },
-            "nullable" : true
-          },
-          "fileName" : {
-            "type" : "string",
-            "nullable" : true
-          },
-          "body" : {
-            "type" : "object",
             "nullable" : true
           }
         }
@@ -51357,16 +51834,16 @@
             },
             "nullable" : true
           },
-          "preamble" : {
-            "type" : "string",
-            "nullable" : true
-          },
           "parts" : {
             "type" : "array",
             "nullable" : true,
             "items" : {
               "$ref" : "#/components/schemas/InputPart"
             }
+          },
+          "preamble" : {
+            "type" : "string",
+            "nullable" : true
           }
         }
       },
@@ -52523,17 +53000,6 @@
           }
         },
         "description" : "die Informationen zum Erstellen eines GOSt-Klausurraums."
-      },
-      "JsonNullableLong" : {
-        "type" : "object",
-        "properties" : {
-          "undefined" : {
-            "type" : "boolean"
-          },
-          "present" : {
-            "type" : "boolean"
-          }
-        }
       },
       "GostKlausurenSchuelerklausurCreateRequest" : {
         "required" : [ "idKursklausur", "idSchueler" ],
@@ -53741,62 +54207,136 @@
         },
         "description" : "Die Daten eines Jahrgangs."
       },
-      "JahrgaengeKatalogEintrag" : {
-        "required" : [ "kuerzel", "schluessel", "schulformen", "text" ],
+      "JahrgangCreateRequest" : {
+        "required" : [ "bezeichnung", "idJahrgang", "kuerzel" ],
         "type" : "object",
         "properties" : {
-          "id" : {
-            "type" : "integer",
-            "description" : "die ID des Core-Type-Daten-Eintrags und der neue Schlüssel für die ASD",
-            "format" : "int64",
-            "example" : 4711
-          },
-          "schluessel" : {
-            "type" : "string",
-            "description" : "ein Schlüssel als Zeichenkette, welcher ggf. auf externe Katalog verweist und für ein Jahr der Historie des Katalogs eindeutig sein muss.",
-            "example" : "17"
-          },
           "kuerzel" : {
+            "maxLength" : 20,
+            "minLength" : 0,
             "type" : "string",
-            "description" : "das Kürzel, welches als Kurztext zu Visualisierung verwendet wird. Sollte nicht als identifizierendes Merkmal verwendet werden",
-            "example" : "GE"
+            "description" : "Das schulinterne Kürzel des Jahrgangs",
+            "nullable" : true,
+            "example" : "05"
           },
-          "text" : {
+          "bezeichnung" : {
+            "maxLength" : 100,
+            "minLength" : 0,
             "type" : "string",
-            "description" : "die Bezeichnung, welche als Langtext zu Visualisierung verwendet wird. Sollte nicht als identifizierendes Merkmal verwendet werden",
-            "example" : "Gesamtschule"
+            "description" : "Die schulinterne Bezeichnung des Jahrgangs",
+            "nullable" : true,
+            "example" : "5. Jahrgang"
+          },
+          "kurzbezeichnung" : {
+            "maxLength" : 2,
+            "minLength" : 0,
+            "type" : "string",
+            "description" : "Die schulinterne Kurzbezeichnung des Jahrgangs",
+            "nullable" : true,
+            "example" : "05"
+          },
+          "idJahrgang" : {
+            "type" : "integer",
+            "description" : "Die ID des ASD-Jahrgangs (CoreType)",
+            "format" : "int64",
+            "example" : 5000001
+          },
+          "sortierung" : {
+            "type" : "integer",
+            "description" : "Die Sortierreihenfolge des Jahrgangs",
+            "format" : "int32",
+            "nullable" : true,
+            "example" : 1
+          },
+          "idSchulgliederung" : {
+            "type" : "integer",
+            "description" : "Die ID der Schulgliederung (CoreType)",
+            "format" : "int64",
+            "nullable" : true,
+            "example" : 1001000
+          },
+          "idFolgejahrgang" : {
+            "type" : "integer",
+            "description" : "Die ID des Folgejahrgangs",
+            "format" : "int64",
+            "nullable" : true,
+            "example" : 4712
+          },
+          "idBildungsstufe" : {
+            "type" : "integer",
+            "description" : "Die ID der Bildungsstufe (CoreType)",
+            "format" : "int64",
+            "nullable" : true,
+            "example" : 1
+          },
+          "anzahlRestabschnitte" : {
+            "maximum" : 41,
+            "minimum" : 0,
+            "type" : "integer",
+            "description" : "Die Anzahl der Restabschnitte bis zum Abschluss",
+            "format" : "int32",
+            "nullable" : true,
+            "example" : 12
+          },
+          "istSichtbar" : {
+            "type" : "boolean",
+            "description" : "Gibt an, ob der Jahrgang in der Anwendung sichtbar ist",
+            "example" : true
           },
           "gueltigVon" : {
             "type" : "integer",
-            "description" : "gibt an, in welchem Schuljahr der Eintrag einführt wurde. Ist kein Schuljahr bekannt, so ist null gesetzt",
-            "format" : "int32",
+            "description" : "Die ID des Schuljahresabschnitts, ab dem der Jahrgang gültig ist (null = ab dem ersten Abschnitt)",
+            "format" : "int64",
             "nullable" : true
           },
           "gueltigBis" : {
             "type" : "integer",
-            "description" : "gibt an, bis zu welchem Schuljahr der Eintrag in der Eingangsstufe gültig ist. Ist kein Schuljahr bekannt, so ist null gesetzt",
-            "format" : "int32",
-            "nullable" : true,
-            "example" : 2025
-          },
-          "auslaufdauer" : {
-            "type" : "integer",
-            "description" : "gibt an, bis um wieviel Jahre gueltigBis maximal verlängert wird.",
-            "format" : "int32",
-            "example" : 0
-          },
-          "schulformen" : {
-            "type" : "array",
-            "description" : "die Bezeichner der Schulformen, bei welchen der Jahrgang vorkommt",
-            "items" : {
-              "type" : "string",
-              "description" : "die Bezeichner der Schulformen, bei welchen der Jahrgang vorkommt",
-              "nullable" : true
-            }
+            "description" : "Die ID des Schuljahresabschnitts, bis zu dem der Jahrgang gültig ist (null = Ende offen)",
+            "format" : "int64",
+            "nullable" : true
           }
-        },
-        "description" : "ein Eintrag in dem Katalog der Jahrgänge",
-        "nullable" : true
+        }
+      },
+      "JahrgangPatchRequest" : {
+        "type" : "object",
+        "properties" : {
+          "kuerzel" : {
+            "$ref" : "#/components/schemas/JsonNullableString"
+          },
+          "bezeichnung" : {
+            "$ref" : "#/components/schemas/JsonNullableString"
+          },
+          "kurzbezeichnung" : {
+            "$ref" : "#/components/schemas/JsonNullableString"
+          },
+          "idJahrgang" : {
+            "$ref" : "#/components/schemas/JsonNullableLong"
+          },
+          "sortierung" : {
+            "$ref" : "#/components/schemas/JsonNullableInteger"
+          },
+          "idSchulgliederung" : {
+            "$ref" : "#/components/schemas/JsonNullableLong"
+          },
+          "idFolgejahrgang" : {
+            "$ref" : "#/components/schemas/JsonNullableLong"
+          },
+          "idBildungsstufe" : {
+            "$ref" : "#/components/schemas/JsonNullableLong"
+          },
+          "anzahlRestabschnitte" : {
+            "$ref" : "#/components/schemas/JsonNullableInteger"
+          },
+          "istSichtbar" : {
+            "$ref" : "#/components/schemas/JsonNullableBoolean"
+          },
+          "gueltigVon" : {
+            "$ref" : "#/components/schemas/JsonNullableLong"
+          },
+          "gueltigBis" : {
+            "$ref" : "#/components/schemas/JsonNullableLong"
+          }
+        }
       },
       "KAOAAnschlussoptionenKatalogEintrag" : {
         "required" : [ "anzeigeZusatzmerkmal", "kuerzel", "schluessel", "stufen", "text" ],
@@ -55629,6 +56169,31 @@
         },
         "description" : "Eine Lehrbefähigung zu einem Lehramt eines Lehrers."
       },
+      "LehrerLehramtCreateRequest" : {
+        "required" : [ "idKatalogLehramt", "idLehrer" ],
+        "type" : "object",
+        "properties" : {
+          "idLehrer" : {
+            "type" : "integer",
+            "description" : "Die ID des Lehrers.",
+            "format" : "int64",
+            "example" : 4711
+          },
+          "idKatalogLehramt" : {
+            "type" : "integer",
+            "description" : "Die ID des Lehramtes.",
+            "format" : "int64",
+            "example" : 82
+          },
+          "idAnerkennungsgrund" : {
+            "type" : "integer",
+            "description" : "Die Katalog-ID des Anerkennungsgrund für das Lehramt.",
+            "format" : "int64",
+            "nullable" : true,
+            "example" : 1
+          }
+        }
+      },
       "LehrerLehrbefaehigungCreateRequest" : {
         "required" : [ "idLehramt", "idLehrbefaehigung" ],
         "type" : "object",
@@ -55778,6 +56343,12 @@
             "type" : "string",
             "description" : "Das Kürzel des Lehrers.",
             "example" : "MUS"
+          },
+          "kuerzelStatistik" : {
+            "type" : "string",
+            "description" : "Das Statistik-Kürzel des Lehrers.",
+            "nullable" : true,
+            "example" : "ALBE"
           },
           "personalTyp" : {
             "type" : "string",
@@ -57229,8 +57800,22 @@
           }
         }
       },
+      "LehrerLehramtPatchRequest" : {
+        "required" : [ "idKatalogLehramt", "idLehrer" ],
+        "type" : "object",
+        "properties" : {
+          "idLehrer" : {
+            "$ref" : "#/components/schemas/JsonNullableLong"
+          },
+          "idKatalogLehramt" : {
+            "$ref" : "#/components/schemas/JsonNullableLong"
+          },
+          "idAnerkennungsgrund" : {
+            "$ref" : "#/components/schemas/JsonNullableLong"
+          }
+        }
+      },
       "LehrerLehrbefaehigungPatchRequest" : {
-        "required" : [ "idLehrbefaehigung" ],
         "type" : "object",
         "properties" : {
           "idLehramt" : {
@@ -57485,6 +58070,11 @@
             "type" : "boolean",
             "description" : "Gibt an, ob bei fehlender oder fehlerhafter schulischer E-Mail-Adresse die private E-Mail-Adresse genutzt werden soll.",
             "example" : false
+          },
+          "istPrivateEmailAlternativeZulaessig" : {
+            "type" : "boolean",
+            "description" : "Gibt an, ob die Reportvorlage den Versand an die private E-Mail-Adresse zulässt.",
+            "example" : true
           },
           "betreff" : {
             "type" : "string",
@@ -59103,6 +59693,11 @@
             "description" : "Der Beruf des Schülers (nur bei Schulform BK/SB/WB)",
             "nullable" : true,
             "example" : "Tischler"
+          },
+          "hatLoeschvermerk" : {
+            "type" : "boolean",
+            "description" : "Gibt an, ob der Löschvermerk des Schülers gesetzt ist oder nicht.",
+            "example" : true
           }
         },
         "description" : "Die Stammdaten eines Schüler-Eintrags.",
@@ -60891,6 +61486,9 @@
           },
           "beruf" : {
             "$ref" : "#/components/schemas/JsonNullableString"
+          },
+          "hatLoeschvermerk" : {
+            "$ref" : "#/components/schemas/JsonNullableBoolean"
           }
         }
       },
@@ -61038,6 +61636,9 @@
           },
           "beruf" : {
             "$ref" : "#/components/schemas/JsonNullableString"
+          },
+          "hatLoeschvermerk" : {
+            "$ref" : "#/components/schemas/JsonNullableBoolean"
           },
           "id" : {
             "type" : "integer",
@@ -63973,6 +64574,191 @@
           }
         }
       },
+      "SchulwechselAbgangCreateRequest" : {
+        "required" : [ "idSchueler", "idStatus", "lastModified" ],
+        "type" : "object",
+        "properties" : {
+          "idSchueler" : {
+            "type" : "integer",
+            "description" : "Die Id des Schülers auf den sich der Wechselvorgang bezieht",
+            "format" : "int64",
+            "example" : 4423
+          },
+          "idStatus" : {
+            "type" : "integer",
+            "description" : "Die Id des aktuellen Status",
+            "format" : "int32",
+            "example" : 1
+          },
+          "lastModified" : {
+            "type" : "string",
+            "description" : "Der Zeitpunkt der letzten Änderung des Dokuments",
+            "example" : "2025-04-12 12:34:25"
+          },
+          "idDocument" : {
+            "type" : "integer",
+            "description" : "Die Id des zugehörigen Wechseldokuments",
+            "format" : "int64",
+            "nullable" : true,
+            "example" : 12345
+          },
+          "idSchulkindSchulbewerbung" : {
+            "type" : "string",
+            "description" : "Die eindeutige UUID des Schulkinds bei schulbewerbung.de – identifiziert den Wechselvorgang",
+            "nullable" : true,
+            "example" : "123e4567-e89b-12d3-a456-426614174000"
+          }
+        }
+      },
+      "SchulwechselAbgang" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "description" : "Die Id des Wechselvorgangs",
+            "format" : "int64",
+            "readOnly" : true,
+            "example" : 1
+          },
+          "idSchueler" : {
+            "type" : "integer",
+            "description" : "Die Id des Schülers auf den sich der Wechselvorgang bezieht",
+            "format" : "int64",
+            "example" : 4423
+          },
+          "idStatus" : {
+            "type" : "integer",
+            "description" : "Die Id des aktuellen Status des Wechselvorgangs",
+            "format" : "int32",
+            "example" : 1
+          },
+          "lastModified" : {
+            "type" : "string",
+            "description" : "Der Zeitpunkt der letzten Statusänderung des Wechselvorgangs",
+            "nullable" : true,
+            "example" : "2026-01-22 13:39:19"
+          },
+          "idDocument" : {
+            "type" : "integer",
+            "description" : "Die Id des XSchule-Dokuments, das zu diesem Wechselvorgang gehört",
+            "format" : "int64",
+            "nullable" : true,
+            "example" : 1
+          },
+          "idSchulkindSchulbewerbung" : {
+            "type" : "string",
+            "description" : "Die eindeutige UUID des Schulkinds bei schulbewerbung.de – identifiziert den Wechselvorgang",
+            "nullable" : true,
+            "example" : "123e4567-e89b-12d3-a456-426614174000"
+          }
+        },
+        "description" : "Die Wechselvorgangsdaten eines Schüler-Abgangs",
+        "nullable" : true
+      },
+      "SchulwechselDokument" : {
+        "required" : [ "createdAt", "lastModified" ],
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "description" : "Die Id des Dokuments",
+            "format" : "int64",
+            "readOnly" : true,
+            "example" : 1
+          },
+          "fileName" : {
+            "type" : "string",
+            "description" : "Der Dateiname des Dokuments",
+            "nullable" : true,
+            "example" : "schulwechsel.xml"
+          },
+          "xmlDocument" : {
+            "type" : "string",
+            "description" : "Das Dokument selbst",
+            "nullable" : true
+          },
+          "createdAt" : {
+            "type" : "string",
+            "description" : "Der Zeitpunkt der Erstellung des Dokuments",
+            "example" : "2025-04-12"
+          },
+          "lastModified" : {
+            "type" : "string",
+            "description" : "Der Zeitpunkt der letzten Änderung des Dokuments",
+            "example" : "2025-04-12"
+          }
+        },
+        "description" : "Ein Dokument mit Bezug auf den Schulwechsel eines Schülers",
+        "nullable" : true
+      },
+      "SchulwechselDokumentCreateRequest" : {
+        "required" : [ "createdAt", "fileName", "lastModified", "xmlDocument" ],
+        "type" : "object",
+        "properties" : {
+          "fileName" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string",
+            "description" : "Der Dateiname des Dokuments",
+            "nullable" : true,
+            "example" : "schulwechsel.xml"
+          },
+          "xmlDocument" : {
+            "minLength" : 1,
+            "type" : "string",
+            "description" : "Das Dokument selbst",
+            "nullable" : true
+          },
+          "createdAt" : {
+            "minLength" : 1,
+            "type" : "string",
+            "description" : "Der Zeitpunkt der Erstellung des Dokuments",
+            "nullable" : true,
+            "example" : "2025-04-12"
+          },
+          "lastModified" : {
+            "minLength" : 1,
+            "type" : "string",
+            "description" : "Der Zeitpunkt der letzten Änderung des Dokuments",
+            "nullable" : true,
+            "example" : "2025-04-12"
+          }
+        }
+      },
+      "SchulwechselAbgangPatchRequest" : {
+        "type" : "object",
+        "properties" : {
+          "idStatus" : {
+            "$ref" : "#/components/schemas/JsonNullableInteger"
+          },
+          "lastModified" : {
+            "$ref" : "#/components/schemas/JsonNullableString"
+          },
+          "idDocument" : {
+            "$ref" : "#/components/schemas/JsonNullableLong"
+          },
+          "idSchulkindSchulbewerbung" : {
+            "$ref" : "#/components/schemas/JsonNullableString"
+          }
+        }
+      },
+      "SchulwechselDokumentPatchRequest" : {
+        "type" : "object",
+        "properties" : {
+          "fileName" : {
+            "$ref" : "#/components/schemas/JsonNullableString"
+          },
+          "xmlDocument" : {
+            "$ref" : "#/components/schemas/JsonNullableString"
+          },
+          "createdAt" : {
+            "$ref" : "#/components/schemas/JsonNullableString"
+          },
+          "lastModified" : {
+            "$ref" : "#/components/schemas/JsonNullableString"
+          }
+        }
+      },
       "AbiturStatistikGesamt" : {
         "required" : [ "abifach" ],
         "type" : "object",
@@ -64237,6 +65023,12 @@
             "type" : "string",
             "description" : "Das Kürzel des Lehrers.",
             "example" : "MUS"
+          },
+          "kuerzelStatistik" : {
+            "type" : "string",
+            "description" : "Das Statistik-Kürzel des Lehrers.",
+            "nullable" : true,
+            "example" : "ALBE"
           },
           "vorname" : {
             "type" : "string",
@@ -64674,11 +65466,44 @@
             "nullable" : true,
             "example" : "999000"
           },
-          "vorigeAllgHerkunft" : {
-            "type" : "string",
-            "description" : "die allgemeine Herkunftsart des Schüler in Bezug auf die schulform der zuvor besuchten Schule",
+          "idHerkunftSchulformVorherigeSchule" : {
+            "type" : "integer",
+            "description" : "Die ID der HerkunftSchulform (falls zuvor besuchte Schule = Sonstige Schule).",
+            "format" : "int64",
             "nullable" : true,
-            "example" : "Grundschule (auch Primarstufe der Volkschule)"
+            "example" : 1000
+          },
+          "idHerkunftSonstigeVorherigeSchule" : {
+            "type" : "integer",
+            "description" : "Die ID der HerkunftSonstige (falls zuvor besuchte Schule = kein Schulbesuch).",
+            "format" : "int64",
+            "nullable" : true,
+            "example" : 1000
+          },
+          "berufsabschlussVorhandenVorherigeSchule" : {
+            "type" : "boolean",
+            "description" : "Gibt an, ob ein Berufsabschluss vorhanden ist.",
+            "example" : false
+          },
+          "idSchulgliederungVorherigeSchule" : {
+            "type" : "integer",
+            "description" : "Die ID der Schulgliederung aus Herkunftbildungsgang.json (BK/SB) der zuvor besuchten Schule.",
+            "format" : "int64",
+            "nullable" : true,
+            "example" : 2000
+          },
+          "schluesselCoreTypeFachklasseVorherigeSchule" : {
+            "type" : "string",
+            "description" : "Der Schlüssel des CoreTypes der Fachklasse der zuvor besuchten Schule (BK/SB).",
+            "nullable" : true,
+            "example" : "170-10100"
+          },
+          "idHochschulabschluss" : {
+            "type" : "integer",
+            "description" : "Die ID des Hochschulabschlusses aus Hochschulabschluss.json (BK/SB/WB).",
+            "format" : "int64",
+            "nullable" : true,
+            "example" : 2000
           },
           "vorigeArtLetzteVersetzung" : {
             "type" : "string",

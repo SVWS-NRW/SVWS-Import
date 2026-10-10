@@ -120,7 +120,7 @@ Die Anwendung erkennt Duplikate auf zwei Ebenen:
 
 
 <nav style="display:flex;justify-content:space-between;margin-top:2rem;padding-top:1rem;border-top:1px solid var(--vp-c-divider)">
-  <a href="unterricht-klassenunterricht.html">« Klassenunterricht importieren</a>
+  <a href="unterricht-schuelerunterricht.html">« Schülerunterricht importieren</a>
   <a href="../index.html">Inhaltsverzeichnis</a>
-  <a href="unterricht-schuelerunterricht.html">Schülerunterricht importieren »</a>
+  <a href="unterricht-kurszuweisung.html">Kurszuweisung »</a>
 </nav>

@@ -1,11 +1,13 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { type JahrgangImportRow, type JahrgangDetails } from '@/models/Jahrgaenge'
+import { type JahrgangImportRow, type JahrgangDetails, type JahrgangAsdKataloge, validateJahrgangRow } from '@/models/Jahrgaenge'
 import { createJahrgang, fetchJahrgaenge } from '@/services/svwsService'
+import { fetchJahrgangAsdKataloge } from '@/services/katalogService'
 
 export const useJahrgaengeStore = defineStore('jahrgaenge', () => {
   const rows = ref<JahrgangImportRow[]>([])
   const existingJahrgaenge = ref<JahrgangDetails[]>([])
+  const kataloge = ref<JahrgangAsdKataloge | null>(null)
   const uploading = ref(false)
   const uploadProgress = ref(0)
   const uploadTotal = ref(0)
@@ -35,8 +37,7 @@ export const useJahrgaengeStore = defineStore('jahrgaenge', () => {
 
   function validateRow(idx: number): void {
     const row = rows.value[idx]
-    const errors: string[] = []
-    if (!row.kuerzel.trim()) errors.push('Kürzel fehlt')
+    const errors = validateJahrgangRow(row, kataloge.value ?? undefined)
     rows.value[idx] = { ...row, _errors: errors, _valid: errors.length === 0 }
   }
 
@@ -52,7 +53,13 @@ export const useJahrgaengeStore = defineStore('jahrgaenge', () => {
   async function loadExisting(): Promise<{ error?: string }> {
     loadingExisting.value = true
     try {
-      existingJahrgaenge.value = await fetchJahrgaenge()
+      const [jahrgaenge, asd] = await Promise.all([
+        fetchJahrgaenge(),
+        kataloge.value ? Promise.resolve(kataloge.value) : fetchJahrgangAsdKataloge(),
+      ])
+      existingJahrgaenge.value = jahrgaenge
+      kataloge.value = asd
+      validateAll()
       return {}
     } catch (e) {
       return { error: e instanceof Error ? e.message : 'Fehler beim Laden der Jahrgänge' }
@@ -75,7 +82,13 @@ export const useJahrgaengeStore = defineStore('jahrgaenge', () => {
       const row = updated[i]
       if (!row._valid || row._sent) continue
       if (useSelection && !selectedIds!.has(row._id)) continue
-      const result = await createJahrgang(row)
+      if (!kataloge.value) {
+        updated[i] = { ...row, _errors: ['Kataloge nicht geladen'] }
+        failed++
+        uploadProgress.value++
+        continue
+      }
+      const result = await createJahrgang(row, kataloge.value)
       if (result.success) {
         updated[i] = { ...row, _sent: true, _errors: [] }
         sent++
@@ -95,7 +108,7 @@ export const useJahrgaengeStore = defineStore('jahrgaenge', () => {
   }
 
   return {
-    rows, existingJahrgaenge, uploading, uploadProgress, uploadTotal, loadingExisting,
+    rows, existingJahrgaenge, kataloge, uploading, uploadProgress, uploadTotal, loadingExisting,
     totalCount, validCount, sentCount, errorCount,
     setRows, updateRow, deleteRow, validateAll, clear, loadExisting, uploadAll, stopUpload,
   }

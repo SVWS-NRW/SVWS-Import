@@ -62,7 +62,7 @@ Die App läuft dann im Vite-Dev-Server (Standard: `http://localhost:5173`).
 - `npm run electron:dev` startet die App als Electron-Desktop-App im Entwicklungsmodus (nur Linux)
 - `npm run electron:build` baut die Electron-App für die aktuelle Plattform (Linux → AppImage)
 - `npm run electron:build:win` baut den Windows-Installer (`.exe` via NSIS) – erfordert `wine` auf Linux
-- `npm run release [patch|minor|major]` erhöht die Version, baut Linux (AppImage), Windows (NSIS-Installer) und das Webserver-ZIP, pusht Commit und Tag und legt einen GitHub-Release-Entwurf an – siehe [Release erstellen](#release-erstellen)
+- `npm run release [patch|minor|major]` erhöht die Version, baut Linux (AppImage), Windows (NSIS-Installer) und das Web-App-ZIP, pusht Commit und Tag und legt einen GitHub-Release-Entwurf an – siehe [Release erstellen](#release-erstellen)
 - `npm run release:build` baut nur die Release-Dateien in `release/` (ohne Versionserhöhung und Upload)
 - `npm run release:github` legt nur den GitHub-Release-Entwurf `v<version>` aus den vorhandenen Dateien in `release/` an
 
@@ -99,7 +99,7 @@ npm run electron:build
 # Nur Windows
 npm run electron:build:win
 
-# Linux + Windows + Webserver-ZIP (ohne Versionserhöhung und Upload)
+# Linux + Windows + Web-App-ZIP (ohne Versionserhöhung und Upload)
 npm run release:build
 ```
 
@@ -107,7 +107,7 @@ Die fertigen Pakete landen im Verzeichnis `release/`:
 
 - `SVWS-Import-<version>.AppImage`
 - `SVWS-Import-Setup-<version>.exe`
-- `SVWS-Import-<version>-webserver.zip`
+- `SVWS-Import-<version>-webapp.zip`
 
 ### Release erstellen
 
@@ -131,7 +131,7 @@ Das Skript [scripts/release.mjs](scripts/release.mjs) führt nacheinander aus:
 
 1. Prüfen der Voraussetzungen – bricht ab, bevor irgendetwas verändert wird
 2. `npm version <patch|minor|major>` – erhöht die Version in `package.json` und `package-lock.json`, erzeugt Commit und Tag `v<version>`
-3. `npm run release:build` – baut AppImage, Windows-Installer und Webserver-ZIP nach `release/`
+3. `npm run release:build` – baut AppImage, Windows-Installer und Web-App-ZIP nach `release/`
 4. `git push --follow-tags` – pusht Commit und Tag
 5. `npm run release:github` – legt den Release-Entwurf „Release `<version>`“ mit den drei Dateien an (ohne Release-Notes)
 

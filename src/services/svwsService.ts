@@ -673,6 +673,9 @@ export async function createOrtsteil(
 ): Promise<UploadResult> {
   try {
     const ortId = orteMap ? resolveWohnortId(orteMap, row.plz, row.ort) : null
+    if (ortId === null) {
+      return { success: false, error: `Ort nicht im Katalog gefunden (PLZ "${row.plz}", Ort "${row.ort}")` }
+    }
     const payload = ortsteilImportToApi(row, ortId)
     const response = await getApiClient().post('/ortsteile/create', payload)
     return { success: true, id: response.data?.id }

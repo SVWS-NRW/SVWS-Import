@@ -190,7 +190,7 @@ const existingColDefs: ColDef[] = [
   { field: 'ortsteil',       headerName: 'Ortsteil',    flex: 1 },
   { field: 'bezeichnungOrt', headerName: 'Ort',         width: 180 },
   { field: 'plzOrt',         headerName: 'PLZ',         width: 100 },
-  { field: 'ort_id',         headerName: 'Orts-ID',     width: 100 },
+  { field: 'idOrt',          headerName: 'Orts-ID',     width: 100 },
 ]
 
 const importColDefs: ColDef<OrtsteilImportRow>[] = [

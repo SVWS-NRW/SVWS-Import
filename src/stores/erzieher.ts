@@ -95,7 +95,7 @@ export const useErzieherStore = defineStore('erzieher', () => {
       nationalitaetenById.value = kataloge.nationalitaetenById ?? new Map()
       const otMap = new Map<string, number>()
       for (const ot of ortsteile) {
-        if (ot.ortsteil && ot.ort_id !== null) otMap.set(`${ot.ort_id}|${norm(ot.ortsteil)}`, ot.id)
+        if (ot.ortsteil && ot.idOrt !== null) otMap.set(`${ot.idOrt}|${norm(ot.ortsteil)}`, ot.id)
       }
       ortsteileMap.value = otMap
 

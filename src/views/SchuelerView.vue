@@ -27,6 +27,10 @@
           Erzieherdaten
           <Badge v-if="ezStore.totalCount > 0" :value="ezStore.totalCount" severity="secondary" class="tab-badge" />
         </Tab>
+        <Tab value="lernabschnitte">
+          Lernabschnittsdaten
+          <Badge v-if="laStore.totalCount > 0" :value="laStore.totalCount" severity="secondary" class="tab-badge" />
+        </Tab>
       </TabList>
 
       <TabPanels>
@@ -327,6 +331,114 @@
             />
           </div>
         </TabPanel>
+
+        <!-- ── Lernabschnittsdaten ────────────────────────────────────────── -->
+        <TabPanel value="lernabschnitte">
+          <div class="tab-content">
+            <div class="tab-actions">
+              <ImportStats
+                :total="laStore.totalCount"
+                :valid="laStore.validCount"
+                :errors="laStore.errorCount"
+                :sent="laStore.sentCount"
+              />
+              <div class="action-buttons">
+                <Button
+                  v-tooltip.top="'Schülerliste, Schuljahresabschnitte und Kataloge neu aus Datenbank laden'"
+                  icon="pi pi-refresh"
+                  severity="secondary"
+                  size="small"
+                  text
+                  :loading="laStore.lookupLoading"
+                  @click="handleLaReloadLookup"
+                />
+                <Select
+                  v-model="laDuplikatModus"
+                  :options="LA_DUPLIKAT_OPTIONEN"
+                  optionLabel="label"
+                  optionValue="value"
+                  size="small"
+                  :disabled="laStore.uploading"
+                  v-tooltip.top="'Was passieren soll, wenn der Schüler im Schuljahresabschnitt bereits einen Lernabschnitt hat'"
+                  style="width: 290px"
+                />
+                <FileUpload
+                  :key="laFileKey"
+                  mode="basic"
+                  :auto="false"
+                  :multiple="false"
+                  accept=".csv,.dat"
+                  chooseLabel="Datei laden"
+                  chooseIcon="pi pi-folder-open"
+                  :maxFileSize="10000000"
+                  :disabled="laParsing"
+                  @select="onLaFileSelect"
+                />
+                <Button
+                  :label="laStore.uploading ? `${laStore.uploadProgress} / ${laStore.uploadTotal}` : laSelectedCount > 0 ? `${laSelectedCount} senden` : 'Alles senden'"
+                  icon="pi pi-upload"
+                  size="small"
+                  :disabled="laStore.validCount === 0 || laStore.uploading"
+                  :loading="laStore.uploading"
+                  @click="handleLaUploadAll"
+                />
+                <Button
+                  :label="laStore.uploading ? 'Stoppen' : 'Leeren'"
+                  :icon="laStore.uploading ? 'pi pi-stop' : 'pi pi-trash'"
+                  :severity="laStore.uploading ? 'warn' : 'danger'"
+                  text
+                  size="small"
+                  @click="laStore.uploading ? laStore.stopUpload() : confirmLaClear()"
+                />
+              </div>
+            </div>
+
+            <Message v-if="laInfo" severity="info" :closable="true" @close="laInfo = ''">
+              {{ laInfo }}
+            </Message>
+            <Message v-if="laLookupError" severity="warn" :closable="true" @close="laLookupError = ''">
+              {{ laLookupError }}
+            </Message>
+            <Message v-if="laParseError" severity="error" :closable="true" @close="laParseError = ''">
+              {{ laParseError }}
+            </Message>
+            <Message v-if="laUploadResult" :severity="laUploadResult.failed > 0 || laUploadResult.missing > 0 ? 'warn' : 'success'" :closable="true" @close="laUploadResult = null">
+              {{ laUploadResult.updated }} Lernabschnitte aktualisiert
+              <span v-if="laUploadResult.sent > 0">, {{ laUploadResult.sent }} angelegt</span>
+              <span v-if="laUploadResult.skipped > 0">, {{ laUploadResult.skipped }} übersprungen (bereits vorhanden)</span>
+              <span v-if="laUploadResult.missing > 0">, {{ laUploadResult.missing }} nicht vorhanden (Anlegen vom Server noch nicht unterstützt)</span>
+              <span v-if="laUploadResult.failed > 0">, {{ laUploadResult.failed }} fehlgeschlagen</span>
+            </Message>
+
+            <Message v-if="laStore.rows.length === 0" severity="info" :closable="false" class="hint-msg">
+              CSV-Datei (z.&nbsp;B. <strong>schueler-lernabschnitte.csv</strong>) oder den Schild-NRW-Export
+              <strong>SchuelerLernabschnittsdaten.dat</strong> laden. Der Schüler wird anhand von
+              <strong>Nachname</strong>, <strong>Vorname</strong> und <strong>Geburtsdatum</strong> (oder der Schüler-ID) gesucht.
+              Eine Zeile entspricht dem Lernabschnitt eines Schülers in einem Schuljahresabschnitt.
+              Importiert werden kann nur in Schuljahresabschnitte, die im SVWS-Server bereits vorhanden sind,
+              und nur in Lernabschnitte, die beim Schüler schon existieren – das Anlegen neuer Lernabschnitte
+              unterstützt der SVWS-Server noch nicht.
+            </Message>
+
+            <ag-grid-vue
+              v-if="laStore.rows.length > 0"
+              :class="[isDark ? 'ag-theme-quartz-dark' : 'ag-theme-quartz', 'data-table']"
+              :rowData="laStore.rows"
+              :columnDefs="laColumnDefs"
+              :defaultColDef="defaultColDef"
+              :tooltipShowDelay="400"
+              :rowClassRules="laRowClassRules"
+              :getRowId="getLaRowId"
+              rowSelection="multiple"
+              :suppressRowClickSelection="true"
+              @cell-value-changed="onLaCellChanged"
+              @grid-ready="onLaGridReady"
+              @selection-changed="onLaSelectionChanged"
+              :animateRows="true"
+              :stopEditingWhenCellsLoseFocus="true"
+            />
+          </div>
+        </TabPanel>
       </TabPanels>
     </Tabs>
 
@@ -357,15 +469,17 @@ import { useSchuelerStore, type SchuelerDuplikatModus, type SchuelerUploadErgebn
 import { useSchuleStore } from '@/stores/schule'
 import { useSchulbesuchStore } from '@/stores/schulbesuch'
 import { useErzieherStore, type DuplikatModus } from '@/stores/erzieher'
+import { useLernabschnitteStore, type LernabschnittDuplikatModus, type LernabschnittUploadErgebnis } from '@/stores/lernabschnitte'
 import { useDarkMode } from '@/composables/useDarkMode'
 import { type SchuelerImportRow } from '@/models/Schueler'
 import { type SchuelerSchulbesuchImportRow } from '@/models/SchuelerSchulbesuch'
 import { type SchuelerErzieherImportRow } from '@/models/SchuelerErzieher'
+import { type SchuelerLernabschnittImportRow } from '@/models/SchuelerLernabschnitt'
 import ImportStats from '@/components/ImportStats.vue'
 import ColumnMappingDialog from '@/components/ColumnMappingDialog.vue'
 import { parseSchuelerCsv } from '@/utils/csvParser'
 import { parseSchuelerXlsx } from '@/utils/xlsxParser'
-import { parseSchuelerSchulbesuchCsv, parseSchuelerErzieherCsv, istErzieherDatei } from '@/utils/csvParser'
+import { parseSchuelerSchulbesuchCsv, parseSchuelerErzieherCsv, istErzieherDatei, parseSchuelerLernabschnittCsv, istLernabschnittDatei } from '@/utils/csvParser'
 
 ModuleRegistry.registerModules([ClientSideRowModelModule])
 
@@ -374,6 +488,7 @@ const store = useSchuelerStore()
 const schuleStore = useSchuleStore()
 const sbStore = useSchulbesuchStore()
 const ezStore = useErzieherStore()
+const laStore = useLernabschnitteStore()
 const confirm = useConfirm()
 const { isDark } = useDarkMode()
 
@@ -413,6 +528,14 @@ async function onFileSelect(event: { files: File[] }): Promise<void> {
     activeTab.value = 'erzieher'
     await onEzFileSelect({ files: [file] })
     ezInfo.value = `„${file.name}“ enthält Erzieherdaten und wurde deshalb im Tab „Erzieherdaten“ geladen.`
+    return
+  }
+  // Lernabschnitts-Datei versehentlich bei den Stammdaten geladen → im Tab „Lernabschnittsdaten“ einlesen
+  if (!/\.(xlsx|xls)$/i.test(file.name) && await istLernabschnittDatei(file)) {
+    fileKey.value++
+    activeTab.value = 'lernabschnitte'
+    await onLaFileSelect({ files: [file] })
+    laInfo.value = `„${file.name}“ enthält Lernabschnittsdaten und wurde deshalb im Tab „Lernabschnittsdaten“ geladen.`
     return
   }
   parsing.value = true
@@ -1092,6 +1215,196 @@ const ezColumnDefs = computed<ColDef<SchuelerErzieherImportRow>[]>(() => {
         params.data._sent
           ? ''
           : `<button onclick="window.__deleteErzieher('${params.data._id}')" style="border:none;background:none;cursor:pointer;color:#ef4444;font-size:1rem" title="Zeile löschen">✕</button>`,
+    },
+  ])
+})
+
+// ── Lernabschnittsdaten ───────────────────────────────────────────────────────
+
+const laParseError = ref('')
+const laParsing = ref(false)
+const laLookupError = ref('')
+const laUploadResult = ref<LernabschnittUploadErgebnis | null>(null)
+const LA_DUPLIKAT_OPTIONEN: { label: string; value: LernabschnittDuplikatModus }[] = [
+  { label: 'Vorhandene Lernabschnitte überschreiben', value: 'ueberschreiben' },
+  { label: 'Vorhandene Lernabschnitte überspringen',  value: 'ueberspringen' },
+]
+const laDuplikatModus = ref<LernabschnittDuplikatModus>('ueberschreiben')
+const laGridApi = ref<GridApi | null>(null)
+const laFileKey = ref(0)
+const laSelectedCount = ref(0)
+const laInfo = ref('')
+
+function onLaGridReady(params: GridReadyEvent): void {
+  laGridApi.value = params.api
+}
+
+function onLaSelectionChanged(): void {
+  laSelectedCount.value = laGridApi.value?.getSelectedRows().length ?? 0
+}
+
+async function onLaFileSelect(event: { files: File[] }): Promise<void> {
+  const file = event.files[0]
+  if (!file) return
+  laParsing.value = true
+  laParseError.value = ''
+  laLookupError.value = ''
+  laInfo.value = ''
+  try {
+    const rows = await parseSchuelerLernabschnittCsv(file)
+    if (rows.length === 0) throw new Error('Keine Datensätze gefunden')
+    if (!laStore.lookupLoaded) {
+      const result = await laStore.loadSchuelerLookup()
+      if (result.error) laLookupError.value = `Schülerliste und Kataloge konnten nicht geladen werden: ${result.error} — Abgleich nicht möglich.`
+    }
+    await laStore.setRows(rows)
+  } catch (e) {
+    laParseError.value = e instanceof Error ? e.message : 'Fehler beim Einlesen der Datei'
+  } finally {
+    laParsing.value = false
+  }
+}
+
+async function handleLaReloadLookup(): Promise<void> {
+  laLookupError.value = ''
+  const result = await laStore.loadSchuelerLookup(true)
+  if (result.error) {
+    laLookupError.value = result.error
+  } else if (laStore.rows.length > 0) {
+    laStore.resolveAndValidate()
+  }
+}
+
+async function handleLaUploadAll(): Promise<void> {
+  laUploadResult.value = null
+  const selected = laGridApi.value?.getSelectedRows() ?? []
+  const selectedIds = selected.length > 0 ? new Set(selected.map((r: { _id: string }) => r._id)) : undefined
+  laUploadResult.value = await laStore.uploadAll(selectedIds, laDuplikatModus.value)
+  laGridApi.value?.refreshCells({ force: true })
+}
+
+function confirmLaClear(): void {
+  confirm.require({
+    message: 'Alle Lernabschnitts-Importdaten verwerfen?',
+    header: 'Bestätigung',
+    icon: 'pi pi-exclamation-triangle',
+    acceptLabel: 'Ja, leeren',
+    rejectLabel: 'Abbrechen',
+    accept: () => { laStore.clear(); laFileKey.value++ },
+  })
+}
+
+async function onLaCellChanged(event: CellValueChangedEvent<SchuelerLernabschnittImportRow>): Promise<void> {
+  if (event.data) {
+    await laStore.updateRow(event.data._id, { [event.colDef.field as string]: event.newValue ?? '' })
+    laGridApi.value?.refreshCells({ force: true })
+  }
+}
+
+;(window as unknown as Record<string, unknown>).__deleteLernabschnitt = (id: string) => {
+  laStore.deleteRow(id)
+}
+
+function getLaRowId(params: GetRowIdParams<SchuelerLernabschnittImportRow>): string {
+  return params.data._id
+}
+
+const laRowClassRules = {
+  'row-sent':  (params: { data: SchuelerLernabschnittImportRow }) => params.data._sent,
+  'row-error': (params: { data: SchuelerLernabschnittImportRow }) => !params.data._valid && !params.data._sent,
+}
+
+const laColumnDefs = computed<ColDef<SchuelerLernabschnittImportRow>[]>(() => {
+  const has = (field: keyof SchuelerLernabschnittImportRow) => laStore.rows.some(r => !!r[field])
+  const fehlerStyle = (feld: string) =>
+    (p: { data?: SchuelerLernabschnittImportRow }) => p.data?._fehlerFelder.includes(feld) ? { background: '#fee2e2' } : null
+  const col = (field: keyof SchuelerLernabschnittImportRow & string, headerName: string, width: number, immer = false): ColDef<SchuelerLernabschnittImportRow> =>
+    ({ field, headerName, width, hide: !immer && !has(field), cellStyle: fehlerStyle(field) })
+  // Abschlüsse übernimmt der SVWS-Server derzeit nicht per PATCH → nur anzeigen
+  const nurAnzeige = (field: 'abschlussAllgemein' | 'abschlussBerufsbildend', headerName: string): ColDef<SchuelerLernabschnittImportRow> => ({
+    field, headerName, width: 190, editable: false, hide: !has(field),
+    headerTooltip: `${headerName} – wird derzeit nicht übertragen (vom SVWS-Server per API nicht unterstützt)`,
+    cellRenderer: (params: { value: string }) => params.value
+      ? `<span style="color:#94a3b8" title="Wird nicht übertragen – der SVWS-Server übernimmt Abschlüsse derzeit nicht über die API">${params.value} –</span>`
+      : '',
+  })
+  return withHeaderTooltips([
+    {
+      field: 'nachname', headerName: 'Nachname', pinned: 'left', width: 140,
+      checkboxSelection: true, headerCheckboxSelection: true, cellStyle: fehlerStyle('nachname'),
+    },
+    { field: 'vorname',      headerName: 'Vorname',      pinned: 'left', width: 130, cellStyle: fehlerStyle('vorname') },
+    { field: 'geburtsdatum', headerName: 'Geburtsdatum', pinned: 'left', width: 130, cellStyle: fehlerStyle('geburtsdatum') },
+    { field: 'schuelerId',   headerName: 'Schüler-ID',   pinned: 'left', width: 110, hide: !has('schuelerId'), cellStyle: fehlerStyle('schuelerId') },
+    {
+      headerName: 'Abgleich', width: 120, pinned: 'left', editable: false, sortable: false, filter: false,
+      cellRenderer: (params: { data: SchuelerLernabschnittImportRow }) => {
+        switch (params.data._lookupStatus) {
+          case 'ok':        return `<span style="color:#22c55e" title="ID: ${params.data._schuelerId}">✔ Gefunden</span>`
+          case 'not_found': return '<span style="color:#ef4444">✖ Nicht gefunden</span>'
+          case 'ambiguous': return '<span style="color:#f59e0b">⚠ Nicht eindeutig</span>'
+          case 'mismatch':  return '<span style="color:#ef4444" title="Name/Geburtsdatum passen nicht zur Schüler-ID">✖ ID passt nicht</span>'
+          default:          return '<span style="color:#94a3b8">⋯ Ausstehend</span>'
+        }
+      },
+    },
+    { ...col('schuljahr', 'Schuljahr', 100, true), pinned: 'left' },
+    {
+      ...col('abschnitt', 'Abschnitt', 100, true), pinned: 'left',
+      cellRenderer: (params: { data: SchuelerLernabschnittImportRow; value: string }) => {
+        if (!params.value) return ''
+        return params.data._idSchuljahresabschnitt !== null
+          ? `${params.value} <span style="color:#22c55e" title="Schuljahresabschnitt im SVWS-Server vorhanden">✔</span>`
+          : `${params.value} <span style="color:#ef4444" title="Schuljahresabschnitt im SVWS-Server nicht vorhanden">✘</span>`
+      },
+    },
+    col('wechselNr', 'WechselNr', 100),
+    // Zuordnung
+    col('jahrgang', 'Jahrgang', 100, true),
+    col('klasse', 'Klasse', 90, true),
+    col('tutor', 'Klassenlehrer/Tutor', 150),
+    col('schulgliederung', 'Gliederung', 110),
+    col('organisationsform', 'Org.-Form', 100),
+    col('klassenart', 'Klassenart', 110),
+    // Förderung
+    col('foerderschwerpunkt1', 'Förderschwerpunkt', 150),
+    col('foerderschwerpunkt2', '2. Förderschwerpunkt', 170),
+    col('schwerbehinderung', 'Schwerbehinderung', 150),
+    // Bewertung
+    col('gewertet', 'Gewertet', 100),
+    col('wiederholung', 'Wiederholung', 120),
+    col('versetzung', 'Versetzung', 110),
+    col('abschlussart', 'Abschlussart', 120),
+    col('datumKonferenz', 'Konferenzdatum', 140),
+    col('datumZeugnis', 'Zeugnisdatum', 130),
+    col('zeugnisart', 'Zeugnisart', 110),
+    // Fehlstunden
+    col('fehlstundenGesamt', 'Fehlstunden', 120),
+    col('fehlstundenUnentschuldigt', 'davon unentsch.', 140),
+    col('fehlstundenGrenzwert', 'Fehlstd.-Grenzwert', 150),
+    // Zeitraum
+    col('datumAnfang', 'Datum von', 120),
+    col('datumEnde', 'Datum bis', 120),
+    nurAnzeige('abschlussAllgemein', 'Abschluss allgemeinb.'),
+    nurAnzeige('abschlussBerufsbildend', 'Abschluss berufsbez.'),
+    {
+      headerName: 'Importstatus', width: 150, editable: false,
+      cellRenderer: (params: { data: SchuelerLernabschnittImportRow }) => {
+        const title = params.data._errors.join('; ').replace(/"/g, '&quot;')
+        if (params.data._result === 'uebersprungen') return `<span style="color:#f59e0b" title="${title}">⏭ Übersprungen</span>`
+        if (params.data._result === 'fehlt') return `<span style="color:#f59e0b" title="${title}">⚠ Lernabschnitt fehlt</span>`
+        if (params.data._result === 'ueberschrieben') return '<span style="color:#3b82f6">✎ Überschrieben</span>'
+        if (params.data._sent) return '<span style="color:#22c55e">✔ Angelegt</span>'
+        if (!params.data._valid) return `<span style="color:#ef4444" title="${title}">✖ Fehler</span>`
+        return '<span style="color:#f59e0b">● Bereit</span>'
+      },
+    },
+    {
+      headerName: '', width: 60, editable: false, sortable: false, filter: false,
+      cellRenderer: (params: { data: SchuelerLernabschnittImportRow }) =>
+        params.data._sent
+          ? ''
+          : `<button onclick="window.__deleteLernabschnitt('${params.data._id}')" style="border:none;background:none;cursor:pointer;color:#ef4444;font-size:1rem" title="Zeile löschen">✕</button>`,
     },
   ])
 })

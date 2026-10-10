@@ -314,6 +314,48 @@ async function loadJahrgangAsdKataloge(): Promise<JahrgangAsdKataloge> {
   return { jahrgaenge: toMap(data['Jahrgaenge']), schulgliederungen: toMap(data['Schulgliederung']) }
 }
 
+// ── Historisierte ASD-Kataloge für Lernabschnittsdaten ───────────────────────
+
+/** Kürzel (Großschreibung) → alle Historien-Einträge; die gültige ID hängt vom Schuljahr ab */
+export type HistorisierterKatalog = Map<string, AllinoneHistorie[]>
+
+export interface LernabschnittAsdKataloge {
+  schulgliederungen: HistorisierterKatalog
+  klassenarten: HistorisierterKatalog
+  organisationsformenAllgemein: HistorisierterKatalog
+  organisationsformenBK: HistorisierterKatalog
+  organisationsformenWB: HistorisierterKatalog
+}
+
+export async function fetchLernabschnittAsdKataloge(): Promise<LernabschnittAsdKataloge> {
+  const data = await fetchAllInOne()
+  const toMap = (katalog: AllinoneKatalog | undefined): HistorisierterKatalog => {
+    const map: HistorisierterKatalog = new Map()
+    for (const entry of (katalog?.daten ?? [])) {
+      for (const h of entry.historie) {
+        if (!h.kuerzel || typeof h.id !== 'number') continue
+        const key = h.kuerzel.trim().toUpperCase()
+        map.set(key, [...(map.get(key) ?? []), h])
+      }
+    }
+    return map
+  }
+  return {
+    schulgliederungen:            toMap(data['Schulgliederung']),
+    klassenarten:                 toMap(data['Klassenart']),
+    organisationsformenAllgemein: toMap(data['AllgemeinbildendOrganisationsformen']),
+    organisationsformenBK:        toMap(data['BerufskollegOrganisationsformen']),
+    organisationsformenWB:        toMap(data['WeiterbildungskollegOrganisationsformen']),
+  }
+}
+
+/** ID des im Schuljahr gültigen Eintrags zum Kürzel, sonst null (id 0 ist gültig, z. B. Gliederung „***“) */
+export function resolveHistorisierteId(katalog: HistorisierterKatalog, kuerzel: string, schuljahr: number): number | null {
+  const eintraege = katalog.get(kuerzel.trim().toUpperCase())
+  const h = eintraege?.find(e => (e.gueltigVon ?? -Infinity) <= schuljahr && schuljahr <= (e.gueltigBis ?? Infinity))
+  return h ? h.id : null
+}
+
 // ── Schulform + Jahrgänge (aus allinone.json, ein einziger Fetch) ─────────────
 
 export interface JahrgangKatalogEintrag {

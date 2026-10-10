@@ -722,3 +722,95 @@ export async function istErzieherDatei(file: File): Promise<boolean> {
   const spalten = kopf.split(/[;|,\t]/).map(s => normalizeKey(s.replace(/"/g, '').trim()))
   return spalten.some(s => ['erzieherart', 'nachname1', 'nachname1.person'].includes(s))
 }
+
+/**
+ * Lernabschnittsdaten — unterstützt die neue CSV (schueler-lernabschnitte.csv) und den
+ * Schild-NRW-Export SchuelerLernabschnittsdaten.dat (Pipe-getrennt, Spalten „Jahr“, „Abschnitt“, „SummeFehlstd“ usw.).
+ */
+export function parseSchuelerLernabschnittCsv(file: File): Promise<import('@/models/SchuelerLernabschnitt').SchuelerLernabschnittImportRow[]> {
+  return new Promise((resolve, reject) => {
+    Papa.parse<Record<string, string>>(file, {
+      header: true,
+      skipEmptyLines: true,
+      delimiter: /\.dat$/i.test(file.name) ? '|' : '',
+      // Schild-Exporte beginnen mit BOM — sonst heißt die erste Spalte "﻿Nachname"
+      transformHeader: (h) => h.replace(/^﻿/, ''),
+      complete(results) {
+        try {
+          const rows = results.data.map((record) => {
+            const m = buildLookup(record)
+            const t = (...keys: string[]) => get(m, ...keys).trim()
+            return {
+              _id: generateId(),
+              _valid: false,
+              _errors: [] as string[],
+              _fehlerFelder: [] as string[],
+              _sent: false,
+              _schuelerId: null,
+              _lookupStatus: 'pending' as const,
+              _idSchuljahresabschnitt: null,
+              // Schüler (Schüler-ID optional, z. B. aus dem Schülerexport)
+              schuelerId:   t('schuelerid', 'schülerid', 'idschueler', 'idschüler'),
+              nachname:     t('nachname', 'name', 'familienname'),
+              vorname:      t('vorname', 'rufname'),
+              geburtsdatum: normalisiereDatum(t('geburtsdatum', 'geburtstag', 'geb')),
+              // Abschnitt (Schild: „Jahr“; „2021/22“ wird auf 2021 gekürzt)
+              schuljahr: t('schuljahr', 'jahr').replace(/^(\d{4}).*$/, '$1'),
+              abschnitt: t('abschnitt', 'halbjahr'),
+              wechselNr: t('wechselnr', 'wechselnummer'),
+              // Zuordnung
+              jahrgang:          t('jahrgang'),
+              klasse:            t('klasse'),
+              tutor:             t('tutor', 'klassenlehrer', 'klassenlehrerin'),
+              schulgliederung:   t('schulgliederung', 'gliederung', 'bildungsgang'),
+              organisationsform: t('organisationsform', 'orgform'),
+              klassenart:        t('klassenart'),
+              // Förderung
+              foerderschwerpunkt1: t('foerderschwerpunkt', 'förderschwerpunkt', 'foerderschwerpunkt1', 'förderschwerpunkt1'),
+              foerderschwerpunkt2: t('foerderschwerpunkt2', 'förderschwerpunkt2', '2.förderschwerpunkt', '2.foerderschwerpunkt'),
+              schwerbehinderung:   t('schwerbehinderung', 'schwerstbehinderung'),
+              // Bewertung
+              gewertet:       t('gewertet', 'wertung'),
+              wiederholung:   t('wiederholung'),
+              versetzung:     t('versetzung', 'versetzungsvermerk'),
+              abschlussart:   t('abschlussart', 'abschluss'),
+              datumKonferenz: normalisiereDatum(t('konferenzdatum', 'datumkonferenz')),
+              datumZeugnis:   normalisiereDatum(t('zeugnisdatum', 'datumzeugnis')),
+              zeugnisart:     t('zeugnisart'),
+              // Fehlstunden
+              fehlstundenGesamt:         t('fehlstunden', 'fehlstundengesamt', 'summefehlstd'),
+              fehlstundenUnentschuldigt: t('fehlstundenunentschuldigt', 'summefehlstdunentschuldigt'),
+              fehlstundenGrenzwert:      t('fehlstundengrenzwert'),
+              // Zeitraum
+              datumAnfang: normalisiereDatum(t('datumvon', 'datumanfang', 'beginn')),
+              datumEnde:   normalisiereDatum(t('datumbis', 'datumende', 'ende')),
+              // Nur Anzeige
+              abschlussAllgemein:     t('abschlussallgemein', 'allg.bildenderabschluss'),
+              abschlussBerufsbildend: t('abschlussberufsbildend', 'berufsbez.abschluss'),
+            }
+          })
+          resolve(rows)
+        } catch (e) {
+          reject(e)
+        }
+      },
+      error(err) {
+        reject(new Error(`CSV-Fehler: ${err.message}`))
+      },
+    })
+  })
+}
+
+/**
+ * Erkennt eine Lernabschnitts-Datei (neue CSV oder SchuelerLernabschnittsdaten.dat): Schuljahr + Abschnitt
+ * und mindestens zwei typische Bewertungsspalten. Schuljahr + Abschnitt allein reichen nicht —
+ * die stehen auch in SchuelerBasisdaten.dat, Klassen- und Unterrichtsdateien.
+ */
+export async function istLernabschnittDatei(file: File): Promise<boolean> {
+  const kopf = (await file.slice(0, 4096).text()).replace(/^﻿/, '').split(/\r?\n/)[0] ?? ''
+  const spalten = kopf.split(/[;|,\t]/).map(s => normalizeKey(s.replace(/"/g, '').trim()))
+  const typisch = ['wertung', 'gewertet', 'wiederholung', 'versetzung', 'konferenzdatum', 'zeugnisdatum', 'summefehlstd', 'fehlstundengesamt']
+  return spalten.includes('abschnitt')
+    && (spalten.includes('jahr') || spalten.includes('schuljahr'))
+    && spalten.filter(s => typisch.includes(s)).length >= 2
+}

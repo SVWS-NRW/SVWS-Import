@@ -1278,6 +1278,74 @@ export async function downloadLernplattformExport(
 }
 
 
+// ── Lernabschnittsdaten ──────────────────────────────────────────────────────
+
+/**
+ * Der SVWS-Server (Stand 1.5.0) bietet noch keinen Endpunkt, um zu einem vorhandenen Schüler einen
+ * weiteren Lernabschnitt anzulegen – der Server-DataManager ist dafür bereits vorbereitet
+ * (Pflichtattribute schuelerID und schuljahresabschnitt). Sobald der Endpunkt existiert,
+ * Pfad in createLernabschnittsdaten prüfen und das Flag aktivieren.
+ */
+export const LERNABSCHNITT_ANLEGEN_UNTERSTUETZT = false
+
+export interface LernabschnittVorhanden {
+  id: number
+  wechselNr: number
+}
+
+/** Lernabschnitte eines Schülers in einem Schuljahresabschnitt (meist einer, bei Klassenwechsel mehrere) */
+export async function fetchLernabschnittsdaten(idSchueler: number, idSchuljahresabschnitt: number): Promise<LernabschnittVorhanden[]> {
+  try {
+    const resp = await getApiClient().get<LernabschnittVorhanden[]>(`/schueler/lernabschnittsdaten/${idSchueler}/${idSchuljahresabschnitt}`)
+    return Array.isArray(resp.data) ? resp.data : []
+  } catch (error: unknown) {
+    if ((error as { response?: { status?: number } })?.response?.status === 404) return []
+    throw new Error(toAppError(error).messageUser)
+  }
+}
+
+export async function patchLernabschnittsdaten(id: number, patch: Record<string, unknown>): Promise<UploadResult> {
+  try {
+    await getApiClient().patch(`/schueler/lernabschnittsdaten/${id}`, patch)
+    return { success: true, id }
+  } catch (error: unknown) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}
+
+/** Vorbereitet für den künftigen Server-Endpunkt (siehe LERNABSCHNITT_ANLEGEN_UNTERSTUETZT) */
+export async function createLernabschnittsdaten(
+  idSchueler: number,
+  idSchuljahresabschnitt: number,
+  daten: Record<string, unknown>,
+): Promise<UploadResult> {
+  if (!LERNABSCHNITT_ANLEGEN_UNTERSTUETZT) {
+    return { success: false, error: 'Lernabschnitt nicht vorhanden – das Anlegen unterstützt der SVWS-Server noch nicht' }
+  }
+  try {
+    const resp = await getApiClient().post('/schueler/lernabschnittsdaten/create', {
+      schuelerID: idSchueler,
+      schuljahresabschnitt: idSchuljahresabschnitt,
+      ...daten,
+    })
+    return { success: true, id: resp.data?.id }
+  } catch (error: unknown) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}
+
+export interface FoerderschwerpunktEintrag {
+  id: number
+  kuerzel: string
+  kuerzelStatistik?: string | null
+}
+
+export interface VersetzungsvermerkEintrag {
+  Nr: string | null
+  Klartext: string | null
+  Schulform: string | null
+}
+
 // ── Erzieher ─────────────────────────────────────────────────────────────────
 
 export interface ErzieherartEintrag {

@@ -18,6 +18,7 @@
       <button @click="scrollTo('schueler')">Schüler Stammdaten</button>
       <button @click="scrollTo('schulbesuch')">Schulbesuch</button>
       <button @click="scrollTo('erzieher')">Erzieherdaten</button>
+      <button @click="scrollTo('lernabschnitte')">Lernabschnittsdaten</button>
       <button @click="scrollTo('lehrer')">Lehrkräfte</button>
       <button @click="scrollTo('klassen')">Klassen</button>
       <button @click="scrollTo('faecher')">Fächer</button>
@@ -396,6 +397,56 @@
           <tr><td><code>ortsteil</code></td><td>Adresse</td><td>Text</td><td>Ortsteil des Wohnorts aus dem Ortsteil-Katalog</td></tr>
           <tr><td><code>anschreiben</code></td><td>Eintrag</td><td>Boolean</td><td><code>J</code>/<code>N</code>, <code>ja</code>/<code>nein</code>, <code>true</code>/<code>false</code></td></tr>
           <tr><td><code>bemerkungen</code></td><td>Eintrag</td><td>Text</td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── Schüler Lernabschnittsdaten ────────────────────────────────────── -->
+    <div id="lernabschnitte" class="format-section">
+      <h3>
+        <i class="pi pi-calendar section-icon" /> Schüler Lernabschnittsdaten
+        <span class="path-badge direct">Direktimport</span>
+      </h3>
+      <p class="section-desc">
+        Daten eines Schülers zu einem Schuljahresabschnitt (Klasse, Jahrgang, Versetzung, Fehlstunden …).
+        Schüler werden anhand von <code>Nachname</code>, <code>Vorname</code> und <code>Geburtsdatum</code>
+        oder über die <code>Schüler-ID</code> zugeordnet. Unterstützt wird auch der Schild-NRW-Export
+        <code>SchuelerLernabschnittsdaten.dat</code>. Beispieldatei: <code>schueler-lernabschnitte.csv</code>
+      </p>
+      <p class="section-desc">
+        <strong>Einschränkung:</strong> Der Schuljahresabschnitt muss im SVWS-Server vorhanden sein, und der Schüler
+        muss dort bereits einen Lernabschnitt haben – das Anlegen neuer Lernabschnitte unterstützt der SVWS-Server
+        noch nicht. Leere Zellen ändern nichts. Abschlüsse werden derzeit nicht übertragen.
+      </p>
+      <table class="field-table">
+        <thead>
+          <tr><th>Spaltenname</th><th>Kategorie</th><th>Typ</th><th>Hinweis</th></tr>
+        </thead>
+        <tbody>
+          <tr class="cat-row"><td colspan="4">Schüler-Identifikation</td></tr>
+          <tr><td><code>schuelerId</code> / <code>Schüler-ID</code></td><td>Identifikation</td><td>Zahl</td><td>Optional. Hat Vorrang vor Name + Geburtsdatum</td></tr>
+          <tr><td><code>nachname</code>, <code>vorname</code>, <code>geburtsdatum</code> <span class="required-badge">Pflicht*</span></td><td>Identifikation</td><td>Text / Datum</td><td>*nicht Pflicht, wenn eine Schüler-ID angegeben ist</td></tr>
+          <tr class="cat-row"><td colspan="4">Abschnitt</td></tr>
+          <tr><td><code>schuljahr</code> / <code>Jahr</code> <span class="required-badge">Pflicht</span></td><td>Abschnitt</td><td>Zahl</td><td>z.&nbsp;B. <code>2026</code> für 2026/27</td></tr>
+          <tr><td><code>abschnitt</code> <span class="required-badge">Pflicht</span></td><td>Abschnitt</td><td>Zahl</td><td><code>1</code> oder <code>2</code> — muss im SVWS-Server vorhanden sein</td></tr>
+          <tr><td><code>wechselnr</code></td><td>Abschnitt</td><td>Zahl</td><td>Nur bei Klassenwechsel im Abschnitt; leer = aktueller Lernabschnitt</td></tr>
+          <tr class="cat-row"><td colspan="4">Zuordnung</td></tr>
+          <tr><td><code>jahrgang</code>, <code>klasse</code></td><td>Zuordnung</td><td>Text</td><td>Kürzel; die Klasse muss im Abschnitt existieren</td></tr>
+          <tr><td><code>tutor</code> / <code>Klassenlehrer</code></td><td>Zuordnung</td><td>Text</td><td>Lehrer-Kürzel</td></tr>
+          <tr><td><code>schulgliederung</code>, <code>organisationsform</code> / <code>OrgForm</code>, <code>klassenart</code></td><td>Zuordnung</td><td>Text</td><td>Kürzel, geprüft gegen den im Schuljahr gültigen Katalog</td></tr>
+          <tr class="cat-row"><td colspan="4">Förderung</td></tr>
+          <tr><td><code>foerderschwerpunkt</code>, <code>foerderschwerpunkt2</code></td><td>Förderung</td><td>Text</td><td>Kürzel aus dem Förderschwerpunkt-Katalog der Schule</td></tr>
+          <tr><td><code>schwerbehinderung</code> / <code>Schwerstbehinderung</code></td><td>Förderung</td><td>Boolean</td><td><code>J</code>/<code>N</code></td></tr>
+          <tr class="cat-row"><td colspan="4">Bewertung</td></tr>
+          <tr><td><code>gewertet</code> / <code>Wertung</code>, <code>wiederholung</code></td><td>Bewertung</td><td>Boolean</td><td><code>J</code>/<code>N</code></td></tr>
+          <tr><td><code>versetzung</code></td><td>Bewertung</td><td>Text</td><td>Versetzungsvermerk, z.&nbsp;B. <code>V</code>, <code>N</code>, <code>NP</code>, <code>FR</code></td></tr>
+          <tr><td><code>abschlussart</code> / <code>Abschluss</code></td><td>Bewertung</td><td>Zahl</td><td></td></tr>
+          <tr><td><code>konferenzdatum</code>, <code>zeugnisdatum</code></td><td>Bewertung</td><td>Datum</td><td><code>TT.MM.JJJJ</code> oder <code>JJJJ-MM-TT</code></td></tr>
+          <tr><td><code>zeugnisart</code></td><td>Bewertung</td><td>Text</td><td>Höchstens 5 Zeichen</td></tr>
+          <tr class="cat-row"><td colspan="4">Fehlstunden und Zeitraum</td></tr>
+          <tr><td><code>fehlstunden</code> / <code>SummeFehlstd</code>, <code>fehlstundenunentschuldigt</code></td><td>Fehlstunden</td><td>Zahl</td><td></td></tr>
+          <tr><td><code>fehlstundengrenzwert</code></td><td>Fehlstunden</td><td>Zahl</td><td>Berufskolleg</td></tr>
+          <tr><td><code>datumvon</code>, <code>datumbis</code></td><td>Zeitraum</td><td>Datum</td><td></td></tr>
         </tbody>
       </table>
     </div>

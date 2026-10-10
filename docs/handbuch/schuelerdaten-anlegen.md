@@ -144,6 +144,56 @@ Hinweise:
 | **Vorhandene Erzieher überschreiben** | Der vorhandene Eintrag wird mit den Werten aus der Datei aktualisiert; leere Felder lassen vorhandene Werte unverändert. Die 2. Person wird aktualisiert, wenn sie (gleicher Name) schon existiert, sonst im Eintrag ergänzt. | ✎ Überschrieben |
 | **Erzieher zusätzlich anlegen** | Es wird immer ein neuer Erzieher-Eintrag angelegt | ✔ Gesendet |
 
+## Lernabschnittsdaten importieren
+
+Im Tab **„Lernabschnittsdaten"** der Schüler-Ansicht werden die Daten eines Schülers zu einem Schuljahresabschnitt eingelesen: Klasse, Jahrgang, Klassenlehrkraft/Tutor, Gliederung, Förderschwerpunkte, Versetzung, Fehlstunden, Konferenz- und Zeugnisdatum usw. Die Schüler werden über **Nachname + Vorname + Geburtsdatum** oder über die **Schüler-ID** gesucht (Spalte „Abgleich").
+
+Unterstützte Dateien:
+
+- die CSV-Datei im Format von `examples/schueler-lernabschnitte.csv`
+- der Schild-NRW-Export **`SchuelerLernabschnittsdaten.dat`** (Pipe-getrennt, Spalten wie `Jahr`, `Abschnitt`, `SummeFehlstd`)
+
+> **Einschränkungen (Stand SVWS-Server 1.5.0)**
+>
+> - **Nur bekannte Schuljahresabschnitte:** Zeilen zu einem Schuljahresabschnitt, den der SVWS-Server noch nicht kennt, werden rot markiert (✘ in der Spalte „Abschnitt"). Neue Schuljahresabschnitte können derzeit nicht angelegt werden.
+> - **Nur vorhandene Lernabschnitte:** Der SVWS-Server kann zu einem vorhandenen Schüler noch keinen weiteren Lernabschnitt anlegen. Ein Schüler erhält seinen ersten Lernabschnitt beim Anlegen (Tab „Stammdaten"). Fehlt der Lernabschnitt, erscheint beim Senden **⚠ Lernabschnitt fehlt**; die Zeile bleibt erhalten und kann nach einem Server-Update erneut gesendet werden.
+> - **Abschlüsse** (`allg.-bildender Abschluss`, `berufsbez. Abschluss`) werden angezeigt, aber nicht übertragen – der SVWS-Server übernimmt sie derzeit nicht über die API.
+> - **Fachklasse** und **Schwerpunkt** (Berufskolleg) werden nicht eingelesen.
+
+| Spalte (CSV) | Schild-Spalte | Beschreibung | Beispiel |
+|--------------|---------------|-------------|----------|
+| `schuelerid` | – | Optional, hat Vorrang vor Name + Geburtsdatum | `625` |
+| `nachname`, `vorname`, `geburtsdatum` | gleich | Schüler (Pflicht ohne Schüler-ID) | `Müller`, `Anna`, `12.04.2007` |
+| `schuljahr`, `abschnitt` | `Jahr`, `Abschnitt` | Schuljahresabschnitt (Pflicht, muss in SVWS vorhanden sein) | `2026`, `1` |
+| `wechselnr` | – | Nur bei Klassenwechsel innerhalb des Abschnitts (leer = aktueller Lernabschnitt) | `1` |
+| `jahrgang`, `klasse` | gleich | Jahrgangs- und Klassenkürzel (Klasse des jeweiligen Abschnitts) | `10`, `10a` |
+| `tutor` | `Klassenlehrer` | Kürzel der Lehrkraft | `FRIT` |
+| `schulgliederung` | gleich | Gliederung, z. B. `GY9`, `***` = Standard | `***` |
+| `organisationsform` | `OrgForm` | Schlüssel der Organisationsform | `1` |
+| `klassenart` | gleich | Kürzel der Klassenart | `RK` |
+| `foerderschwerpunkt`, `foerderschwerpunkt2` | `Förderschwerpunkt`, `2. Förderschwerpunkt` | Kürzel aus dem Förderschwerpunkt-Katalog der Schule | `LB` |
+| `schwerbehinderung` | `Schwerstbehinderung` | `J`/`N` | `N` |
+| `gewertet`, `wiederholung` | `Wertung`, `Wiederholung` | `J`/`N` | `J`, `N` |
+| `versetzung` | gleich | Versetzungsvermerk, z. B. `V`, `N`, `NP`, `FR` | `V` |
+| `abschlussart` | `Abschluss` | Art des Abschlusses (Zahl) | `0` |
+| `konferenzdatum`, `zeugnisdatum` | gleich | Datum (TT.MM.JJJJ) | `26.01.2027` |
+| `zeugnisart` | gleich | Höchstens 5 Zeichen | |
+| `fehlstunden`, `fehlstundenunentschuldigt` | `SummeFehlstd`, `SummeFehlstd_unentschuldigt` | Ganze Zahlen | `12`, `2` |
+| `fehlstundengrenzwert` | `Fehlstunden-Grenzwert` | Ganze Zahl (Berufskolleg) | |
+| `datumvon`, `datumbis` | `Datum von`, `Datum bis` | Zeitraum des Lernabschnitts | `01.08.2026` |
+
+Hinweise:
+
+- **Kataloge je Schuljahr:** Gliederung, Organisationsform und Klassenart werden mit dem Katalog geprüft, der im Schuljahr der Zeile gültig war. Ein Wert, der in diesem Schuljahr nicht (mehr) gültig ist – z. B. Klassenart `IL` nach 2018 –, wird rot markiert. Leeren Sie die Zelle, wenn der Wert nicht übernommen werden soll.
+- **Unbekannte Kürzel** (Klasse, Jahrgang, Lehrkraft, Förderschwerpunkt, Versetzungsvermerk) werden rot markiert und müssen vor dem Senden korrigiert werden.
+- **Leere Zellen ändern nichts** – vorhandene Werte im Lernabschnitt bleiben erhalten.
+- Lernabschnitts-Dateien, die versehentlich im Tab „Stammdaten" geladen werden, öffnen sich automatisch im Tab „Lernabschnittsdaten".
+
+| Auswahl | Verhalten | Status |
+|---------|-----------|--------|
+| **Vorhandene Lernabschnitte überschreiben** (Standard) | Der vorhandene Lernabschnitt wird mit den nicht leeren Werten der Datei aktualisiert | ✎ Überschrieben |
+| **Vorhandene Lernabschnitte überspringen** | Die Zeile wird nicht übertragen | ⏭ Übersprungen |
+
 ## Nach dem Import
 
 - Gesamtzahl der aktiven Schüler prüfen

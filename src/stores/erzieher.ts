@@ -10,6 +10,7 @@ import {
   patchErzieher,
   fetchOrtsteile,
   type ErzieherVorhanden,
+  type SchuelerListeEintrag,
 } from '@/services/svwsService'
 import { loadKataloge, resolveWohnortId, resolveNationalitaetId } from '@/services/katalogService'
 import type { OrtKatalogEintrag } from '@/models/ImportSchema'
@@ -51,6 +52,7 @@ export const useErzieherStore = defineStore('erzieher', () => {
   const uploadCancelled = ref(false)
 
   const schuelerMap = ref<Map<string, number[]>>(new Map())
+  const schuelerById = ref<Map<number, SchuelerListeEintrag>>(new Map())
   /** Bezeichnung (lowercase) → ID */
   const erzieherartenMap = ref<Map<string, number>>(new Map())
   const orteKatalog = ref<Map<string, OrtKatalogEintrag>>(new Map())
@@ -78,7 +80,9 @@ export const useErzieherStore = defineStore('erzieher', () => {
       ])
 
       const sMap = new Map<string, number[]>()
+      const byId = new Map<number, SchuelerListeEintrag>()
       for (const s of schuelerList) {
+        byId.set(s.id, s)
         const geb = s.geburtsdatum ? normalisiereDatum(s.geburtsdatum) : ''
         const key = lookupKey(s.nachname, s.vorname, geb)
         const ids = sMap.get(key) ?? []
@@ -86,6 +90,7 @@ export const useErzieherStore = defineStore('erzieher', () => {
         sMap.set(key, ids)
       }
       schuelerMap.value = sMap
+      schuelerById.value = byId
 
       const aMap = new Map<string, number>()
       for (const a of erzieherarten) if (a.bezeichnung) aMap.set(norm(a.bezeichnung), a.id)
@@ -126,14 +131,34 @@ export const useErzieherStore = defineStore('erzieher', () => {
     return resolveNationalitaetId(nationalitaetenById.value, wert)
   }
 
+  /**
+   * Zuordnung über die Schüler-ID, falls angegeben. Angegebene Namen/Geburtsdatum müssen zum
+   * Schüler mit dieser ID passen, damit ein Tippfehler in der ID nicht unbemerkt bleibt.
+   */
+  function resolveById(row: SchuelerErzieherImportRow): void {
+    const raw = row.schuelerId.trim()
+    const s = /^\d+$/.test(raw) ? schuelerById.value.get(Number(raw)) : undefined
+    if (!s) { row._lookupStatus = 'not_found'; row._schuelerId = null; return }
+    const passt =
+      (!row.nachname.trim()     || norm(row.nachname) === norm(s.nachname)) &&
+      (!row.vorname.trim()      || norm(row.vorname)  === norm(s.vorname)) &&
+      (!row.geburtsdatum.trim() || !s.geburtsdatum   || row.geburtsdatum.trim() === normalisiereDatum(s.geburtsdatum))
+    row._lookupStatus = passt ? 'ok' : 'mismatch'
+    row._schuelerId   = passt ? s.id : null
+  }
+
   function resolveAndValidate(): void {
     for (const row of rows.value) {
       if (row._sent) continue
       if (lookupLoaded.value) {
-        const ids = schuelerMap.value.get(lookupKey(row.nachname, row.vorname, row.geburtsdatum))
-        if (!ids || ids.length === 0) { row._lookupStatus = 'not_found'; row._schuelerId = null }
-        else if (ids.length > 1)      { row._lookupStatus = 'ambiguous'; row._schuelerId = null }
-        else                          { row._lookupStatus = 'ok';        row._schuelerId = ids[0] }
+        if (row.schuelerId.trim()) {
+          resolveById(row)
+        } else {
+          const ids = schuelerMap.value.get(lookupKey(row.nachname, row.vorname, row.geburtsdatum))
+          if (!ids || ids.length === 0) { row._lookupStatus = 'not_found'; row._schuelerId = null }
+          else if (ids.length > 1)      { row._lookupStatus = 'ambiguous'; row._schuelerId = null }
+          else                          { row._lookupStatus = 'ok';        row._schuelerId = ids[0] }
+        }
 
         const art = norm(row.erzieherart)
         row._erzieherartStatus = !art ? 'empty' : erzieherartenMap.value.has(art) ? 'found' : 'new'
@@ -142,11 +167,18 @@ export const useErzieherStore = defineStore('erzieher', () => {
         else row._wohnortStatus = resolveWohnort(row) !== null ? 'found' : 'not_found'
       }
       const errors: string[] = []
-      if (!row.nachname.trim())     errors.push('Nachname des Schülers fehlt')
-      if (!row.vorname.trim())      errors.push('Vorname des Schülers fehlt')
-      if (!row.geburtsdatum.trim()) errors.push('Geburtsdatum des Schülers fehlt')
+      const mitId = !!row.schuelerId.trim()
+      // Mit Schüler-ID sind Name und Geburtsdatum optional (dienen nur der Gegenprüfung)
+      if (!mitId) {
+        if (!row.nachname.trim())     errors.push('Nachname des Schülers fehlt')
+        if (!row.vorname.trim())      errors.push('Vorname des Schülers fehlt')
+        if (!row.geburtsdatum.trim()) errors.push('Geburtsdatum des Schülers fehlt')
+      }
       if (!row.nachname1.trim() && !row.vorname1.trim()) errors.push('Name der 1. Person fehlt')
-      if (row._lookupStatus === 'not_found') errors.push('Schüler nicht gefunden')
+      if (row._lookupStatus === 'not_found') errors.push(mitId
+        ? `Schüler-ID ${row.schuelerId.trim()} nicht gefunden`
+        : 'Schüler nicht gefunden')
+      if (row._lookupStatus === 'mismatch')  errors.push(`Schüler-ID ${row.schuelerId.trim()} passt nicht zu Name/Geburtsdatum`)
       if (row._lookupStatus === 'ambiguous') errors.push('Schüler nicht eindeutig (mehrere Treffer)')
       if (row._lookupStatus === 'pending')   errors.push('Schüler noch nicht abgeglichen')
       // Unbekannte Staatsangehörigkeit nur melden, wenn der Katalog geladen ist

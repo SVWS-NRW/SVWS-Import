@@ -995,6 +995,8 @@ const ezColumnDefs = computed<ColDef<SchuelerErzieherImportRow>[]>(() => {
     },
     { field: 'vorname',      headerName: 'Vorname',      pinned: 'left', width: 130 },
     { field: 'geburtsdatum', headerName: 'Geburtsdatum', pinned: 'left', width: 130 },
+    { field: 'schuelerId',   headerName: 'Schüler-ID',   pinned: 'left', width: 110, hide: !has('schuelerId'),
+      cellStyle: (p) => p.data?._errors.some(e => e.startsWith('Schüler-ID')) ? { background: '#fee2e2' } : null },
     {
       headerName: 'Abgleich', width: 120, pinned: 'left', editable: false, sortable: false, filter: false,
       cellRenderer: (params: { data: SchuelerErzieherImportRow }) => {
@@ -1002,6 +1004,7 @@ const ezColumnDefs = computed<ColDef<SchuelerErzieherImportRow>[]>(() => {
           case 'ok':        return `<span style="color:#22c55e" title="ID: ${params.data._schuelerId}">✔ Gefunden</span>`
           case 'not_found': return '<span style="color:#ef4444">✖ Nicht gefunden</span>'
           case 'ambiguous': return '<span style="color:#f59e0b">⚠ Nicht eindeutig</span>'
+          case 'mismatch':  return '<span style="color:#ef4444" title="Name/Geburtsdatum passen nicht zur Schüler-ID">✖ ID passt nicht</span>'
           default:          return '<span style="color:#94a3b8">⋯ Ausstehend</span>'
         }
       },

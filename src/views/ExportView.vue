@@ -42,14 +42,14 @@
           <div class="format-actions">
             <Button
               :label="loadBtnLabel"
-              :icon="selectedTile === 'schueler' ? 'pi pi-file-export' : 'pi pi-refresh'"
+              :icon="istSchuelerAuswahlTile ? 'pi pi-file-export' : 'pi pi-refresh'"
               size="small"
               :loading="loading"
-              :disabled="selectedFields.length === 0 || (selectedTile === 'schueler' && schuelerAuswahl.length === 0) || (selectedTile === 'lehrer' && lehrerListe.length === 0)"
+              :disabled="selectedFields.length === 0 || (istSchuelerAuswahlTile && schuelerAuswahl.length === 0) || (selectedTile === 'lehrer' && lehrerListe.length === 0)"
               @click="loadData"
             />
             <Button
-              v-if="data.length > 0 && selectedTile !== 'schueler' && selectedTile !== 'lehrer'"
+              v-if="data.length > 0 && !istSchuelerAuswahlTile && selectedTile !== 'lehrer'"
               label="Exportieren"
               icon="pi pi-file-export"
               size="small"
@@ -59,7 +59,7 @@
           </div>
         </div>
         <div v-if="exportProgress > 0" class="export-progress">
-          <span class="progress-text">Lade {{ exportDone }} / {{ exportTotal }} {{ selectedTile === 'lehrer' ? 'Lehrerstammdaten' : 'Schülerdaten' }}…</span>
+          <span class="progress-text">Lade {{ exportDone }} / {{ exportTotal }} {{ selectedTile === 'lehrer' ? 'Lehrerstammdaten' : selectedTile === 'erzieher' ? 'Erzieherdaten' : 'Schülerdaten' }}…</span>
           <ProgressBar :value="Math.round(exportProgress * 100)" style="height: 6px; flex: 1" />
         </div>
       </div>
@@ -113,9 +113,12 @@
       <Message v-if="loadError" severity="error" :closable="true" @close="loadError = ''">
         {{ loadError }}
       </Message>
+      <Message v-if="exportInfo" severity="info" :closable="true" @close="exportInfo = ''">
+        {{ exportInfo }}
+      </Message>
 
-      <!-- Schülerliste (automatisch bei Schülerdaten-Kachel) -->
-      <div v-if="selectedTile === 'schueler'" class="config-section">
+      <!-- Schülerliste (automatisch bei Schülerdaten- und Erzieherdaten-Kachel) -->
+      <div v-if="istSchuelerAuswahlTile" class="config-section">
         <div class="section-header">
           <h3 class="section-title">
             Schülerliste
@@ -431,8 +434,10 @@ import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
-import { fetchForExport, fetchSchuelerAuswahlliste, enrichSchueler, enrichRecords, fetchOrteById, fetchReligionenById, fetchSchulenById, fetchJahrgaengeById, fetchEinschulungsartenById, fetchUebergangsempfehlungenById, fetchKindergartenbesuchsdauerById, fetchKindergartenById, fetchLernplattformen, downloadLernplattformExport, type SchuelerAuswahl, type LernplattformEintrag } from '@/services/svwsService'
+import { fetchForExport, fetchSchuelerAuswahlliste, enrichSchueler, enrichRecords, fetchOrteById, fetchReligionenById, fetchSchulenById, fetchJahrgaengeById, fetchEinschulungsartenById, fetchUebergangsempfehlungenById, fetchKindergartenbesuchsdauerById, fetchKindergartenById, fetchLernplattformen, downloadLernplattformExport, fetchErzieherFuerSchueler, fetchErzieherartenById, fetchOrtsteileById, type SchuelerAuswahl, type LernplattformEintrag } from '@/services/svwsService'
 import type { OrtKatalogEintrag, ReligionKatalogEintrag } from '@/models/ImportSchema'
+import { fetchNationalitaetenIso3ById } from '@/services/katalogService'
+import { gruppiereErzieherEintraege, type ErzieherStammdaten } from '@/models/SchuelerErzieher'
 import { exportAsCsv, exportAsJson } from '@/utils/exportUtils'
 import { useSchuleStore } from '@/stores/schule'
 import { useAuthStore } from '@/stores/auth'
@@ -640,7 +645,37 @@ const TILES: ExportTile[] = [
     label: 'Erzieherdaten',
     description: 'Erziehungsberechtigte exportieren',
     icon: 'pi pi-heart',
-    comingSoon: true,
+    // Spaltenüberschriften so gewählt, dass die Datei wieder in den Erzieher-Import eingelesen werden kann
+    fields: [
+      { key: 'schuelerId',            label: 'Schüler-ID',                    group: 'Schüler' },
+      { key: 'nachname',              label: 'Nachname',                      group: 'Schüler' },
+      { key: 'vorname',               label: 'Vorname',                       group: 'Schüler' },
+      { key: 'geburtsdatum',          label: 'Geburtsdatum',                  group: 'Schüler' },
+      { key: 'klasse',                label: 'Klasse',                        group: 'Schüler' },
+      { key: 'jahrgang',              label: 'Jahrgang',                      group: 'Schüler' },
+      { key: 'erzieherId',            label: 'Erzieher-ID',                   group: 'Eintrag' },
+      { key: 'erzieherart',           label: 'Erzieherart',                   group: 'Eintrag' },
+      { key: 'erhaeltAnschreiben',    label: 'Anschreiben',                   group: 'Eintrag' },
+      { key: 'bemerkungen',           label: 'Bemerkungen',                   group: 'Eintrag' },
+      { key: 'anrede1',               label: 'Anrede 1. Person',              group: '1. Person' },
+      { key: 'titel1',                label: 'Titel 1. Person',               group: '1. Person' },
+      { key: 'nachname1',             label: 'Nachname 1. Person',            group: '1. Person' },
+      { key: 'vorname1',              label: 'Vorname 1. Person',             group: '1. Person' },
+      { key: 'email1',                label: 'E-Mail 1. Person',              group: '1. Person' },
+      { key: 'staatsangehoerigkeit1', label: 'Staatsangehörigkeit 1. Person', group: '1. Person' },
+      { key: 'anrede2',               label: 'Anrede 2. Person',              group: '2. Person' },
+      { key: 'titel2',                label: 'Titel 2. Person',               group: '2. Person' },
+      { key: 'nachname2',             label: 'Nachname 2. Person',            group: '2. Person' },
+      { key: 'vorname2',              label: 'Vorname 2. Person',             group: '2. Person' },
+      { key: 'email2',                label: 'E-Mail 2. Person',              group: '2. Person' },
+      { key: 'staatsangehoerigkeit2', label: 'Staatsangehörigkeit 2. Person', group: '2. Person' },
+      { key: 'strassenname',          label: 'Straße',                        group: 'Adresse' },
+      { key: 'hausnummer',            label: 'Hausnummer',                    group: 'Adresse' },
+      { key: 'hausnummerZusatz',      label: 'Hausnummerzusatz',              group: 'Adresse' },
+      { key: 'plz',                   label: 'PLZ',                           group: 'Adresse' },
+      { key: 'ort',                   label: 'Ort',                           group: 'Adresse' },
+      { key: 'ortsteil',              label: 'Ortsteil',                      group: 'Adresse' },
+    ],
   },
   {
     id: 'betriebe',
@@ -748,6 +783,7 @@ const listError               = ref('')
 const exportProgress          = ref(0)
 const exportDone              = ref(0)
 const exportTotal             = ref(0)
+const exportInfo              = ref('')
 const lehrerListe             = ref<Record<string, unknown>[]>([])
 const selectedLehrer          = ref<Record<string, unknown>[]>([])
 const lehrerListLoading       = ref(false)
@@ -766,6 +802,11 @@ const lpLoading      = ref(false)
 const lpError        = ref('')
 
 const activeTile = computed(() => TILES.find(t => t.id === selectedTile.value))
+
+/** Kacheln, deren Export über die Schülerliste (Auswahl + Filter) gesteuert wird */
+const istSchuelerAuswahlTile = computed(() =>
+  selectedTile.value === 'schueler' || selectedTile.value === 'erzieher',
+)
 
 const hasSections = computed(() =>
   (activeTile.value?.fields ?? []).some(f => f.section),
@@ -805,6 +846,12 @@ const loadBtnLabel = computed(() => {
       ? selectedSchueler.value.length
       : filteredSchueler.value.length
     return count > 0 ? `${count} Schüler exportieren` : 'Exportieren'
+  }
+  if (selectedTile.value === 'erzieher') {
+    const count = selectedSchueler.value.length > 0
+      ? selectedSchueler.value.length
+      : filteredSchueler.value.length
+    return count > 0 ? `Erzieher von ${count} Schülern exportieren` : 'Exportieren'
   }
   if (selectedTile.value === 'lehrer') {
     const count = selectedLehrer.value.length > 0
@@ -858,7 +905,7 @@ onMounted(() => {
 })
 
 watch(selectedAbschnittId, (newId, oldId) => {
-  if (newId !== null && oldId !== null && selectedTile.value === 'schueler') {
+  if (newId !== null && oldId !== null && istSchuelerAuswahlTile.value) {
     reloadAuswahlliste()
   }
 })
@@ -868,6 +915,7 @@ function selectTile(id: string): void {
   selectedTile.value = id
   data.value = []
   loadError.value = ''
+  exportInfo.value = ''
   schuelerAuswahl.value = []
   selectedSchueler.value = []
   jahrgangFilter.value = []
@@ -878,7 +926,7 @@ function selectTile(id: string): void {
   lehrerListError.value = ''
   const tile = TILES.find(t => t.id === id)
   selectedFields.value = tile?.fields?.map(f => f.key) ?? []
-  if (id === 'schueler')      reloadAuswahlliste()
+  if (id === 'schueler' || id === 'erzieher') reloadAuswahlliste()
   if (id === 'lehrer')        reloadLehrerListe()
   if (id === 'lernplattformen') {
     lpListe.value = []
@@ -977,6 +1025,7 @@ async function loadData(): Promise<void> {
   const tile = activeTile.value
   if (!tile) return
   loadError.value = ''
+  exportInfo.value = ''
 
   if (tile.id === 'schueler') {
     const students = selectedSchueler.value.length > 0
@@ -1086,6 +1135,11 @@ async function loadData(): Promise<void> {
     return
   }
 
+  if (tile.id === 'erzieher') {
+    await exportErzieher(tile)
+    return
+  }
+
   if (tile.id === 'lehrer') {
     const teachers = selectedLehrer.value.length > 0 ? selectedLehrer.value : filteredLehrer.value
     if (teachers.length === 0) { loadError.value = 'Keine Lehrkräfte zum Exportieren vorhanden.'; return }
@@ -1159,6 +1213,110 @@ async function loadData(): Promise<void> {
     data.value = []
   } finally {
     loading.value = false
+  }
+}
+
+async function exportErzieher(tile: ExportTile): Promise<void> {
+  const students = selectedSchueler.value.length > 0 ? selectedSchueler.value : filteredSchueler.value
+  if (students.length === 0) { loadError.value = 'Keine Schüler zum Exportieren vorhanden.'; return }
+  if (selectedFields.value.length === 0) { loadError.value = 'Bitte mindestens ein Feld auswählen.'; return }
+
+  loading.value = true
+  exportProgress.value = 0
+  exportDone.value = 0
+  exportTotal.value = students.length
+  try {
+    const sf = selectedFields.value
+    const needsArt       = sf.includes('erzieherart')
+    const needsOrt       = sf.some(f => f === 'plz' || f === 'ort')
+    const needsOrtsteil  = sf.includes('ortsteil')
+    const needsNationen  = sf.some(f => f === 'staatsangehoerigkeit1' || f === 'staatsangehoerigkeit2')
+
+    const nm = <T>() => Promise.resolve(null as unknown as Map<number, T>)
+    const [erzieherJeSchueler, artenById, orteById, ortsteileById, nationenById] = await Promise.all([
+      fetchErzieherFuerSchueler(
+        students,
+        (done, total) => { exportDone.value = done; exportTotal.value = total; exportProgress.value = done / total },
+      ),
+      needsArt      ? fetchErzieherartenById()        : nm<string>(),
+      needsOrt      ? fetchOrteById()                 : nm<OrtKatalogEintrag>(),
+      needsOrtsteil ? fetchOrtsteileById()            : nm<string>(),
+      // Katalog optional: ohne allinone.json bleibt die Staatsangehörigkeit leer
+      needsNationen ? fetchNationalitaetenIso3ById().catch(() => new Map<number, string>()) : nm<string>(),
+    ])
+
+    const nation = (p: ErzieherStammdaten | null) =>
+      p?.idStaatsangehoerigkeit != null ? nationenById?.get(p.idStaatsangehoerigkeit) ?? '' : ''
+
+    // Eine Zeile je Erzieher-Eintrag; Schüler ohne Erzieher werden nicht exportiert
+    const rows: Record<string, unknown>[] = []
+    let ohneErzieher = 0
+    students.forEach((s, i) => {
+      const eintraege = gruppiereErzieherEintraege(erzieherJeSchueler[i])
+      if (eintraege.length === 0) { ohneErzieher++; return }
+      for (const { id, person1: p1, person2: p2 } of eintraege) {
+        const ort = p1.wohnortID != null ? orteById?.get(p1.wohnortID) : undefined
+        rows.push({
+          schuelerId:            s.id,
+          nachname:              s.nachname,
+          vorname:               s.vorname,
+          geburtsdatum:          s.geburtsdatum ?? '',
+          klasse:                s.klasse ?? '',
+          jahrgang:              s.jahrgang ?? '',
+          erzieherId:            id,
+          erzieherart:           p1.idErzieherArt != null ? artenById?.get(p1.idErzieherArt) ?? '' : '',
+          erhaeltAnschreiben:    p1.erhaeltAnschreiben === true ? 'Ja' : p1.erhaeltAnschreiben === false ? 'Nein' : '',
+          bemerkungen:           p1.bemerkungen ?? '',
+          anrede1:               p1.anrede ?? '',
+          titel1:                p1.titel ?? '',
+          nachname1:             p1.nachname ?? '',
+          vorname1:              p1.vorname ?? '',
+          email1:                p1.eMail ?? '',
+          staatsangehoerigkeit1: nation(p1),
+          anrede2:               p2?.anrede ?? '',
+          titel2:                p2?.titel ?? '',
+          nachname2:             p2?.nachname ?? '',
+          vorname2:              p2?.vorname ?? '',
+          email2:                p2?.eMail ?? '',
+          staatsangehoerigkeit2: nation(p2),
+          strassenname:          p1.strassenname ?? '',
+          hausnummer:            p1.hausnummer ?? '',
+          hausnummerZusatz:      p1.hausnummerZusatz ?? '',
+          plz:                   ort?.plz ?? '',
+          ort:                   ort?.ortsname ?? '',
+          ortsteil:              p1.ortsteilID != null ? ortsteileById?.get(p1.ortsteilID) ?? '' : '',
+        })
+      }
+    })
+
+    if (rows.length === 0) {
+      loadError.value = 'Für die gewählten Schüler sind keine Erzieher eingetragen.'
+      return
+    }
+
+    const fieldLabelMap = Object.fromEntries((tile.fields ?? []).map(f => [f.key, f.label]))
+    const exportCols = sf.map(k => fieldLabelMap[k] ?? k)
+    const exportData = rows.map(row => {
+      const r: Record<string, unknown> = {}
+      for (const k of sf) r[fieldLabelMap[k] ?? k] = row[k]
+      return r
+    })
+
+    const date = new Date().toISOString().slice(0, 10)
+    const filename = `erzieher_export_${date}`
+    format.value === 'csv'
+      ? exportAsCsv(exportData, exportCols, `${filename}.csv`)
+      : exportAsJson(exportData, exportCols, `${filename}.json`)
+
+    exportInfo.value = `${rows.length} Erzieher-Einträge zu ${students.length - ohneErzieher} Schülern exportiert.`
+      + (ohneErzieher > 0 ? ` ${ohneErzieher} Schüler ohne Erzieher wurden übersprungen.` : '')
+  } catch (e) {
+    loadError.value = e instanceof Error ? e.message : 'Fehler beim Exportieren'
+  } finally {
+    loading.value = false
+    exportProgress.value = 0
+    exportDone.value = 0
+    exportTotal.value = 0
   }
 }
 

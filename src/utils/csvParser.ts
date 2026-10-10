@@ -670,7 +670,8 @@ export function parseSchuelerErzieherCsv(file: File): Promise<import('@/models/S
               _lookupStatus: 'pending' as const,
               _erzieherartStatus: 'empty' as const,
               _wohnortStatus: 'empty' as const,
-              // Schüler
+              // Schüler (Schüler-ID optional, z. B. aus dem Erzieher-Export)
+              schuelerId:   t('schuelerid', 'schülerid', 'idschueler', 'idschüler'),
               nachname:     t('nachname', 'name', 'familienname'),
               vorname:      t('vorname', 'rufname'),
               geburtsdatum: normalisiereDatum(t('geburtsdatum', 'geburtstag', 'geb')),

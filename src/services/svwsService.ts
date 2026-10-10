@@ -16,7 +16,7 @@ import { betriebImportToApi, ansprechpartnerImportToApi, type BetriebImportRow, 
 import { ortsteilImportToApi, type OrtsteilImportRow, type OrtsteilDetails } from '@/models/Ortsteile'
 import { resolveWohnortId, resolveReligionId, resolveNationalitaetId, resolveVerkehrsspracheId, fetchSchulReligionen, fetchJahrgangAsdKataloge } from './katalogService'
 import type { Floskelgruppe, Floskel, FloskelApiPayload } from '@/models/Floskel'
-import type { ErzieherStammdatenPayload } from '@/models/SchuelerErzieher'
+import type { ErzieherStammdatenPayload, ErzieherStammdaten } from '@/models/SchuelerErzieher'
 import type {
   Ankreuzkompetenz,
   AnkreuzkompetenzCreatePayload,
@@ -1247,6 +1247,44 @@ export async function fetchSchuelerErzieher(idSchueler: number): Promise<Erziehe
     if ((error as { response?: { status?: number } })?.response?.status === 404) return []
     throw error
   }
+}
+
+export async function fetchErzieherartenById(): Promise<Map<number, string>> {
+  const map = new Map<number, string>()
+  for (const a of await fetchErzieherarten()) {
+    if (a.id && a.bezeichnung) map.set(a.id, a.bezeichnung)
+  }
+  return map
+}
+
+export async function fetchOrtsteileById(): Promise<Map<number, string>> {
+  const map = new Map<number, string>()
+  for (const ot of await fetchOrtsteile()) {
+    if (ot.id && ot.ortsteil) map.set(ot.id, ot.ortsteil)
+  }
+  return map
+}
+
+/** Lädt die Erzieher (Personen mit vollständigen Stammdaten) zu jedem Schüler; Reihenfolge wie `students` */
+export async function fetchErzieherFuerSchueler(
+  students: SchuelerAuswahl[],
+  onProgress: (done: number, total: number) => void,
+  concurrency = 15,
+): Promise<ErzieherStammdaten[][]> {
+  const results: ErzieherStammdaten[][] = new Array(students.length)
+  let cursor = 0
+  let done = 0
+
+  async function work(): Promise<void> {
+    while (cursor < students.length) {
+      const i = cursor++
+      results[i] = await fetchSchuelerErzieher(students[i].id) as ErzieherStammdaten[]
+      onProgress(++done, students.length)
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(concurrency, students.length) }, work))
+  return results
 }
 
 /** Legt einen neuen Erzieher-Eintrag mit der 1. Person an */

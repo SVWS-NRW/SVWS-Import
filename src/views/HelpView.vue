@@ -365,7 +365,8 @@
       <p class="section-desc">
         Erziehungsberechtigte zu vorhandenen Schülern. Eine Zeile ist ein Erzieher-Eintrag mit bis zu zwei Personen
         und gemeinsamer Adresse; mehrere Zeilen pro Schüler sind möglich. Schüler werden anhand von
-        <code>Nachname</code>, <code>Vorname</code> und <code>Geburtsdatum</code> zugeordnet.
+        <code>Nachname</code>, <code>Vorname</code> und <code>Geburtsdatum</code> zugeordnet — oder, falls vorhanden,
+        über die <code>Schüler-ID</code> (z.&nbsp;B. aus dem Erzieher-Export).
         Unterstützt wird auch der Schild-NRW-Export <code>SchuelerErzieher.dat</code> (Spalten wie <code>Nachname 1.Person</code>).
         Beispieldatei: <code>schueler-erzieher.csv</code>
       </p>
@@ -375,9 +376,10 @@
         </thead>
         <tbody>
           <tr class="cat-row"><td colspan="4">Schüler-Identifikation</td></tr>
-          <tr><td><code>nachname</code> <span class="required-badge">Pflicht</span></td><td>Identifikation</td><td>Text</td><td>Zum Abgleich mit vorhandenem Schüler</td></tr>
-          <tr><td><code>vorname</code> <span class="required-badge">Pflicht</span></td><td>Identifikation</td><td>Text</td><td></td></tr>
-          <tr><td><code>geburtsdatum</code> <span class="required-badge">Pflicht</span></td><td>Identifikation</td><td>Datum</td><td><code>TT.MM.JJJJ</code> oder <code>JJJJ-MM-TT</code></td></tr>
+          <tr><td><code>schuelerId</code> / <code>Schüler-ID</code></td><td>Identifikation</td><td>Zahl</td><td>Optional. Hat Vorrang vor Name + Geburtsdatum; sind diese zusätzlich angegeben, müssen sie zum Schüler passen</td></tr>
+          <tr><td><code>nachname</code> <span class="required-badge">Pflicht*</span></td><td>Identifikation</td><td>Text</td><td>Zum Abgleich mit vorhandenem Schüler — *nicht Pflicht, wenn eine Schüler-ID angegeben ist</td></tr>
+          <tr><td><code>vorname</code> <span class="required-badge">Pflicht*</span></td><td>Identifikation</td><td>Text</td><td></td></tr>
+          <tr><td><code>geburtsdatum</code> <span class="required-badge">Pflicht*</span></td><td>Identifikation</td><td>Datum</td><td><code>TT.MM.JJJJ</code> oder <code>JJJJ-MM-TT</code></td></tr>
           <tr class="cat-row"><td colspan="4">Erzieher-Eintrag</td></tr>
           <tr><td><code>erzieherart</code></td><td>Eintrag</td><td>Text</td><td>z.&nbsp;B. <code>Eltern</code>, <code>Mutter</code>, <code>Schüler ist volljährig</code> — unbekannte Arten werden im Katalog angelegt</td></tr>
           <tr><td><code>anrede1</code>, <code>titel1</code></td><td>1. Person</td><td>Text</td><td>z.&nbsp;B. <code>Frau</code>, <code>Dr.</code></td></tr>

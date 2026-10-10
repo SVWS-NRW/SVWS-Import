@@ -8,11 +8,13 @@ export interface SchuelerErzieherImportRow {
   _errors: string[]
   _sent: boolean
   _schuelerId: number | null
-  _lookupStatus: 'pending' | 'ok' | 'not_found' | 'ambiguous'
+  /** mismatch: Schüler-ID gefunden, aber Name/Geburtsdatum passen nicht dazu */
+  _lookupStatus: 'pending' | 'ok' | 'not_found' | 'ambiguous' | 'mismatch'
   _erzieherartStatus: 'empty' | 'found' | 'new'
   _wohnortStatus: 'empty' | 'found' | 'not_found'
   _result?: 'angelegt' | 'ueberschrieben' | 'uebersprungen'
-  // Identifikation des Schülers
+  // Identifikation des Schülers — Schüler-ID hat Vorrang vor Name + Geburtsdatum
+  schuelerId: string
   nachname: string
   vorname: string
   geburtsdatum: string
@@ -118,4 +120,49 @@ export function erzieherPerson2Payload(
     eMail: orNull(row.email2),
     idStaatsangehoerigkeit,
   }
+}
+
+/** Antwort von GET /schueler/{id}/erzieher — eine Person je Objekt */
+export interface ErzieherStammdaten {
+  /** ID des DB-Eintrags × 10 + Position der Person (1 oder 2) */
+  id: number
+  idSchueler: number
+  idErzieherArt: number | null
+  titel: string | null
+  anrede: string | null
+  nachname: string | null
+  vorname: string | null
+  strassenname: string | null
+  hausnummer: string | null
+  hausnummerZusatz: string | null
+  wohnortID: number | null
+  ortsteilID: number | null
+  erhaeltAnschreiben: boolean | null
+  eMail: string | null
+  idStaatsangehoerigkeit: number | null
+  bemerkungen: string | null
+}
+
+/** Ein Erzieher-Eintrag mit 1. und optional 2. Person (gemeinsame Adresse) */
+export interface ErzieherEintrag {
+  /** ID des DB-Eintrags (ohne Positionsziffer) */
+  id: number
+  person1: ErzieherStammdaten
+  person2: ErzieherStammdaten | null
+}
+
+/** Fasst die Personen eines Schülers anhand der Positionsziffer in der ID zu Einträgen zusammen */
+export function gruppiereErzieherEintraege(personen: ErzieherStammdaten[]): ErzieherEintrag[] {
+  const eintraege = new Map<number, { p1?: ErzieherStammdaten; p2?: ErzieherStammdaten }>()
+  for (const p of personen) {
+    const pos = p.id % 10
+    const id = pos === 1 || pos === 2 ? Math.floor(p.id / 10) : p.id
+    const e = eintraege.get(id) ?? {}
+    if (pos === 2) e.p2 = p
+    else e.p1 = p
+    eintraege.set(id, e)
+  }
+  return [...eintraege.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([id, e]) => ({ id, person1: (e.p1 ?? e.p2)!, person2: e.p1 ? e.p2 ?? null : null }))
 }

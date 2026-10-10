@@ -87,6 +87,18 @@ function parseNationalitaetenById(katalog: AllinoneKatalog): Map<string, number>
   return map
 }
 
+/** Katalog-ID → ISO-3-Code (z. B. DEU), für den Export; vom Erzieher-Import wieder lesbar */
+export async function fetchNationalitaetenIso3ById(): Promise<Map<number, string>> {
+  const map = new Map<number, string>()
+  const katalog = (await fetchAllInOne()).Nationalitaeten
+  for (const entry of katalog?.daten ?? []) {
+    const h = currentHistorie(entry)
+    const code = h?.iso3 || h?.codeDEStatis || h?.schluessel
+    if (h?.id && code) map.set(h.id, code)
+  }
+  return map
+}
+
 export function resolveNationalitaetId(
   nationalitaetenById: Map<string, number> | undefined,
   raw: string,

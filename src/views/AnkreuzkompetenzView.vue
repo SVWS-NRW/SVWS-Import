@@ -145,7 +145,7 @@
         class="kompetenzen-table"
       >
         <Column selectionMode="multiple" style="width: 2.5rem; flex: 0 0 2.5rem" frozen />
-        <Column header="Fach" style="width: 70px" sortable :sortField="(d) => faecherById.get(d.idFach ?? -1)?.kuerzel ?? ''">
+        <Column header="Fach" style="width: 85px" sortable :sortField="(d) => faecherById.get(d.idFach ?? -1)?.kuerzel ?? ''">
           <template #body="{ data }">
             <span v-if="data.idFach">{{ faecherById.get(data.idFach)?.kuerzel ?? data.idFach }}</span>
             <Tag v-else-if="data.istASV" value="ASV" severity="info" />
@@ -170,13 +170,13 @@
           </template>
         </Column>
         <Column field="floskelText" header="Text" />
-        <Column header="Aktiv" style="width: 70px">
+        <Column header="Aktiv" style="width: 80px">
           <template #body="{ data }">
             <i v-if="data.istAktiv" class="pi pi-check status-ok" />
             <i v-else class="pi pi-times status-off" />
           </template>
         </Column>
-        <Column field="sortierung" header="Sort." style="width: 65px" sortable />
+        <Column field="sortierung" header="Sort." style="width: 75px" sortable />
         <template #empty>
           <div class="table-empty">
             <i class="pi pi-inbox table-empty-icon" />
@@ -225,15 +225,15 @@
           class="import-table"
         >
           <Column selectionMode="multiple" style="width: 2.5rem; flex: 0 0 2.5rem" frozen />
-          <Column field="fach" header="Fach" style="width: 65px" />
-          <Column field="jahrgang" header="Jg." style="width: 80px" />
+          <Column field="fach" header="Fach" style="width: 85px" />
+          <Column field="jahrgang" header="Jg." style="width: 90px" />
           <Column header="Abschnitt" style="width: 110px">
             <template #body="{ data }">
               <Tag :value="ABSCHNITT_LABELS[Number(data.abschnitt)] ?? (data.abschnitt || '–')" severity="secondary" class="abschnitt-tag" />
             </template>
           </Column>
-          <Column field="istASV" header="ASV" style="width: 55px" />
-          <Column field="sortierung" header="Sort." style="width: 65px" />
+          <Column field="istASV" header="ASV" style="width: 65px" />
+          <Column field="sortierung" header="Sort." style="width: 75px" />
           <Column field="text" header="Text" />
         </DataTable>
       </template>
@@ -667,15 +667,15 @@ h2 {
   border: 1px solid var(--p-surface-border);
   border-radius: 8px;
   background: var(--p-surface-card);
-  padding: 0.5rem 0.75rem;
+  padding: 0.75rem 1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.6rem;
 }
 
 .panel h3 {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: 0.95rem;
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -685,14 +685,14 @@ h2 {
 .panel-hint {
   margin: 0;
   color: var(--p-text-muted-color);
-  font-size: 0.72rem;
+  font-size: 0.9rem;
 }
 
 .section-head {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: 0.6rem;
 }
 
 .section-head h3 {
@@ -702,48 +702,48 @@ h2 {
 .filter-bar {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
   margin-left: auto;
 }
 
 .filter-search {
-  width: 130px;
+  width: 180px;
 }
 
 .filter-select {
-  width: 110px;
+  width: 150px;
 }
 
 .selection-bar {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.25rem 0.5rem;
+  padding: 0.35rem 0.75rem;
   background: var(--p-surface-ground);
   border: 1px solid var(--p-primary-color);
   border-radius: 6px;
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   color: var(--p-text-color);
 }
 
 .selection-icon {
   color: var(--p-primary-color);
-  font-size: 0.75rem;
+  font-size: 0.9rem;
 }
 
 .table-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.35rem;
-  padding: 1rem;
+  gap: 0.5rem;
+  padding: 1.5rem;
   color: var(--p-text-muted-color);
-  font-size: 0.75rem;
+  font-size: 0.9rem;
 }
 
 .table-empty-icon {
-  font-size: 1.25rem;
+  font-size: 1.6rem;
   opacity: 0.4;
 }
 
@@ -781,44 +781,28 @@ h2 {
 
 .status-ok {
   color: var(--p-green-500);
-  font-size: 0.75rem;
+  font-size: 0.9rem;
 }
 
 .status-off {
   color: var(--p-text-muted-color);
-  font-size: 0.75rem;
+  font-size: 0.9rem;
 }
 
 :deep(.p-datatable thead th),
 :deep(.p-datatable tbody td) {
-  font-size: 0.72rem;
-  padding: 0.2rem 0.5rem;
-}
-
-:deep(.p-datatable .p-checkbox) {
-  width: 14px;
-  height: 14px;
-}
-
-:deep(.p-datatable .p-checkbox .p-checkbox-box) {
-  width: 14px;
-  height: 14px;
-}
-
-:deep(.p-datatable .p-checkbox .p-checkbox-icon) {
-  font-size: 0.6rem;
-  width: 0.6rem;
-  height: 0.6rem;
+  font-size: 0.9rem;
+  padding: 0.35rem 0.6rem;
 }
 
 :deep(.p-datatable .p-tag) {
-  font-size: 0.65rem;
-  padding: 0.1rem 0.3rem;
+  font-size: 0.8rem;
+  padding: 0.15rem 0.45rem;
 }
 
 :deep(.p-paginator) {
-  font-size: 0.72rem;
-  padding: 0.15rem 0.25rem;
+  font-size: 0.9rem;
+  padding: 0.25rem 0.5rem;
 }
 
 :deep(.p-paginator .p-paginator-page),
@@ -826,29 +810,14 @@ h2 {
 :deep(.p-paginator .p-paginator-prev),
 :deep(.p-paginator .p-paginator-first),
 :deep(.p-paginator .p-paginator-last) {
-  min-width: 1.5rem;
-  height: 1.5rem;
-  font-size: 0.72rem;
-  padding: 0;
-}
-
-:deep(.p-paginator .p-paginator-page .p-icon),
-:deep(.p-paginator .p-paginator-nav-button .p-icon) {
-  width: 0.7rem;
-  height: 0.7rem;
-}
-
-:deep(.p-paginator .p-select) {
-  font-size: 0.72rem;
+  min-width: 2rem;
+  height: 2rem;
+  font-size: 0.9rem;
 }
 
 :deep(.p-paginator .p-select .p-select-label) {
-  font-size: 0.72rem;
-  padding: 0.15rem 0.25rem;
-}
-
-:deep(.p-paginator .p-select .p-select-dropdown) {
-  width: 1.25rem;
+  font-size: 0.9rem;
+  padding: 0.3rem 0.5rem;
 }
 
 :deep(.p-fileupload-basic .p-button) {
@@ -862,27 +831,14 @@ h2 {
   color: var(--p-text-muted-color);
 }
 
-:deep(.filter-bar .p-select),
-:deep(.filter-bar .p-inputtext) {
-  font-size: 0.72rem;
-}
-
 :deep(.filter-bar .p-select .p-select-label),
-:deep(.filter-bar .p-select .p-inputtext) {
-  font-size: 0.72rem;
-  padding: 0.2rem 0.25rem;
-}
-
-:deep(.filter-bar .p-select .p-select-dropdown) {
-  width: 1.25rem;
+:deep(.filter-bar .p-inputtext) {
+  font-size: 0.9rem;
+  padding: 0.35rem 0.5rem;
 }
 
 :deep(.filter-bar .p-select .p-select-dropdown .p-icon) {
-  width: 0.6rem;
-  height: 0.6rem;
-}
-
-:deep(.filter-bar .p-inputtext) {
-  padding: 0.2rem 0.35rem;
+  width: 0.8rem;
+  height: 0.8rem;
 }
 </style>

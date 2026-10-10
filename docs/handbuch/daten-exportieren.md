@@ -8,12 +8,13 @@ Schüler-, Lehrer-, Erzieher- oder Betriebsdaten sowie schulinterne Kataloge aus
 
 ## Aufbau der Exportseite
 
-Die Exportseite ist in drei Bereiche gegliedert:
+Die Startseite des Exports zeigt Kacheln für die einzelnen Datentypen. Ein Klick auf eine Kachel öffnet die zugehörige Exportseite; über den **Pfeil links neben der Überschrift** (oder die Zurück-Taste des Browsers) gelangen Sie wieder zur Übersicht.
 
-1. **Datentyp wählen** – Kacheln oben zur Auswahl des Exportbereichs (z. B. Schülerdaten, Lehrerdaten)
-2. **Format & Export** – Auswahl des Dateiformats und Start des Exports
-3. **Feldauswahl** – Checkboxen zur Auswahl der gewünschten Spalten, gruppiert nach Themenbereich
-4. **Datensatzliste** – Tabelle aller verfügbaren Datensätze mit Filtermöglichkeiten und Auswahl
+Die Exportseite ist wie folgt gegliedert:
+
+1. **Format & Export** – Auswahl des Dateiformats und Start des Exports
+2. **Feldauswahl** – Checkboxen zur Auswahl der gewünschten Spalten, gruppiert nach Themenbereich
+3. **Datensatzliste** – Tabelle aller verfügbaren Datensätze mit Filtermöglichkeiten und Auswahl
 
 ---
 
@@ -21,13 +22,14 @@ Die Exportseite ist in drei Bereiche gegliedert:
 
 ### 1. Datentyp wählen
 
-Klicken Sie oben auf eine der Kacheln:
+Klicken Sie auf der Startseite auf eine der Kacheln:
 
 - **Schülerdaten** – Stammdaten und Schulbesuchsdaten aller Schülerinnen und Schüler
 - **Lehrerdaten** – Stammdaten und Personaldaten aller Lehrkräfte
 - **Erzieherdaten** – Erziehungsberechtigte zu den ausgewählten Schülerinnen und Schülern
 - **Betriebe** – der Katalog der Ausbildungs- und Praktikumsbetriebe
 - **Kataloge** – schulinterne Kataloge als JSON-Dateien (siehe [Kataloge](#kataloge))
+- **SVWS-Server** – Open-API-Spezifikation und Statistikkataloge des Servers (siehe [SVWS-Server](#svws-server))
 
 ### 2. Format wählen
 
@@ -178,6 +180,17 @@ Die Kachel **Kataloge** exportiert die schulinternen Kataloge (wie im SVWS-Clien
 Jeder Katalog wird als **eigene Datei** heruntergeladen, z. B. `katalog_erzieherarten_2026-10-10.json`. Kann ein Katalog nicht geladen werden, wird er in einer Fehlermeldung aufgeführt; die übrigen Kataloge werden trotzdem exportiert.
 
 > **Hinweis:** Bei mehreren Katalogen fragt der Browser beim ersten Mal ggf. nach, ob die Seite mehrere Dateien herunterladen darf. Bestätigen Sie dies.
+
+---
+
+## SVWS-Server
+
+Die Kachel **SVWS-Server** stellt zwei Dateien des verbundenen SVWS-Servers zum Download bereit. Sie werden unverändert heruntergeladen; die Serverversion wird an den Dateinamen angehängt.
+
+| Eintrag | Inhalt | Dateiname (Beispiel) |
+|---------|--------|----------------------|
+| **Open-API-Spezifikation** | Beschreibung aller REST-Schnittstellen des Servers | `server_1.5.0.json` |
+| **Statistikkataloge** | Alle Statistikkataloge des Servers in einer Datei | `allinone_1.5.0.json` |
 
 ---
 

@@ -156,7 +156,7 @@ const allRequiredMapped = computed(() => {
 
 .mapping-title {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: 1.1rem;
   font-weight: 600;
 }
 
@@ -191,12 +191,12 @@ const allRequiredMapped = computed(() => {
 }
 
 :deep(.p-button) {
-  font-size: 0.72rem;
-  padding: 0.2rem 0.5rem;
+  font-size: 0.9rem;
+  padding: 0.35rem 0.75rem;
 }
 :deep(.p-tag) {
-  font-size: 0.65rem;
-  padding: 0.1rem 0.3rem;
+  font-size: 0.8rem;
+  padding: 0.15rem 0.45rem;
 }
 
 /* Klebt am oberen Rand, während die Quellspalten durchgescrollt werden */

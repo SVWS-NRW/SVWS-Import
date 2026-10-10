@@ -255,7 +255,7 @@ function goBack(): void {
 .wizard-steps {
   display: flex;
   align-items: center;
-  padding: 0.4rem 1.25rem;
+  padding: 0.6rem 1.5rem;
   background: var(--p-surface-card);
   border-bottom: 1px solid var(--p-surface-border);
   flex-shrink: 0;
@@ -264,7 +264,7 @@ function goBack(): void {
 .wizard-step {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.5rem;
   cursor: default;
   white-space: nowrap;
 }
@@ -274,14 +274,14 @@ function goBack(): void {
 }
 
 .step-dot {
-  width: 20px;
-  height: 20px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   border: 2px solid var(--p-surface-border);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.65rem;
+  font-size: 0.8rem;
   font-weight: 600;
   color: var(--p-text-muted-color);
   background: var(--p-surface-card);
@@ -302,7 +302,7 @@ function goBack(): void {
 }
 
 .step-label {
-  font-size: 0.72rem;
+  font-size: 0.9rem;
   color: var(--p-text-muted-color);
   transition: color 0.2s;
 }
@@ -320,7 +320,7 @@ function goBack(): void {
   flex: 1;
   height: 2px;
   background: var(--p-surface-border);
-  margin: 0 0.35rem;
+  margin: 0 0.5rem;
   min-width: 1rem;
   transition: background 0.2s;
 }
@@ -336,21 +336,21 @@ function goBack(): void {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.625rem;
-  padding: 0.75rem 1.25rem;
+  gap: 0.75rem;
+  padding: 0.75rem 1.5rem;
   overflow-y: auto;
   overflow-x: hidden;
 }
 
 .wizard-content.is-grid-step {
   overflow: hidden;
-  padding: 0.5rem 1rem;
+  padding: 0.75rem 1.5rem;
   gap: 0;
 }
 
 .content-title {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: 1.1rem;
   font-weight: 600;
   flex-shrink: 0;
 }
@@ -366,20 +366,20 @@ function goBack(): void {
 .preview-meta {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
 }
 
 .preview-note {
   color: var(--p-text-muted-color);
-  font-size: 0.72rem;
+  font-size: 0.9rem;
 }
 
 .file-badge {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-  font-size: 0.72rem;
+  gap: 0.35rem;
+  font-size: 0.9rem;
   color: var(--p-text-muted-color);
 }
 
@@ -397,7 +397,7 @@ function goBack(): void {
 .module-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 .module-card {
@@ -406,8 +406,8 @@ function goBack(): void {
   align-items: center;
   justify-content: center;
   text-align: center;
-  gap: 0.25rem;
-  padding: 0.625rem 0.5rem;
+  gap: 0.4rem;
+  padding: 1rem 0.75rem;
   border: 2px solid var(--p-surface-border);
   border-radius: 8px;
   cursor: pointer;
@@ -429,13 +429,13 @@ function goBack(): void {
 }
 
 .module-icon {
-  font-size: 1.4rem;
+  font-size: 1.8rem;
   color: var(--p-primary-color);
 }
 
 .module-card strong {
   display: block;
-  font-size: 0.8rem;
+  font-size: 0.95rem;
   line-height: 1.2;
 }
 
@@ -452,7 +452,7 @@ function goBack(): void {
 .wizard-footer {
   display: flex;
   align-items: center;
-  padding: 0.4rem 1.25rem;
+  padding: 0.6rem 1.5rem;
   border-top: 1px solid var(--p-surface-border);
   background: var(--p-surface-card);
   flex-shrink: 0;
@@ -460,32 +460,32 @@ function goBack(): void {
 
 :deep(.p-datatable thead th),
 :deep(.p-datatable tbody td) {
-  font-size: 0.72rem;
-  padding: 0.2rem 0.5rem;
+  font-size: 0.9rem;
+  padding: 0.35rem 0.6rem;
 }
 
 :deep(.p-fileupload-basic .p-button) {
-  font-size: 0.75rem;
-  padding: 0.2rem 0.5rem;
+  font-size: 0.9rem;
+  padding: 0.35rem 0.75rem;
 }
 
 :deep(.p-fileupload-label) {
-  font-size: 0.72rem;
+  font-size: 0.9rem;
   color: var(--p-text-muted-color);
 }
 
 :deep(.p-tag) {
-  font-size: 0.65rem;
-  padding: 0.1rem 0.3rem;
+  font-size: 0.8rem;
+  padding: 0.15rem 0.45rem;
 }
 
 .wizard-footer :deep(.p-button) {
-  font-size: 0.72rem;
-  padding: 0.2rem 0.5rem;
+  font-size: 0.9rem;
+  padding: 0.35rem 0.75rem;
 }
 
 .wizard-footer :deep(.p-button .p-button-icon) {
-  font-size: 0.72rem;
+  font-size: 0.9rem;
 }
 
 .footer-spacer {

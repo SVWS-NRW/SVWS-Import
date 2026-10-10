@@ -42,7 +42,8 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
-      path: '/export',
+      // ohne Parameter: Kachelübersicht, mit Parameter: Exportseite der Kachel (z. B. /export/schueler)
+      path: '/export/:tile?',
       name: 'export',
       component: ExportView,
       meta: { requiresAuth: true },

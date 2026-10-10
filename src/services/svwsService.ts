@@ -780,6 +780,22 @@ export async function fetchKatalog(endpoint: string): Promise<unknown[]> {
   }
 }
 
+/** Version des verbundenen SVWS-Servers (z. B. „1.5.0“) */
+export async function fetchServerVersion(): Promise<string> {
+  const response = await getRootClient().get('/status/version')
+  return typeof response.data === 'string' ? response.data : String(response.data ?? '')
+}
+
+/** Lädt eine Datei des SVWS-Servers (z. B. /openapi/server.json) unverändert als Blob */
+export async function fetchServerDatei(pfad: string): Promise<Blob> {
+  try {
+    const response = await getRootClient().get(pfad, { responseType: 'blob', timeout: 120000 })
+    return response.data as Blob
+  } catch (error: unknown) {
+    throw new Error(toAppError(error).messageUser)
+  }
+}
+
 export interface SchuelerAuswahl {
   id: number
   nachname: string

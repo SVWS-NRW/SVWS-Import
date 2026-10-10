@@ -1,29 +1,40 @@
 <template>
-  <div class="export-view">
-    <h2>Daten exportieren</h2>
-    <p class="subtitle">Wähle einen Datentyp, stelle die gewünschten Felder zusammen und exportiere als CSV oder JSON.</p>
+  <div class="export-view" :class="{ 'export-detail': activeTile }">
+    <!-- Übersicht: Kacheln -->
+    <template v-if="!activeTile">
+      <h2>Daten exportieren</h2>
+      <p class="subtitle">Wähle einen Datentyp, stelle die gewünschten Felder zusammen und exportiere als CSV oder JSON.</p>
 
-    <!-- Kacheln -->
-    <div class="export-cards">
-      <div
-        v-for="tile in TILES"
-        :key="tile.id"
-        class="export-card"
-        :class="{
-          active:        selectedTile === tile.id,
-          'coming-soon': tile.comingSoon,
-        }"
-        :title="tile.comingSoon ? 'Noch nicht verfügbar' : tile.description"
-        @click="!tile.comingSoon && selectTile(tile.id)"
-      >
-        <i :class="[tile.icon, 'card-icon']" />
-        <strong>{{ tile.label }}</strong>
-        <span v-if="tile.comingSoon" class="coming-soon-badge">In Vorbereitung</span>
+      <div class="export-cards">
+        <div
+          v-for="tile in TILES"
+          :key="tile.id"
+          class="export-card"
+          :class="{ 'coming-soon': tile.comingSoon }"
+          :title="tile.comingSoon ? 'Noch nicht verfügbar' : tile.description"
+          @click="!tile.comingSoon && router.push({ name: 'export', params: { tile: tile.id } })"
+        >
+          <i :class="[tile.icon, 'card-icon']" />
+          <strong>{{ tile.label }}</strong>
+          <span v-if="tile.comingSoon" class="coming-soon-badge">In Vorbereitung</span>
+        </div>
       </div>
-    </div>
+    </template>
 
-    <!-- Konfigurationsbereich -->
-    <template v-if="activeTile">
+    <!-- Exportseite der gewählten Kachel -->
+    <template v-else>
+      <div class="table-header">
+        <div class="header-left">
+          <Button
+            icon="pi pi-arrow-left"
+            text
+            rounded
+            @click="router.push({ name: 'export' })"
+            aria-label="Zurück"
+          />
+          <h2>{{ activeTile.label }} exportieren</h2>
+        </div>
+      </div>
 
       <!-- Format + Aktionen (nicht für Lernplattformen und Kataloge — eigene Bereiche) -->
       <div v-if="!hatEigenenExportBereich" class="config-section">
@@ -296,6 +307,34 @@
         </Message>
       </div>
 
+      <!-- SVWS-Server -->
+      <div v-if="selectedTile === 'svws-server'" class="config-section">
+        <h3 class="section-title">
+          Dateien des SVWS-Servers
+          <span v-if="serverVersion" class="count-badge">Version {{ serverVersion }}</span>
+        </h3>
+        <div class="server-dateien">
+          <div v-for="d in SERVER_DATEIEN" :key="d.id" class="server-datei">
+            <i class="pi pi-file server-datei-icon" />
+            <div class="server-datei-text">
+              <strong>{{ d.label }}</strong>
+              <span>{{ d.beschreibung }}</span>
+            </div>
+            <Button
+              label="Herunterladen"
+              icon="pi pi-download"
+              size="small"
+              :loading="serverLaedt === d.id"
+              :disabled="serverLaedt !== null"
+              @click="doServerDownload(d)"
+            />
+          </div>
+        </div>
+        <Message v-if="serverFehler" severity="error" :closable="true" @close="serverFehler = ''">
+          {{ serverFehler }}
+        </Message>
+      </div>
+
       <!-- Lernplattformen -->
       <div v-if="selectedTile === 'lernplattformen'" class="config-section">
         <h3 class="section-title">Lernplattform exportieren</h3>
@@ -565,7 +604,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import TooltipDirective from 'primevue/tooltip'
 import Button from 'primevue/button'
 
@@ -580,12 +620,12 @@ import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
-import { fetchForExport, fetchSchuelerAuswahlliste, enrichSchueler, enrichRecords, fetchOrteById, fetchReligionenById, fetchSchulenById, fetchJahrgaengeById, fetchEinschulungsartenById, fetchUebergangsempfehlungenById, fetchKindergartenbesuchsdauerById, fetchKindergartenById, fetchLernplattformen, downloadLernplattformExport, fetchErzieherFuerSchueler, fetchErzieherartenById, fetchOrtsteileById, fetchBetriebe, fetchBetriebsartenById, fetchKatalog, type SchuelerAuswahl, type LernplattformEintrag } from '@/services/svwsService'
+import { fetchForExport, fetchSchuelerAuswahlliste, enrichSchueler, enrichRecords, fetchOrteById, fetchReligionenById, fetchSchulenById, fetchJahrgaengeById, fetchEinschulungsartenById, fetchUebergangsempfehlungenById, fetchKindergartenbesuchsdauerById, fetchKindergartenById, fetchLernplattformen, downloadLernplattformExport, fetchErzieherFuerSchueler, fetchErzieherartenById, fetchOrtsteileById, fetchBetriebe, fetchBetriebsartenById, fetchKatalog, fetchServerVersion, fetchServerDatei, type SchuelerAuswahl, type LernplattformEintrag } from '@/services/svwsService'
 import type { OrtKatalogEintrag, ReligionKatalogEintrag } from '@/models/ImportSchema'
 import { fetchNationalitaetenIso3ById } from '@/services/katalogService'
 import { gruppiereErzieherEintraege, type ErzieherStammdaten } from '@/models/SchuelerErzieher'
 import type { BetriebDetails } from '@/models/Betriebe'
-import { exportAsCsv, exportAsJson, exportRawJson } from '@/utils/exportUtils'
+import { exportAsCsv, exportAsJson, exportRawJson, downloadBlob } from '@/utils/exportUtils'
 import { useSchuleStore } from '@/stores/schule'
 import { useAuthStore } from '@/stores/auth'
 
@@ -862,6 +902,12 @@ const TILES: ExportTile[] = [
     icon: 'pi pi-book',
   },
   {
+    id: 'svws-server',
+    label: 'SVWS-Server',
+    description: 'Open-API-Spezifikation und Statistikkataloge des Servers herunterladen',
+    icon: 'pi pi-server',
+  },
+  {
     id: 'lernplattformen',
     label: 'Lernplattformen',
     description: 'Zugangsdaten für Lernplattformen exportieren',
@@ -902,6 +948,33 @@ const KATALOGE: KatalogDef[] = [
   { id: 'teilleistungsarten',  label: 'Teilleistungsarten',  endpoint: '/teilleistungsarten' },
   { id: 'telefonarten',        label: 'Telefonarten',        endpoint: '/schule/telefonarten' },
   { id: 'vermerkarten',        label: 'Vermerkarten',        endpoint: '/schule/vermerkarten' },
+]
+
+interface ServerDatei {
+  id: string
+  label: string
+  beschreibung: string
+  /** Pfad relativ zur Server-URL (ohne /db/{schema}) */
+  pfad: string
+  /** Dateiname ohne Endung; die Serverversion wird angehängt */
+  dateiname: string
+}
+
+const SERVER_DATEIEN: ServerDatei[] = [
+  {
+    id: 'openapi',
+    label: 'Open-API-Spezifikation',
+    beschreibung: 'Schnittstellenbeschreibung aller REST-Endpunkte (server.json)',
+    pfad: '/openapi/server.json',
+    dateiname: 'server',
+  },
+  {
+    id: 'allinone',
+    label: 'Statistikkataloge',
+    beschreibung: 'Alle Statistikkataloge des Servers in einer Datei (allinone.json)',
+    pfad: '/types/allinone.json',
+    dateiname: 'allinone',
+  },
 ]
 
 const GESCHLECHT_LABELS: Record<number, string> = {
@@ -979,6 +1052,8 @@ function formatLehrerValue(key: string, value: unknown): unknown {
   return value
 }
 
+const route       = useRoute()
+const router      = useRouter()
 const schuleStore = useSchuleStore()
 const authStore   = useAuthStore()
 
@@ -1022,6 +1097,10 @@ const katalogAktuell   = ref('')
 const katalogErfolg    = ref('')
 const katalogFehler    = ref<string[]>([])
 
+const serverVersion = ref('')
+const serverLaedt   = ref<string | null>(null)
+const serverFehler  = ref('')
+
 const lpListe        = ref<LernplattformEintrag[]>([])
 const lpSelectedId   = ref<number | null>(null)
 const lpAbschnittId  = ref<number | null>(null)
@@ -1035,7 +1114,7 @@ const activeTile = computed(() => TILES.find(t => t.id === selectedTile.value))
 
 /** Kacheln ohne Format- und Feldauswahl */
 const hatEigenenExportBereich = computed(() =>
-  selectedTile.value === 'lernplattformen' || selectedTile.value === 'kataloge',
+  selectedTile.value === 'lernplattformen' || selectedTile.value === 'kataloge' || selectedTile.value === 'svws-server',
 )
 
 /** Kacheln, deren Export über die Schülerliste (Auswahl + Filter) gesteuert wird */
@@ -1149,18 +1228,30 @@ const filteredSchueler = computed(() => {
   )
 })
 
-onMounted(() => {
-  if (schuleStore.aktuellerAbschnittId !== null) {
-    selectedAbschnittId.value = schuleStore.aktuellerAbschnittId
-    lpAbschnittId.value = schuleStore.aktuellerAbschnittId
-  }
-})
+// Vor dem Routen-Watch setzen, damit die Schülerliste beim direkten Aufruf sofort laden kann
+if (schuleStore.aktuellerAbschnittId !== null) {
+  selectedAbschnittId.value = schuleStore.aktuellerAbschnittId
+  lpAbschnittId.value = schuleStore.aktuellerAbschnittId
+}
 
 watch(selectedAbschnittId, (newId, oldId) => {
   if (newId !== null && oldId !== null && istSchuelerAuswahlTile.value) {
     reloadAuswahlliste()
   }
 })
+
+// Die gewählte Kachel kommt aus der Route (/export/:tile); ohne Parameter wird die Übersicht gezeigt
+watch(
+  () => route.params.tile,
+  (param) => {
+    const id = typeof param === 'string' ? param : ''
+    if (!id) { selectedTile.value = null; return }
+    const tile = TILES.find(t => t.id === id)
+    if (!tile || tile.comingSoon) { router.replace({ name: 'export' }); return }
+    selectTile(id)
+  },
+  { immediate: true },
+)
 
 function selectTile(id: string): void {
   if (selectedTile.value === id) return
@@ -1186,6 +1277,11 @@ function selectTile(id: string): void {
   if (id === 'schueler' || id === 'erzieher') reloadAuswahlliste()
   if (id === 'lehrer')        reloadLehrerListe()
   if (id === 'betriebe')      reloadBetriebeListe()
+  if (id === 'svws-server') {
+    serverFehler.value = ''
+    // Version nur für Anzeige und Dateinamen — ohne sie funktioniert der Download trotzdem
+    fetchServerVersion().then(v => { serverVersion.value = v }).catch(() => { serverVersion.value = '' })
+  }
   if (id === 'lernplattformen') {
     lpListe.value = []
     lpSelectedId.value = null
@@ -1288,6 +1384,20 @@ async function doKatalogExport(): Promise<void> {
   } finally {
     katalogLoading.value = false
     katalogAktuell.value = ''
+  }
+}
+
+async function doServerDownload(d: ServerDatei): Promise<void> {
+  serverFehler.value = ''
+  serverLaedt.value = d.id
+  try {
+    const blob = await fetchServerDatei(d.pfad)
+    const suffix = serverVersion.value ? `_${serverVersion.value}` : ''
+    downloadBlob(blob, `${d.dateiname}${suffix}.json`)
+  } catch (e) {
+    serverFehler.value = `${d.label}: ${e instanceof Error ? e.message : 'Fehler beim Herunterladen'}`
+  } finally {
+    serverLaedt.value = null
   }
 }
 
@@ -1703,6 +1813,31 @@ function doExport(): void {
   gap: 1rem;
 }
 
+/* Exportseite: Abstände wie in den Import-Ansichten */
+.export-view.export-detail {
+  padding: 0.75rem 1.5rem;
+  gap: 0.75rem;
+}
+
+/* Kopf der Exportseite mit Zurück-Button (wie in den Import-Ansichten) */
+.table-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.table-header h2 {
+  max-width: none;
+  width: auto;
+  margin: 0;
+}
+
 /* Kopf und Kacheln in derselben zentrierten Spalte wie in ImportView (max-width 1040px abzüglich Padding) */
 h2,
 .subtitle,
@@ -2101,6 +2236,42 @@ h2 { margin-top: 0; margin-bottom: 0; font-size: 1.6rem; font-weight: 600; }
   --p-checkbox-width: 1.1rem;
   --p-checkbox-height: 1.1rem;
   --p-checkbox-icon-size: 0.7rem;
+}
+
+/* ── SVWS-Server ─────────────────────────────────────────────────────────── */
+
+.server-dateien {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.server-datei {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  border: 1px solid var(--p-surface-border);
+  border-radius: 8px;
+  background: var(--p-surface-ground);
+  padding: 0.6rem 0.85rem;
+}
+
+.server-datei-icon {
+  font-size: 1.4rem;
+  color: var(--p-primary-color);
+}
+
+.server-datei-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  flex: 1;
+  font-size: 0.95rem;
+}
+
+.server-datei-text span {
+  font-size: 0.85rem;
+  color: var(--p-text-muted-color);
 }
 
 /* ── Kataloge ────────────────────────────────────────────────────────────── */

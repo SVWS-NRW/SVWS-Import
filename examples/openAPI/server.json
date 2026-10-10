@@ -15039,44 +15039,6 @@
         }
       }
     },
-    "/db/{schema}/jahrgaenge/allgemein/jahrgaenge" : {
-      "get" : {
-        "tags" : [ "Server" ],
-        "summary" : "Gibt den Katalog der in den einzelnen Schulformen gültigen Jahrgänge zurück.",
-        "description" : "Erstellt eine Liste aller in dem Katalog vorhanden in den einzelnen Schulformen gültigen Jahrgänge. Dabei wird geprüft, ob der SVWS-Benutzer die notwendige Berechtigung zum Ansehen von Katalogen besitzt.",
-        "operationId" : "getKatalogJahrgaenge",
-        "parameters" : [ {
-          "name" : "schema",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string",
-            "nullable" : true
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "description" : "Eine Liste von Jahrgangs-Katalog-Einträgen",
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/JahrgaengeKatalogEintrag"
-                  }
-                }
-              }
-            }
-          },
-          "403" : {
-            "description" : "Der SVWS-Benutzer hat keine Rechte, um Katalog-Einträge anzusehen."
-          },
-          "404" : {
-            "description" : "Keine Jahrgangs-Katalog-Einträge gefunden"
-          }
-        }
-      }
-    },
     "/db/{schema}/jahrgaenge/{id}" : {
       "patch" : {
         "tags" : [ "Server" ],
@@ -51794,15 +51756,15 @@
       "InputPart" : {
         "type" : "object",
         "properties" : {
-          "contentTypeFromMessage" : {
-            "type" : "boolean"
-          },
           "mediaType" : {
             "$ref" : "#/components/schemas/MediaType"
           },
           "bodyAsString" : {
             "type" : "string",
             "nullable" : true
+          },
+          "contentTypeFromMessage" : {
+            "type" : "boolean"
           },
           "fileName" : {
             "type" : "string",
@@ -54334,63 +54296,6 @@
             "nullable" : true
           }
         }
-      },
-      "JahrgaengeKatalogEintrag" : {
-        "required" : [ "kuerzel", "schluessel", "schulformen", "text" ],
-        "type" : "object",
-        "properties" : {
-          "id" : {
-            "type" : "integer",
-            "description" : "die ID des Core-Type-Daten-Eintrags und der neue Schlüssel für die ASD",
-            "format" : "int64",
-            "example" : 4711
-          },
-          "schluessel" : {
-            "type" : "string",
-            "description" : "ein Schlüssel als Zeichenkette, welcher ggf. auf externe Katalog verweist und für ein Jahr der Historie des Katalogs eindeutig sein muss.",
-            "example" : "17"
-          },
-          "kuerzel" : {
-            "type" : "string",
-            "description" : "das Kürzel, welches als Kurztext zu Visualisierung verwendet wird. Sollte nicht als identifizierendes Merkmal verwendet werden",
-            "example" : "GE"
-          },
-          "text" : {
-            "type" : "string",
-            "description" : "die Bezeichnung, welche als Langtext zu Visualisierung verwendet wird. Sollte nicht als identifizierendes Merkmal verwendet werden",
-            "example" : "Gesamtschule"
-          },
-          "gueltigVon" : {
-            "type" : "integer",
-            "description" : "gibt an, in welchem Schuljahr der Eintrag einführt wurde. Ist kein Schuljahr bekannt, so ist null gesetzt",
-            "format" : "int32",
-            "nullable" : true
-          },
-          "gueltigBis" : {
-            "type" : "integer",
-            "description" : "gibt an, bis zu welchem Schuljahr der Eintrag in der Eingangsstufe gültig ist. Ist kein Schuljahr bekannt, so ist null gesetzt",
-            "format" : "int32",
-            "nullable" : true,
-            "example" : 2025
-          },
-          "auslaufdauer" : {
-            "type" : "integer",
-            "description" : "gibt an, bis um wieviel Jahre gueltigBis maximal verlängert wird.",
-            "format" : "int32",
-            "example" : 0
-          },
-          "schulformen" : {
-            "type" : "array",
-            "description" : "die Bezeichner der Schulformen, bei welchen der Jahrgang vorkommt",
-            "items" : {
-              "type" : "string",
-              "description" : "die Bezeichner der Schulformen, bei welchen der Jahrgang vorkommt",
-              "nullable" : true
-            }
-          }
-        },
-        "description" : "ein Eintrag in dem Katalog der Jahrgänge",
-        "nullable" : true
       },
       "JahrgangPatchRequest" : {
         "type" : "object",

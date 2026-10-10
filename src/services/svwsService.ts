@@ -106,7 +106,7 @@ export async function addAnkreuzkompetenzJahrgangszuordnungen(
   payload: AnkreuzkompetenzJahrgangszuordnungPayload[],
 ): Promise<UploadResult> {
   try {
-    await getApiClient().post('/schule/ankreuzkompetenzen/jahrgangzuordnung', payload)
+    await getApiClient().post('/schule/ankreuzkompetenzen/jahrgangzuordnung/multiple', payload)
     return { success: true }
   } catch (error: unknown) {
     return { success: false, error: toAppError(error).messageUser }
@@ -836,9 +836,10 @@ export async function fetchSchuelerAuswahlliste(abschnittId: number): Promise<Sc
     }
   }
 
+  // idKlasse -1 = keine Klasse zugeordnet
   return schueler.map(s => ({
     ...s,
-    klasse: klassenMap.get(s.idKlasse as number) ?? (s.idKlasse != null ? String(s.idKlasse) : ''),
+    klasse: klassenMap.get(s.idKlasse as number) ?? (s.idKlasse != null && s.idKlasse >= 0 ? String(s.idKlasse) : ''),
   }))
 }
 

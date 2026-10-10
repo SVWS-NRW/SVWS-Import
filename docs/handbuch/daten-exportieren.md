@@ -98,7 +98,7 @@ Klicken Sie auf die grüne Schaltfläche **„Exportieren"**. Während des Expor
 
 | Gruppe | Beispielfelder |
 |--------|---------------|
-| Personendaten | Nachname, Vorname, Geburtsdatum, Geschlecht, Geburtsort |
+| Personendaten | Schüler-ID, Nachname, Vorname, Geburtsdatum, Geschlecht, Geburtsort |
 | Schule | Status, Jahrgang, Klasse, Aufnahmedatum |
 | Adresse & Kontakt | Straße, PLZ, Wohnort, Telefon, E-Mail |
 | Herkunft | Staatsangehörigkeit, Geburtsland, Verkehrssprache |

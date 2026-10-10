@@ -689,6 +689,7 @@ const TILES: ExportTile[] = [
     ],
     fields: [
       // ── Stammdaten ──────────────────────────────────────────────────────────
+      { key: 'id',                             label: 'Schüler-ID',                  section: 'Stammdaten', group: 'Personendaten' },
       { key: 'nachname',                       label: 'Nachname',                    section: 'Stammdaten', group: 'Personendaten' },
       { key: 'vorname',                        label: 'Vorname',                     section: 'Stammdaten', group: 'Personendaten' },
       { key: 'alleVornamen',                   label: 'Alle Vornamen',               section: 'Stammdaten', group: 'Personendaten' },

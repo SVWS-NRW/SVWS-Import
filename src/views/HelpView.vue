@@ -107,7 +107,9 @@
       </h3>
       <p class="section-desc">
         Pflichtfelder sind mit <span class="required-badge">Pflicht</span> gekennzeichnet.
-        Beispieldatei: <code>schueler-stammdaten.csv</code>
+        Beispieldatei: <code>schueler-stammdaten.csv</code>.
+        Im Direktimport kann gewählt werden, ob bereits vorhandene Schüler übersprungen, überschrieben oder neu angelegt werden.
+        Abgeglichen wird über die optionale Spalte <code>Schüler-ID</code>, sonst über Nachname, Vorname und Geburtsdatum.
       </p>
       <table class="field-table">
         <thead>

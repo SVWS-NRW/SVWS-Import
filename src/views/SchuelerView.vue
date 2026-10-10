@@ -70,6 +70,16 @@
                   :disabled="parsing"
                   @select="onFileSelect"
                 />
+                <Select
+                  v-model="duplikatModus"
+                  :options="SCHUELER_DUPLIKAT_OPTIONEN"
+                  optionLabel="label"
+                  optionValue="value"
+                  size="small"
+                  :disabled="store.uploading"
+                  v-tooltip.top="'Was passieren soll, wenn der Schüler bereits vorhanden ist (gleiche Schüler-ID oder gleicher Name und Geburtsdatum)'"
+                  style="width: 270px"
+                />
                 <Button
                   :label="store.uploading ? `${store.uploadProgress} / ${store.uploadTotal}` : selectedCount > 0 ? `${selectedCount} senden` : 'Alles senden'"
                   icon="pi pi-upload"
@@ -93,7 +103,9 @@
               {{ parseError }}
             </Message>
             <Message v-if="uploadResult" :severity="uploadResult.failed > 0 ? 'warn' : 'success'" :closable="true" @close="uploadResult = null">
-              {{ uploadResult.sent }} Datensätze übertragen
+              {{ uploadResult.sent }} Schüler angelegt
+              <span v-if="uploadResult.updated > 0">, {{ uploadResult.updated }} überschrieben</span>
+              <span v-if="uploadResult.skipped > 0">, {{ uploadResult.skipped }} übersprungen (bereits vorhanden)</span>
               <span v-if="uploadResult.failed > 0">, {{ uploadResult.failed }} fehlgeschlagen</span>
             </Message>
 
@@ -341,7 +353,7 @@ import TabPanels from 'primevue/tabpanels'
 import TabPanel from 'primevue/tabpanel'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
-import { useSchuelerStore } from '@/stores/schueler'
+import { useSchuelerStore, type SchuelerDuplikatModus, type SchuelerUploadErgebnis } from '@/stores/schueler'
 import { useSchuleStore } from '@/stores/schule'
 import { useSchulbesuchStore } from '@/stores/schulbesuch'
 import { useErzieherStore, type DuplikatModus } from '@/stores/erzieher'
@@ -369,7 +381,14 @@ const activeTab = ref('stammdaten')
 
 // ── Stammdaten ────────────────────────────────────────────────────────────────
 
-const uploadResult = ref<{ sent: number; failed: number } | null>(null)
+const uploadResult = ref<SchuelerUploadErgebnis | null>(null)
+
+const SCHUELER_DUPLIKAT_OPTIONEN: { label: string; value: SchuelerDuplikatModus }[] = [
+  { label: 'Vorhandene Schüler überspringen',  value: 'ueberspringen' },
+  { label: 'Vorhandene Schüler überschreiben', value: 'ueberschreiben' },
+  { label: 'Schüler immer neu anlegen',        value: 'neu' },
+]
+const duplikatModus = ref<SchuelerDuplikatModus>('ueberspringen')
 const parseError = ref('')
 const parsing = ref(false)
 const fileKey = ref(0)
@@ -454,6 +473,8 @@ const columnDefs = computed<ColDef<SchuelerImportRow>[]>(() => {
       cellStyle: (p) => p.data?._errors.some(e => e.includes('Vorname')) ? { background: '#fee2e2' } : null,
     },
     { field: 'geburtsdatum',              headerName: 'Geburtsdatum',           width: 140, pinned: 'left' },
+    { field: 'schuelerId',                headerName: 'Schüler-ID',             width: 110, pinned: 'left', hide: !has('schuelerId'),
+      cellStyle: (p) => p.data?._errors.some(e => e.startsWith('Schüler-ID')) ? { background: '#fee2e2' } : null },
     { field: 'alleVornamen',              headerName: 'Alle Vornamen',          width: 150 },
     { field: 'geburtsname',               headerName: 'Geburtsname',            width: 130 },
     { field: 'geburtsort',                headerName: 'Geburtsort',             width: 120 },
@@ -510,11 +531,14 @@ const columnDefs = computed<ColDef<SchuelerImportRow>[]>(() => {
     { field: 'erhaeltMeisterBAFOEG',      headerName: 'Meister-BAföG',          width: 130,  hide: !has('erhaeltMeisterBAFOEG') },
     {
       headerName: 'Importstatus',
-      width: 100,
+      width: 140,
       editable: false,
       cellRenderer: (params: { data: SchuelerImportRow }) => {
-        if (params.data._sent) return '<span style="color:#22c55e">✔ Gesendet</span>'
-        if (!params.data._valid) return `<span style="color:#ef4444" title="${params.data._errors.join('; ')}">✖ Fehler</span>`
+        const title = params.data._errors.join('; ').replace(/"/g, '&quot;')
+        if (params.data._result === 'uebersprungen') return `<span style="color:#f59e0b" title="${title}">⏭ Übersprungen</span>`
+        if (params.data._result === 'ueberschrieben') return '<span style="color:#3b82f6">✎ Überschrieben</span>'
+        if (params.data._sent) return '<span style="color:#22c55e">✔ Angelegt</span>'
+        if (params.data._errors.length > 0) return `<span style="color:#ef4444" title="${title}">✖ Fehler</span>`
         return '<span style="color:#f59e0b">● Bereit</span>'
       },
     },
@@ -570,7 +594,7 @@ async function handleUploadAll(): Promise<void> {
   uploadResult.value = null
   const selected = gridApi.value?.getSelectedRows() ?? []
   const selectedIds = selected.length > 0 ? new Set(selected.map((r: { _id: string }) => r._id)) : undefined
-  uploadResult.value = await store.uploadAll(selectedIds)
+  uploadResult.value = await store.uploadAll(selectedIds, duplikatModus.value)
 }
 
 function confirmClear(): void {

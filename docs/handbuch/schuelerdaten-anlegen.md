@@ -17,7 +17,22 @@ Schülerstammdaten mit persönlichen Angaben, Adresse und Klassenzuordnung über
 3. Prüfen Sie die Vorschautabelle auf korrekte Spaltenerkennung.
 4. Führen Sie das Spalten-Mapping durch: ordnen Sie die Quellspalten den SVWS-Feldern zu.
 5. Korrigieren Sie rot markierte Pflichtfelder.
-6. Klicken Sie auf **„Importieren"** und prüfen Sie das Ergebnis.
+6. Wählen Sie, wie mit bereits vorhandenen Schülern verfahren werden soll (siehe unten).
+7. Klicken Sie auf **„Alles senden"** und prüfen Sie das Ergebnis in der Spalte **Importstatus**.
+
+### Vorhandene Schüler
+
+Vor dem Senden legen Sie in der Auswahlliste neben „Datei laden" fest, was mit Schülern geschieht, die bereits in SVWS vorhanden sind:
+
+| Auswahl | Wirkung |
+|---------|---------|
+| **Vorhandene Schüler überspringen** (Standard) | Vorhandene Schüler bleiben unverändert, nur neue werden angelegt. |
+| **Vorhandene Schüler überschreiben** | Vorhandene Schüler werden mit den Werten aus der Datei aktualisiert. **Leere Zellen ändern nichts** – vorhandene Daten bleiben dann erhalten. |
+| **Schüler immer neu anlegen** | Jede Zeile wird als neuer Schüler angelegt (frühere Arbeitsweise, kann Duplikate erzeugen). |
+
+Ein Schüler gilt als vorhanden, wenn **Nachname, Vorname und Geburtsdatum** übereinstimmen. Enthält die Datei eine Spalte **`Schüler-ID`** (z. B. aus dem Schülerexport), wird stattdessen über die ID zugeordnet; sind Name oder Geburtsdatum zusätzlich angegeben, müssen sie zum Schüler mit dieser ID passen. Gibt es mehrere Schüler mit gleichem Namen und Geburtsdatum, kann nur über die Schüler-ID überschrieben werden.
+
+> **Hinweis:** Abgeglichen wird mit den Schülern des aktuellen Schuljahresabschnitts.
 
 ## Aufbau der CSV-Datei
 
@@ -89,6 +104,8 @@ Unter `examples/schuelerdaten.csv` finden Sie eine vollständige Schülerliste. 
 | Klasse nicht gefunden | Klassenkürzel stimmt nicht überein | Klassen zuerst importieren, Kürzel angleichen |
 | Ungültiger Geschlechtswert | Wert ist nicht `m`, `w` oder `d` | Korrekte Werte verwenden |
 | Schüler beim Unterrichtsimport nicht gefunden | Name oder Geburtsdatum weicht ab | Schreibweise exakt angleichen |
+| Schüler nicht eindeutig | Mehrere Schüler mit gleichem Namen und Geburtsdatum | Spalte `Schüler-ID` ergänzen |
+| Schüler-ID passt nicht zu Name/Geburtsdatum | ID gehört zu einem anderen Schüler | ID oder Name prüfen |
 
 ## Erzieherdaten importieren
 

@@ -238,6 +238,7 @@ export const useErzieherStore = defineStore('erzieher', () => {
 
     const fail = (row: SchuelerErzieherImportRow, msg: string) => {
       row._errors = [msg]
+      row._result = undefined
       row._valid = false
       failed++
       uploadProgress.value++
@@ -262,8 +263,8 @@ export const useErzieherStore = defineStore('erzieher', () => {
 
       if (vorhanden && modus === 'ueberspringen') {
         row._errors = [`Erzieher „${row.vorname1} ${row.nachname1}" ist beim Schüler bereits vorhanden — übersprungen`]
+        // Nicht als gesendet markieren: die Zeile kann später mit einem anderen Modus erneut gesendet werden
         row._result = 'uebersprungen'
-        row._sent = true
         skipped++
         uploadProgress.value++
         continue

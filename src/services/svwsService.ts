@@ -6,7 +6,7 @@ import type { KlasseImportRow, KlasseDetails } from '@/models/Klassen'
 import type { JahrgangImportRow, JahrgangDetails, JahrgangAsdKataloge } from '@/models/Jahrgaenge'
 import type { FachImportRow, FachDetails } from '@/models/Faecher'
 import type { SchuleStammdaten, Schuljahresabschnitt } from '@/models/Schule'
-import { schuelerImportToApi } from '@/models/Schueler'
+import { schuelerImportToApi, schuelerStammdatenUpdatePatch } from '@/models/Schueler'
 import { lehrerImportToApi } from '@/models/Lehrer'
 import { klasseImportToApi } from '@/models/Klassen'
 import { jahrgangImportToApi } from '@/models/Jahrgaenge'
@@ -368,107 +368,139 @@ async function patchSchuelerAfterCreate(
 
 // ── Veraltete, typenspezifische Funktionen (für SchuelerView / LehrerView) ──
 
+/** Kataloge, mit denen Klartextwerte einer Schülerzeile in IDs aufgelöst werden */
+export interface SchuelerKataloge {
+  orte?: Map<string, OrtKatalogEintrag>
+  religionen?: Map<string, ReligionKatalogEintrag>
+  klassen?: Map<string, number>
+  jahrgaenge?: Map<string, number>
+  nationalitaetenById?: Map<string, number>
+  verkehrssprachenById?: Map<string, number>
+}
+
+/** Stammdaten über die Grunddaten hinaus (Adresse, Kontakt, Religion, Herkunft); leere Werte werden nicht gesendet */
+function schuelerZusatzPatch(row: SchuelerImportRow, k: SchuelerKataloge): Record<string, unknown> {
+  const stammdatenPatch: Record<string, unknown> = {}
+  // Personaldaten
+  if (row.geburtsname)              stammdatenPatch.geburtsname             = row.geburtsname
+  if (row.geburtsort)               stammdatenPatch.geburtsort              = row.geburtsort
+  // Staatsangehörigkeit, Geburtsländer, Verkehrssprache als Katalog-IDs
+  const rowStr = (key: string) => String(row[key as keyof SchuelerImportRow] ?? '').trim()
+  Object.assign(stammdatenPatch, herkunftIdPatch(rowStr, k.nationalitaetenById, k.verkehrssprachenById))
+  const drucke = parseBoolean(row.druckeKonfessionAufZeugnisse)
+  if (drucke !== null)              stammdatenPatch.druckeKonfessionAufZeugnisse = drucke
+  if (row.religionanmeldung)        stammdatenPatch.religionanmeldung       = row.religionanmeldung
+  if (row.religionabmeldung)        stammdatenPatch.religionabmeldung       = row.religionabmeldung
+  // Herkunft / Migration
+  if (row.zuzugsjahr)               stammdatenPatch.zuzugsjahr              = parseInt(row.zuzugsjahr, 10) || null
+  // hatMigrationshintergrund: true wenn Herkunftsfelder gesetzt, sonst expliziten Wert nehmen
+  const hasMigrationData = !!(row.zuzugsjahr || row.geburtsland || row.verkehrspracheFamilie || row.geburtslandVater || row.geburtslandMutter)
+  if (hasMigrationData) {
+    stammdatenPatch.hatMigrationshintergrund = true
+  } else {
+    const migration = parseBoolean(row.hatMigrationshintergrund)
+    if (migration !== null) stammdatenPatch.hatMigrationshintergrund = migration
+  }
+  // Adresse
+  if (row.strassenname)             stammdatenPatch.strassenname            = row.strassenname
+  if (row.hausnummer)               stammdatenPatch.hausnummer              = row.hausnummer
+  if (row.hausnummerZusatz)         stammdatenPatch.hausnummerZusatz        = row.hausnummerZusatz
+  // Kontakt
+  if (row.telefon)                  stammdatenPatch.telefon                 = row.telefon
+  if (row.telefonMobil)             stammdatenPatch.telefonMobil            = row.telefonMobil
+  if (row.email)                    stammdatenPatch.emailPrivat             = row.email
+  if (row.emailSchule)              stammdatenPatch.emailSchule             = row.emailSchule
+  // Sonstiges
+  if (row.externeSchulNr)           stammdatenPatch.externeSchulNr          = row.externeSchulNr
+  if (row.beruf)                    stammdatenPatch.beruf                   = row.beruf
+  const masern = parseBoolean(row.hatMasernimpfnachweis)
+  if (masern !== null)              stammdatenPatch.hatMasernimpfnachweis   = masern
+  const keineAuskunft = parseBoolean(row.keineAuskunftAnDritte)
+  if (keineAuskunft !== null)       stammdatenPatch.keineAuskunftAnDritte   = keineAuskunft
+  const bafoeg = parseBoolean(row.erhaeltSchuelerBAFOEG)
+  if (bafoeg !== null)              stammdatenPatch.erhaeltSchuelerBAFOEG   = bafoeg
+  const meisterBafoeg = parseBoolean(row.erhaeltMeisterBAFOEG)
+  if (meisterBafoeg !== null)       stammdatenPatch.erhaeltMeisterBAFOEG    = meisterBafoeg
+
+  if (k.orte) {
+    const wohnortID = resolveWohnortId(k.orte, row.plz, row.ort)
+    if (wohnortID !== null) {
+      // wohnortID und ortsteilID müssen immer zusammen gepatcht werden (API-Anforderung)
+      stammdatenPatch.wohnortID  = wohnortID
+      stammdatenPatch.ortsteilID = null
+    }
+  }
+
+  if (k.religionen) {
+    const religionID = resolveReligionId(k.religionen, row.religionKuerzel, row.religionID)
+    if (religionID !== null) stammdatenPatch.religionID = religionID
+  }
+  return stammdatenPatch
+}
+
+/** Klasse und Jahrgang im Lernabschnitt des gewählten Schuljahresabschnitts setzen */
+async function patchSchuelerLernabschnitt(
+  idSchueler: number,
+  idSchuljahresabschnitt: number,
+  row: SchuelerImportRow,
+  k: SchuelerKataloge,
+): Promise<void> {
+  const lernabschnittPatch: Record<string, unknown> = {}
+  if (k.klassen) {
+    const klassenID = resolveByKuerzel(k.klassen, row.klasse)
+    if (klassenID !== null) lernabschnittPatch.klassenID = klassenID
+  }
+  if (k.jahrgaenge) {
+    const jahrgangID = resolveByKuerzel(k.jahrgaenge, row.jahrgang)
+    if (jahrgangID !== null) lernabschnittPatch.jahrgangID = jahrgangID
+  }
+  if (Object.keys(lernabschnittPatch).length === 0) return
+
+  const laResp = await getApiClient().get<SchuelerLernabschnitt[]>(
+    `/schueler/lernabschnittsdaten/${idSchueler}/${idSchuljahresabschnitt}`,
+  )
+  const lernabschnitt = laResp.data.find(la => la.wechselNr === 0) ?? laResp.data[0]
+  if (lernabschnitt?.id) {
+    await getApiClient().patch(`/schueler/lernabschnittsdaten/${lernabschnitt.id}`, lernabschnittPatch)
+  }
+}
+
 export async function createSchueler(
   row: SchuelerImportRow,
   idSchuljahresabschnitt: number,
-  orteKatalog?: Map<string, import('@/models/ImportSchema').OrtKatalogEintrag>,
-  religionenKatalog?: Map<string, import('@/models/ImportSchema').ReligionKatalogEintrag>,
-  klassenMap?: Map<string, number>,
-  jahrgaengeMap?: Map<string, number>,
-  nationalitaetenById?: Map<string, number>,
-  verkehrssprachenById?: Map<string, number>,
+  kataloge: SchuelerKataloge,
 ): Promise<UploadResult> {
   try {
     const payload: SchuelerNeu = schuelerImportToApi(row, idSchuljahresabschnitt)
     const response = await getApiClient().post('/schueler/create', payload)
     const newId: number = response.data.id
 
-    // ── Stammdaten-Patch (Adresse, Kontakt, Religion, Herkunft) ─────────────
-    const stammdatenPatch: Record<string, unknown> = {}
-    // Personaldaten
-    if (row.geburtsname)              stammdatenPatch.geburtsname             = row.geburtsname
-    if (row.geburtsort)               stammdatenPatch.geburtsort              = row.geburtsort
-    // Staatsangehörigkeit, Geburtsländer, Verkehrssprache als Katalog-IDs
-    const rowStr = (key: string) => String(row[key as keyof SchuelerImportRow] ?? '').trim()
-    Object.assign(stammdatenPatch, herkunftIdPatch(rowStr, nationalitaetenById, verkehrssprachenById))
-    const drucke = parseBoolean(row.druckeKonfessionAufZeugnisse)
-    if (drucke !== null)              stammdatenPatch.druckeKonfessionAufZeugnisse = drucke
-    if (row.religionanmeldung)        stammdatenPatch.religionanmeldung       = row.religionanmeldung
-    if (row.religionabmeldung)        stammdatenPatch.religionabmeldung       = row.religionabmeldung
-    // Herkunft / Migration
-    if (row.zuzugsjahr)               stammdatenPatch.zuzugsjahr              = parseInt(row.zuzugsjahr, 10) || null
-    // hatMigrationshintergrund: true wenn Herkunftsfelder gesetzt, sonst expliziten Wert nehmen
-    const hasMigrationData = !!(row.zuzugsjahr || row.geburtsland || row.verkehrspracheFamilie || row.geburtslandVater || row.geburtslandMutter)
-    if (hasMigrationData) {
-      stammdatenPatch.hatMigrationshintergrund = true
-    } else {
-      const migration = parseBoolean(row.hatMigrationshintergrund)
-      if (migration !== null) stammdatenPatch.hatMigrationshintergrund = migration
-    }
-    // Adresse
-    if (row.strassenname)             stammdatenPatch.strassenname            = row.strassenname
-    if (row.hausnummer)               stammdatenPatch.hausnummer              = row.hausnummer
-    if (row.hausnummerZusatz)         stammdatenPatch.hausnummerZusatz        = row.hausnummerZusatz
-    // Kontakt
-    if (row.telefon)                  stammdatenPatch.telefon                 = row.telefon
-    if (row.telefonMobil)             stammdatenPatch.telefonMobil            = row.telefonMobil
-    if (row.email)                    stammdatenPatch.emailPrivat             = row.email
-    if (row.emailSchule)              stammdatenPatch.emailSchule             = row.emailSchule
-    // Sonstiges
-    if (row.externeSchulNr)           stammdatenPatch.externeSchulNr          = row.externeSchulNr
-    if (row.beruf)                    stammdatenPatch.beruf                   = row.beruf
-    const masern = parseBoolean(row.hatMasernimpfnachweis)
-    if (masern !== null)              stammdatenPatch.hatMasernimpfnachweis   = masern
-    const keineAuskunft = parseBoolean(row.keineAuskunftAnDritte)
-    if (keineAuskunft !== null)       stammdatenPatch.keineAuskunftAnDritte   = keineAuskunft
-    const bafoeg = parseBoolean(row.erhaeltSchuelerBAFOEG)
-    if (bafoeg !== null)              stammdatenPatch.erhaeltSchuelerBAFOEG   = bafoeg
-    const meisterBafoeg = parseBoolean(row.erhaeltMeisterBAFOEG)
-    if (meisterBafoeg !== null)       stammdatenPatch.erhaeltMeisterBAFOEG    = meisterBafoeg
-
-    if (orteKatalog) {
-      const wohnortID = resolveWohnortId(orteKatalog, row.plz, row.ort)
-      if (wohnortID !== null) {
-        // wohnortID und ortsteilID müssen immer zusammen gepatcht werden (API-Anforderung)
-        stammdatenPatch.wohnortID  = wohnortID
-        stammdatenPatch.ortsteilID = null
-      }
-    }
-
-    if (religionenKatalog) {
-      const religionID = resolveReligionId(religionenKatalog, row.religionKuerzel, row.religionID)
-      if (religionID !== null) stammdatenPatch.religionID = religionID
-    }
-
+    const stammdatenPatch = schuelerZusatzPatch(row, kataloge)
     if (Object.keys(stammdatenPatch).length > 0) {
       await getApiClient().patch(`/schueler/${newId}/stammdaten`, stammdatenPatch)
     }
-
-    // ── Lernabschnitt-Patch (Klasse + Jahrgang) ──────────────────────────────
-    const lernabschnittPatch: Record<string, unknown> = {}
-    if (klassenMap) {
-      const klassenID = resolveByKuerzel(klassenMap, row.klasse)
-      if (klassenID !== null) lernabschnittPatch.klassenID = klassenID
-    }
-    if (jahrgaengeMap) {
-      const jahrgangID = resolveByKuerzel(jahrgaengeMap, row.jahrgang)
-      if (jahrgangID !== null) lernabschnittPatch.jahrgangID = jahrgangID
-    }
-
-    if (Object.keys(lernabschnittPatch).length > 0) {
-      const laResp = await getApiClient().get<SchuelerLernabschnitt[]>(
-        `/schueler/lernabschnittsdaten/${newId}/${idSchuljahresabschnitt}`,
-      )
-      const lernabschnitt = laResp.data.find(la => la.wechselNr === 0) ?? laResp.data[0]
-      if (lernabschnitt?.id) {
-        await getApiClient().patch(
-          `/schueler/lernabschnittsdaten/${lernabschnitt.id}`,
-          lernabschnittPatch,
-        )
-      }
-    }
+    await patchSchuelerLernabschnitt(newId, idSchuljahresabschnitt, row, kataloge)
 
     return { success: true, id: newId }
+  } catch (error: unknown) {
+    return { success: false, error: toAppError(error).messageUser }
+  }
+}
+
+/** Überschreibt einen vorhandenen Schüler mit den nicht leeren Werten der Zeile */
+export async function updateSchueler(
+  idSchueler: number,
+  row: SchuelerImportRow,
+  idSchuljahresabschnitt: number,
+  kataloge: SchuelerKataloge,
+): Promise<UploadResult> {
+  try {
+    const patch = { ...schuelerStammdatenUpdatePatch(row), ...schuelerZusatzPatch(row, kataloge) }
+    if (Object.keys(patch).length > 0) {
+      await getApiClient().patch(`/schueler/${idSchueler}/stammdaten`, patch)
+    }
+    await patchSchuelerLernabschnitt(idSchueler, idSchuljahresabschnitt, row, kataloge)
+    return { success: true, id: idSchueler }
   } catch (error: unknown) {
     return { success: false, error: toAppError(error).messageUser }
   }
@@ -1018,11 +1050,13 @@ export interface SchuelerListeEintrag {
   status?: number
 }
 
-export async function fetchSchuelerAktuell(): Promise<SchuelerListeEintrag[]> {
+/** strict: Fehler weiterwerfen statt leerer Liste (z. B. für die Duplikaterkennung beim Import) */
+export async function fetchSchuelerAktuell(strict = false): Promise<SchuelerListeEintrag[]> {
   try {
     const response = await getApiClient().get<SchuelerListeEintrag[]>('/schueler/aktuell')
     return Array.isArray(response.data) ? response.data : []
-  } catch {
+  } catch (error: unknown) {
+    if (strict) throw new Error(toAppError(error).messageUser)
     return []
   }
 }

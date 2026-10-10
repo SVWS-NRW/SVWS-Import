@@ -17,6 +17,8 @@ function normalizeKey(key: string): string {
 
 // Alle bekannten (normalisierten) Alias-Spaltennamen für Schüler-Imports
 export const SCHUELER_KNOWN_KEYS = new Set([
+  // schuelerId (optional, z. B. aus dem Schülerexport)
+  'schuelerid', 'schülerid', 'idschueler', 'idschüler',
   // nachname
   'nachname', 'name', 'familienname', 'lastname',
   // vorname
@@ -122,6 +124,7 @@ export async function parseSchuelerCsv(file: File): Promise<{ rows: SchuelerImpo
             _errors: [],
             _sent: false,
             _rawData: record,
+            schuelerId:                  get(m, 'schuelerid', 'schülerid', 'idschueler', 'idschüler'),
             // Personaldaten
             nachname:                    get(m, 'nachname', 'name', 'familienname', 'last name', 'lastname'),
             vorname:                     get(m, 'vorname', 'firstname', 'first name', 'rufname'),

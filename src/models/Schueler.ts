@@ -27,6 +27,9 @@ export interface SchuelerImportRow {
   _errors: string[]
   _sent: boolean
   _rawData: Record<string, string>   // alle Original-Spaltennamen aus der Importdatei
+  _result?: 'angelegt' | 'ueberschrieben' | 'uebersprungen'
+  /** Optional (z. B. aus dem Schülerexport): ordnet die Zeile eindeutig einem vorhandenen Schüler zu */
+  schuelerId: string
   // Personaldaten
   nachname: string
   vorname: string
@@ -79,28 +82,53 @@ export interface SchuelerImportRow {
   erhaeltMeisterBAFOEG: string
 }
 
+const STATUS_MAP: Record<string, SchuelerStatus> = {
+  '0': 0, 'aufnahme': 0, 'neuaufnahme': 0,
+  '1': 1, 'warteliste': 1,
+  '2': 2, 'aktiv': 2,
+  '3': 3, 'beurlaubt': 3,
+  '6': 6, 'extern': 6,
+  '8': 8, 'abschluss': 8,
+  '9': 9, 'abgang': 9,
+  '10': 10, 'ehemalige': 10,
+}
+
+const GESCHLECHT_MAP: Record<string, Geschlecht> = {
+  'm': 3, 'männlich': 3, 'maennlich': 3, 'male': 3, '3': 3,
+  'w': 4, 'weiblich': 4, 'female': 4, '4': 4,
+  'd': 5, 'divers': 5, '5': 5,
+  'x': 6, 'ohne': 6, '6': 6,
+}
+
 function parseStatus(raw: string): SchuelerStatus {
-  const map: Record<string, SchuelerStatus> = {
-    '0': 0, 'aufnahme': 0, 'neuaufnahme': 0,
-    '1': 1, 'warteliste': 1,
-    '2': 2, 'aktiv': 2,
-    '3': 3, 'beurlaubt': 3,
-    '6': 6, 'extern': 6,
-    '8': 8, 'abschluss': 8,
-    '9': 9, 'abgang': 9,
-    '10': 10, 'ehemalige': 10,
-  }
-  return map[raw.toLowerCase().trim()] ?? 2
+  return STATUS_MAP[raw.toLowerCase().trim()] ?? 2
 }
 
 function parseGeschlecht(raw: string): Geschlecht {
-  const map: Record<string, Geschlecht> = {
-    'm': 3, 'männlich': 3, 'maennlich': 3, 'male': 3, '3': 3,
-    'w': 4, 'weiblich': 4, 'female': 4, '4': 4,
-    'd': 5, 'divers': 5, '5': 5,
-    'x': 6, 'ohne': 6, '6': 6,
-  }
-  return map[raw.toLowerCase().trim()] ?? 6
+  return GESCHLECHT_MAP[raw.toLowerCase().trim()] ?? 6
+}
+
+/**
+ * Kernfelder für das Überschreiben eines vorhandenen Schülers (PATCH /schueler/{id}/stammdaten).
+ * Leere oder unbekannte Werte werden nicht gesendet, damit vorhandene Daten erhalten bleiben.
+ */
+export function schuelerStammdatenUpdatePatch(row: SchuelerImportRow): Record<string, unknown> {
+  const patch: Record<string, unknown> = {}
+  const str = (v: string) => v?.trim() ?? ''
+  if (str(row.nachname))           patch.nachname           = str(row.nachname)
+  if (str(row.vorname))            patch.vorname            = str(row.vorname)
+  if (str(row.alleVornamen))       patch.alleVornamen       = str(row.alleVornamen)
+  if (str(row.geburtsdatum))       patch.geburtsdatum       = str(row.geburtsdatum)
+  if (str(row.anmeldedatum))       patch.anmeldedatum       = str(row.anmeldedatum)
+  if (str(row.aufnahmedatum))      patch.aufnahmedatum      = str(row.aufnahmedatum)
+  if (str(row.beginnBildungsgang)) patch.beginnBildungsgang = str(row.beginnBildungsgang)
+  const dauer = parseInt(str(row.dauerBildungsgang), 10)
+  if (!Number.isNaN(dauer))        patch.dauerBildungsgang  = dauer
+  const geschlecht = GESCHLECHT_MAP[str(row.geschlecht).toLowerCase()]
+  if (geschlecht !== undefined)    patch.geschlecht         = geschlecht
+  const status = STATUS_MAP[str(row.status).toLowerCase()]
+  if (status !== undefined)        patch.status             = status
+  return patch
 }
 
 export function schuelerImportToApi(row: SchuelerImportRow, idSchuljahresabschnitt: number): SchuelerNeu {

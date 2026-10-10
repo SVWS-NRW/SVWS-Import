@@ -7,7 +7,7 @@
           text
           rounded
           @click="router.push({ name: 'import' })"
-          aria-label="Zurueck"
+          aria-label="Zurück"
         />
         <h2>Schuljahresabschnitte</h2>
       </div>
@@ -58,7 +58,10 @@
 
       <section class="panel create-panel">
         <h3>Neuen Abschnitt anlegen</h3>
-        <p class="panel-hint">Auch vergangene Schuljahre koennen manuell angelegt werden.</p>
+        <Message v-if="!ANLEGEN_UNTERSTUETZT" severity="warn" :closable="false">
+          Das Anlegen von Schuljahresabschnitten wird vom SVWS-Server momentan noch nicht unterstützt.
+        </Message>
+        <p class="panel-hint">Auch vergangene Schuljahre können manuell angelegt werden.</p>
 
         <div class="form-grid">
           <div class="field">
@@ -69,6 +72,7 @@
               :min="1900"
               :max="3000"
               :useGrouping="false"
+              :disabled="!ANLEGEN_UNTERSTUETZT"
               size="small"
               inputClass="w-full"
             />
@@ -83,7 +87,8 @@
               :options="abschnittOptions"
               optionLabel="label"
               optionValue="value"
-              placeholder="Abschnitt waehlen"
+              placeholder="Abschnitt wählen"
+              :disabled="!ANLEGEN_UNTERSTUETZT"
               size="small"
               class="w-full"
             />
@@ -95,6 +100,7 @@
           icon="pi pi-plus"
           size="small"
           :loading="creating"
+          :disabled="!ANLEGEN_UNTERSTUETZT"
           @click="handleCreate"
         />
       </section>
@@ -114,6 +120,9 @@ import InputNumber from 'primevue/inputnumber'
 import Select from 'primevue/select'
 import { useSchuleStore } from '@/stores/schule'
 import { createSchuljahresabschnitt } from '@/services/svwsService'
+
+/** SVWS-Server 1.5 bietet keinen Endpunkt zum Anlegen von Schuljahresabschnitten — auf true setzen, sobald verfügbar */
+const ANLEGEN_UNTERSTUETZT = false
 
 const router = useRouter()
 const schuleStore = useSchuleStore()
@@ -166,12 +175,12 @@ async function handleCreate(): Promise<void> {
 
   const schuljahr = newSchuljahr.value
   if (schuljahr === null || schuljahr < 1900 || schuljahr > 3000) {
-    errorMessage.value = 'Bitte ein gueltiges Schuljahr eingeben.'
+    errorMessage.value = 'Bitte ein gültiges Schuljahr eingeben.'
     return
   }
 
   if (![1, 2].includes(newAbschnitt.value)) {
-    errorMessage.value = 'Bitte einen gueltigen Abschnitt waehlen.'
+    errorMessage.value = 'Bitte einen gültigen Abschnitt wählen.'
     return
   }
 
@@ -236,62 +245,67 @@ h2 {
 .content-grid {
   display: grid;
   grid-template-columns: minmax(280px, 1.5fr) minmax(240px, 1fr);
-  gap: 0.625rem;
+  gap: 1rem;
+  align-items: start;
 }
 
 .panel {
   border: 1px solid var(--p-surface-border);
   border-radius: 8px;
   background: var(--p-surface-card);
-  padding: 0.5rem 0.75rem;
+  padding: 0.75rem 1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.75rem;
 }
 
 .panel h3 {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: 0.95rem;
   font-weight: 600;
 }
 
 .panel-hint {
   margin: 0;
   color: var(--p-text-muted-color);
-  font-size: 0.72rem;
+  font-size: 0.9rem;
+}
+
+.panel :deep(.p-message-text) {
+  font-size: 0.9rem;
 }
 
 .data-table :deep(thead th),
 .data-table :deep(tbody td) {
-  font-size: 0.65rem;
-  padding: 0.15rem 0.35rem;
+  font-size: 0.9rem;
+  padding: 0.35rem 0.6rem;
   white-space: nowrap;
 }
 
 .data-table :deep(.p-tag) {
-  font-size: 0.6rem;
-  padding: 0.1rem 0.3rem;
+  font-size: 0.8rem;
+  padding: 0.15rem 0.45rem;
 }
 
 .form-grid {
   display: grid;
-  gap: 0.4rem;
+  gap: 0.75rem;
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.3rem;
 }
 
 .field label {
   font-weight: 600;
-  font-size: 0.75rem;
+  font-size: 0.9rem;
 }
 
 .field small {
   color: var(--p-text-muted-color);
-  font-size: 0.7rem;
+  font-size: 0.85rem;
 }
 
 .w-full {
@@ -300,26 +314,23 @@ h2 {
 
 .create-panel :deep(.p-inputnumber-input),
 .create-panel :deep(.p-select-label) {
-  font-size: 0.72rem;
-  padding: 0.2rem 0.35rem;
-}
-
-.create-panel :deep(.p-select-dropdown) {
-  width: 1.25rem;
+  font-size: 0.9rem;
+  padding: 0.35rem 0.5rem;
 }
 
 .create-panel :deep(.p-select-dropdown .p-icon) {
-  width: 0.6rem;
-  height: 0.6rem;
+  width: 0.8rem;
+  height: 0.8rem;
 }
 
 .create-panel :deep(.p-button) {
-  font-size: 0.72rem;
-  padding: 0.2rem 0.5rem;
+  font-size: 0.9rem;
+  padding: 0.35rem 0.75rem;
+  align-self: flex-start;
 }
 
 .create-panel :deep(.p-button .p-button-icon) {
-  font-size: 0.72rem;
+  font-size: 0.9rem;
 }
 
 @media (max-width: 980px) {

@@ -12,6 +12,7 @@ release/
 .env.*.local
 examples/export/
 examples/csv/
+data/
 
 # Logs
 npm-debug.log*

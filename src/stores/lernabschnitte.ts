@@ -90,7 +90,8 @@ export const useLernabschnitteStore = defineStore('lernabschnitte', () => {
     if (lookupLoaded.value && !force) return {}
     lookupLoading.value = true
     try {
-      if (!schuleStore.loaded || force) await schuleStore.fetch()
+      // Immer neu laden: der Schuljahresabschnitt kann nach dem Verbinden angelegt worden sein
+      await schuleStore.fetch()
       const [schuelerList, jahrgaenge, lehrer, foerderschwerpunkte, vermerke, asd] = await Promise.all([
         fetchSchuelerAktuell(true),
         fetchJahrgaenge(),
@@ -142,9 +143,9 @@ export const useLernabschnitteStore = defineStore('lernabschnitte', () => {
   }
 
   /** Lädt die Klassen aller in den Zeilen vorkommenden, im Server bekannten Schuljahresabschnitte */
-  async function ladeKlassen(): Promise<void> {
+  async function ladeKlassen(zeilen: SchuelerLernabschnittImportRow[] = rows.value): Promise<void> {
     if (!lookupLoaded.value) return
-    const ids = new Set(rows.value.map(findeAbschnittId).filter((id): id is number => id !== null))
+    const ids = new Set(zeilen.map(findeAbschnittId).filter((id): id is number => id !== null))
     for (const id of ids) {
       if (klassenJeAbschnitt.value.has(id)) continue
       try {
@@ -285,8 +286,10 @@ export const useLernabschnitteStore = defineStore('lernabschnitte', () => {
   }
 
   async function setRows(newRows: SchuelerLernabschnittImportRow[]): Promise<void> {
+    // Erst nach dem Laden der Klassen übernehmen und sofort prüfen, damit die Tabelle
+    // nie den ungeprüften Stand anzeigt (spätere In-place-Änderungen sieht AG Grid nicht)
+    await ladeKlassen(newRows)
     rows.value = newRows
-    await ladeKlassen()
     resolveAndValidate()
   }
 

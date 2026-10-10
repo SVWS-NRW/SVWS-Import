@@ -1272,6 +1272,8 @@ async function handleLaReloadLookup(): Promise<void> {
     laLookupError.value = result.error
   } else if (laStore.rows.length > 0) {
     laStore.resolveAndValidate()
+    // Zeilen werden in place geprüft → Zellen und Zeilenfarben neu zeichnen
+    laGridApi.value?.redrawRows()
   }
 }
 
@@ -1280,7 +1282,7 @@ async function handleLaUploadAll(): Promise<void> {
   const selected = laGridApi.value?.getSelectedRows() ?? []
   const selectedIds = selected.length > 0 ? new Set(selected.map((r: { _id: string }) => r._id)) : undefined
   laUploadResult.value = await laStore.uploadAll(selectedIds, laDuplikatModus.value)
-  laGridApi.value?.refreshCells({ force: true })
+  laGridApi.value?.redrawRows()
 }
 
 function confirmLaClear(): void {
@@ -1297,7 +1299,7 @@ function confirmLaClear(): void {
 async function onLaCellChanged(event: CellValueChangedEvent<SchuelerLernabschnittImportRow>): Promise<void> {
   if (event.data) {
     await laStore.updateRow(event.data._id, { [event.colDef.field as string]: event.newValue ?? '' })
-    laGridApi.value?.refreshCells({ force: true })
+    laGridApi.value?.redrawRows()
   }
 }
 

@@ -25,8 +25,8 @@
     <!-- Konfigurationsbereich -->
     <template v-if="activeTile">
 
-      <!-- Format + Aktionen (nur für Schüler/Lehrer und andere Tiles, nicht für Lernplattformen) -->
-      <div v-if="selectedTile !== 'lernplattformen'" class="config-section">
+      <!-- Format + Aktionen (nicht für Lernplattformen und Kataloge — eigene Bereiche) -->
+      <div v-if="!hatEigenenExportBereich" class="config-section">
         <h3 class="section-title">Format</h3>
         <div class="format-row">
           <label class="format-option">
@@ -64,8 +64,8 @@
         </div>
       </div>
 
-      <!-- Felder wählen (nicht für Lernplattformen) -->
-      <div v-if="selectedTile !== 'lernplattformen'" class="config-section">
+      <!-- Felder wählen (nicht für Lernplattformen und Kataloge) -->
+      <div v-if="!hatEigenenExportBereich" class="config-section">
         <div class="section-header">
           <h3 class="section-title">Felder auswählen</h3>
           <div class="section-actions">
@@ -227,6 +227,73 @@
             </span>
           </template>
         </DataTable>
+      </div>
+
+      <!-- Kataloge -->
+      <div v-if="selectedTile === 'kataloge'" class="config-section">
+        <div class="section-header">
+          <h3 class="section-title">
+            Kataloge auswählen
+            <span class="count-badge">{{ selectedKataloge.length }} von {{ KATALOGE.length }}</span>
+          </h3>
+          <div class="section-actions">
+            <Button label="Alle" size="small" severity="secondary" text @click="selectedKataloge = KATALOGE.map(k => k.id)" />
+            <Button label="Keine" size="small" severity="secondary" text @click="selectedKataloge = []" />
+          </div>
+        </div>
+        <p class="katalog-hint">
+          Jeder Katalog wird als eigene JSON-Datei heruntergeladen — unverändert, so wie der SVWS-Server ihn liefert.
+        </p>
+        <div class="katalog-grid">
+          <label v-for="k in KATALOGE" :key="k.id" class="field-label">
+            <Checkbox v-model="selectedKataloge" :value="k.id" />
+            <span>{{ k.label }}</span>
+          </label>
+        </div>
+
+        <div v-if="selectedKataloge.some(id => KATALOGE.find(k => k.id === id)?.jeAbschnitt)" class="lernplattform-row">
+          <label class="lernplattform-label">Schuljahresabschnitt (Abteilungen)</label>
+          <Select
+            v-if="schuleStore.loaded"
+            v-model="selectedAbschnittId"
+            :options="schuleStore.abschnitteOptions"
+            optionLabel="label"
+            optionValue="id"
+            placeholder="Abschnitt wählen"
+            size="small"
+            style="width: 240px"
+          />
+          <InputNumber
+            v-else
+            v-model="selectedAbschnittId"
+            :min="1"
+            placeholder="Abschnitt-ID"
+            size="small"
+            style="width: 140px"
+          />
+        </div>
+
+        <div class="lernplattform-row">
+          <Button
+            :label="selectedKataloge.length === 1 ? '1 Katalog als JSON exportieren' : `${selectedKataloge.length} Kataloge als JSON exportieren`"
+            icon="pi pi-download"
+            size="small"
+            :loading="katalogLoading"
+            :disabled="selectedKataloge.length === 0"
+            @click="doKatalogExport"
+          />
+          <span v-if="katalogLoading && katalogAktuell" class="progress-text">Lade {{ katalogAktuell }}…</span>
+        </div>
+
+        <Message v-if="katalogErfolg" severity="success" :closable="true" @close="katalogErfolg = ''">
+          {{ katalogErfolg }}
+        </Message>
+        <Message v-if="katalogFehler.length > 0" severity="error" :closable="true" @close="katalogFehler = []">
+          Nicht exportiert:
+          <ul class="katalog-fehler">
+            <li v-for="f in katalogFehler" :key="f">{{ f }}</li>
+          </ul>
+        </Message>
       </div>
 
       <!-- Lernplattformen -->
@@ -513,12 +580,12 @@ import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
-import { fetchForExport, fetchSchuelerAuswahlliste, enrichSchueler, enrichRecords, fetchOrteById, fetchReligionenById, fetchSchulenById, fetchJahrgaengeById, fetchEinschulungsartenById, fetchUebergangsempfehlungenById, fetchKindergartenbesuchsdauerById, fetchKindergartenById, fetchLernplattformen, downloadLernplattformExport, fetchErzieherFuerSchueler, fetchErzieherartenById, fetchOrtsteileById, fetchBetriebe, fetchBetriebsartenById, type SchuelerAuswahl, type LernplattformEintrag } from '@/services/svwsService'
+import { fetchForExport, fetchSchuelerAuswahlliste, enrichSchueler, enrichRecords, fetchOrteById, fetchReligionenById, fetchSchulenById, fetchJahrgaengeById, fetchEinschulungsartenById, fetchUebergangsempfehlungenById, fetchKindergartenbesuchsdauerById, fetchKindergartenById, fetchLernplattformen, downloadLernplattformExport, fetchErzieherFuerSchueler, fetchErzieherartenById, fetchOrtsteileById, fetchBetriebe, fetchBetriebsartenById, fetchKatalog, type SchuelerAuswahl, type LernplattformEintrag } from '@/services/svwsService'
 import type { OrtKatalogEintrag, ReligionKatalogEintrag } from '@/models/ImportSchema'
 import { fetchNationalitaetenIso3ById } from '@/services/katalogService'
 import { gruppiereErzieherEintraege, type ErzieherStammdaten } from '@/models/SchuelerErzieher'
 import type { BetriebDetails } from '@/models/Betriebe'
-import { exportAsCsv, exportAsJson } from '@/utils/exportUtils'
+import { exportAsCsv, exportAsJson, exportRawJson } from '@/utils/exportUtils'
 import { useSchuleStore } from '@/stores/schule'
 import { useAuthStore } from '@/stores/auth'
 
@@ -789,11 +856,52 @@ const TILES: ExportTile[] = [
     ],
   },
   {
+    id: 'kataloge',
+    label: 'Kataloge',
+    description: 'Schulinterne Kataloge als JSON exportieren',
+    icon: 'pi pi-book',
+  },
+  {
     id: 'lernplattformen',
     label: 'Lernplattformen',
     description: 'Zugangsdaten für Lernplattformen exportieren',
     icon: 'pi pi-desktop',
   },
+]
+
+interface KatalogDef {
+  id: string
+  label: string
+  endpoint: string
+  /** Endpunkt erwartet die ID des Schuljahresabschnitts als letzten Pfadteil */
+  jeAbschnitt?: boolean
+}
+
+/** Schulinterne Kataloge wie im SVWS-Client unter Schule > Kataloge */
+const KATALOGE: KatalogDef[] = [
+  { id: 'abteilungen',         label: 'Abteilungen',         endpoint: '/schule/abteilungen', jeAbschnitt: true },
+  { id: 'ankreuzkompetenzen',  label: 'Ankreuzkompetenzen',  endpoint: '/schule/ankreuzkompetenzen' },
+  { id: 'betriebe',            label: 'Betriebe',            endpoint: '/schule/betriebe' },
+  { id: 'betriebsarten',       label: 'Betriebsarten',       endpoint: '/schule/betriebsarten' },
+  { id: 'einwilligungsarten',  label: 'Einwilligungsarten',  endpoint: '/schule/einwilligungsarten' },
+  { id: 'entlassgruende',      label: 'Entlassgründe',       endpoint: '/entlassgruende' },
+  { id: 'erzieherarten',       label: 'Erzieherarten',       endpoint: '/schule/erzieherarten' },
+  { id: 'faecher',             label: 'Fächer',              endpoint: '/faecher' },
+  { id: 'fahrschuelerarten',   label: 'Fahrschülerarten',    endpoint: '/schueler/fahrschuelerarten' },
+  { id: 'floskelgruppen',      label: 'Floskelgruppen',      endpoint: '/schule/floskelgruppen' },
+  { id: 'floskeln',            label: 'Floskeln',            endpoint: '/schule/floskeln' },
+  { id: 'foerderschwerpunkte', label: 'Förderschwerpunkte',  endpoint: '/foerderschwerpunkte' },
+  { id: 'haltestellen',        label: 'Haltestellen',        endpoint: '/haltestellen' },
+  { id: 'jahrgaenge',          label: 'Jahrgänge',           endpoint: '/jahrgaenge' },
+  { id: 'konfessionen',        label: 'Konfessionen',        endpoint: '/schule/religionen' },
+  { id: 'leitungsfunktionen',  label: 'Leitungsfunktionen',  endpoint: '/schule/leitungsfunktionen' },
+  { id: 'lernplattformen',     label: 'Lernplattformen',     endpoint: '/schule/lernplattformen' },
+  { id: 'orte',                label: 'Orte',                endpoint: '/orte' },
+  { id: 'ortsteile',           label: 'Ortsteile',           endpoint: '/ortsteile' },
+  { id: 'schulen',             label: 'Schulen',             endpoint: '/schule/schulen' },
+  { id: 'teilleistungsarten',  label: 'Teilleistungsarten',  endpoint: '/teilleistungsarten' },
+  { id: 'telefonarten',        label: 'Telefonarten',        endpoint: '/schule/telefonarten' },
+  { id: 'vermerkarten',        label: 'Vermerkarten',        endpoint: '/schule/vermerkarten' },
 ]
 
 const GESCHLECHT_LABELS: Record<number, string> = {
@@ -908,6 +1016,12 @@ const betriebeListError       = ref('')
 const betriebeSichtbarFilter  = ref<boolean[]>([])
 const betriebeNameSearch      = ref('')
 
+const selectedKataloge = ref<string[]>([])
+const katalogLoading   = ref(false)
+const katalogAktuell   = ref('')
+const katalogErfolg    = ref('')
+const katalogFehler    = ref<string[]>([])
+
 const lpListe        = ref<LernplattformEintrag[]>([])
 const lpSelectedId   = ref<number | null>(null)
 const lpAbschnittId  = ref<number | null>(null)
@@ -918,6 +1032,11 @@ const lpLoading      = ref(false)
 const lpError        = ref('')
 
 const activeTile = computed(() => TILES.find(t => t.id === selectedTile.value))
+
+/** Kacheln ohne Format- und Feldauswahl */
+const hatEigenenExportBereich = computed(() =>
+  selectedTile.value === 'lernplattformen' || selectedTile.value === 'kataloge',
+)
 
 /** Kacheln, deren Export über die Schülerliste (Auswahl + Filter) gesteuert wird */
 const istSchuelerAuswahlTile = computed(() =>
@@ -1060,6 +1179,8 @@ function selectTile(id: string): void {
   betriebeListe.value = []
   selectedBetriebe.value = []
   betriebeListError.value = ''
+  katalogErfolg.value = ''
+  katalogFehler.value = []
   const tile = TILES.find(t => t.id === id)
   selectedFields.value = tile?.fields?.map(f => f.key) ?? []
   if (id === 'schueler' || id === 'erzieher') reloadAuswahlliste()
@@ -1131,6 +1252,42 @@ async function reloadBetriebeListe(): Promise<void> {
     betriebeListe.value = []
   } finally {
     betriebeListLoading.value = false
+  }
+}
+
+async function doKatalogExport(): Promise<void> {
+  katalogErfolg.value = ''
+  katalogFehler.value = []
+  const auswahl = KATALOGE.filter(k => selectedKataloge.value.includes(k.id))
+  const date = new Date().toISOString().slice(0, 10)
+  let exportiert = 0
+
+  katalogLoading.value = true
+  try {
+    for (const k of auswahl) {
+      katalogAktuell.value = k.label
+      if (k.jeAbschnitt && selectedAbschnittId.value === null) {
+        katalogFehler.value.push(`${k.label}: kein Schuljahresabschnitt gewählt`)
+        continue
+      }
+      const endpoint = k.jeAbschnitt ? `${k.endpoint}/${selectedAbschnittId.value}` : k.endpoint
+      try {
+        const daten = await fetchKatalog(endpoint)
+        const suffix = k.jeAbschnitt ? `_abschnitt-${selectedAbschnittId.value}` : ''
+        exportRawJson(daten, `katalog_${k.id}${suffix}_${date}.json`)
+        exportiert++
+        // Kurze Pause, damit der Browser mehrere Downloads nacheinander annimmt
+        if (auswahl.length > 1) await new Promise(r => setTimeout(r, 300))
+      } catch (e) {
+        katalogFehler.value.push(`${k.label}: ${e instanceof Error ? e.message : 'Fehler beim Laden'}`)
+      }
+    }
+    if (exportiert > 0) {
+      katalogErfolg.value = exportiert === 1 ? '1 Katalog exportiert.' : `${exportiert} Kataloge exportiert.`
+    }
+  } finally {
+    katalogLoading.value = false
+    katalogAktuell.value = ''
   }
 }
 
@@ -1944,6 +2101,26 @@ h2 { margin-top: 0; margin-bottom: 0; font-size: 1.6rem; font-weight: 600; }
   --p-checkbox-width: 1.1rem;
   --p-checkbox-height: 1.1rem;
   --p-checkbox-icon-size: 0.7rem;
+}
+
+/* ── Kataloge ────────────────────────────────────────────────────────────── */
+
+.katalog-hint {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--p-text-muted-color);
+}
+
+.katalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.5rem 1rem;
+  padding: 0.25rem 0 0.5rem;
+}
+
+.katalog-fehler {
+  margin: 0.25rem 0 0;
+  padding-left: 1.25rem;
 }
 
 /* ── Lernplattformen ─────────────────────────────────────────────────────── */

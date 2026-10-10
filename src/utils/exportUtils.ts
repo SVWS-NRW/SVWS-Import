@@ -29,6 +29,14 @@ export function exportAsJson(
   )
 }
 
+/** Exportiert Daten unverändert als JSON (ohne Feldauswahl) */
+export function exportRawJson(data: unknown, filename: string): void {
+  triggerDownload(
+    new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }),
+    filename,
+  )
+}
+
 function triggerDownload(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')

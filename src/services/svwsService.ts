@@ -769,6 +769,17 @@ export async function fetchForExport(endpoint: string): Promise<Record<string, u
   return Array.isArray(response.data) ? response.data : []
 }
 
+/** Lädt einen Katalog unverändert; 404 („keine Einträge“) ergibt eine leere Liste */
+export async function fetchKatalog(endpoint: string): Promise<unknown[]> {
+  try {
+    const response = await getApiClient().get(endpoint)
+    return Array.isArray(response.data) ? response.data : []
+  } catch (error: unknown) {
+    if ((error as { response?: { status?: number } })?.response?.status === 404) return []
+    throw new Error(toAppError(error).messageUser)
+  }
+}
+
 export interface SchuelerAuswahl {
   id: number
   nachname: string

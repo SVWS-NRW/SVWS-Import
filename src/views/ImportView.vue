@@ -137,8 +137,32 @@ h2 {
   }
 }
 
-.wizard-card {
-  border-style: dashed;
+/* Import-Assistent: eigene Akzentfarbe, da geführter Ablauf statt Direktimport */
+.import-card.wizard-card {
+  border-color: var(--p-indigo-300);
+  background: color-mix(in srgb, var(--p-indigo-500) 8%, var(--p-surface-card));
+}
+
+.import-card.wizard-card:hover {
+  border-color: var(--p-indigo-500);
+  background: color-mix(in srgb, var(--p-indigo-500) 14%, var(--p-surface-card));
+}
+
+.import-card.wizard-card .card-icon {
+  color: var(--p-indigo-500);
+}
+
+:global(.dark) .import-card.wizard-card {
+  border-color: var(--p-indigo-700);
+  background: color-mix(in srgb, var(--p-indigo-400) 12%, var(--p-surface-card));
+}
+
+:global(.dark) .import-card.wizard-card:hover {
+  border-color: var(--p-indigo-400);
+}
+
+:global(.dark) .import-card.wizard-card .card-icon {
+  color: var(--p-indigo-400);
 }
 
 .coming-soon-cards {
